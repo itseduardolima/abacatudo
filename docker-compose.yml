@@ -1,0 +1,76 @@
+# Defaults valem só para desenvolvimento local (senhas triviais). Em produção
+# o .env é obrigatório — rode ./scripts/deploy-check.sh antes de
+# `docker compose up`, ele barra .env ausente ou com placeholder.
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:-internal@localhost}
+      APP_DOMAIN: ${APP_DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Mesma origem: o browser fala com /api/*, que o Caddy manda para a API.
+        NEXT_PUBLIC_API_URL: /api
+    restart: unless-stopped
+    environment:
+      API_INTERNAL_URL: http://api:3001
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    # opcional para os comandos de desenvolvimento; em produção o deploy-check.sh exige o .env
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      # Usuário da aplicação (não-superusuário, criado por infra/postgres/init-app-role.sh).
+      DATABASE_URL: postgresql://${APP_DB_USER:-gastos}:${APP_DB_PASSWORD:-gastos}@postgres:5432/${APP_DB_NAME:-gastos}?schema=public
+      WEB_ORIGIN: https://${APP_DOMAIN:-localhost}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      # Superusuário só para administração/backup; a API usa APP_DB_USER.
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+      APP_DB_USER: ${APP_DB_USER:-gastos}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-gastos}
+      APP_DB_NAME: ${APP_DB_NAME:-gastos}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init-app-role.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  caddy_data:
+  caddy_config:
+  postgres_data:
