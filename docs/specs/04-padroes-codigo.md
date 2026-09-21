@@ -142,8 +142,19 @@ Vocabulário fixo de domínio:
 | Consentimento               | `consent` (`consentExpiresAt`)                                                                 |
 | Assinatura / recorrência    | `recurring`                                                                                    |
 
-Commits: Conventional Commits em inglês (`feat(api/transaction): add split
-endpoint`). Comentários: poucos, em português, só para o **porquê**.
+Comentários: poucos, em português, só para o **porquê**.
+
+## Commits
+
+- Conventional Commits **em inglês**: `type(scope): description`, no imperativo, em minúscula, sem ponto
+  final (`feat(api/transaction): add split endpoint`). Tipos: `feat`, `fix`, `refactor`, `docs`, `chore`,
+  `build`, `ci`, `test`, `style`. O escopo é o app ou módulo afetado.
+- **Vários commits, um por assunto** (docs, tooling, cada pacote ou app, docker, scripts, ci). Nunca uma
+  mudança inteira num commit só.
+- **Sem `Co-authored-by` e sem citar modelo ou IA** em mensagem de commit ou de PR.
+- Autor deste repositório: `itseduardolima <eduardolima2417@gmail.com>`, configurado só localmente
+  (`git config --local`); a configuração global da máquina não é usada aqui.
+- Nunca `--no-verify`: o pre-commit (Prettier via lint-staged) precisa rodar.
 
 ## Nomenclatura
 

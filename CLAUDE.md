@@ -93,6 +93,10 @@ na verdade, "atualizar o spec" (avisar o usuário).
 - **Código em inglês, poucos comentários (em português), commits
   Conventional Commits em inglês.** Vocabulário fixo na seção Idioma do
   spec 04. Texto ao usuário em português.
+- **Commits: vários, por assunto, nunca tudo junto.** Sem `Co-authored-by` e
+  **sem citar modelo ou IA** em mensagem de commit ou de PR. Autor do
+  repositório: `itseduardolima <eduardolima2417@gmail.com>` (config local,
+  nunca a global da máquina). Nunca `--no-verify`. (spec 04 § Commits)
 - **Nunca cor hardcoded em componente** — sempre token semântico de
   `styles/theme.css` (`bg-primary`, `text-ink`...). Lima **só como fundo** de
   ação/estado ativo (1,5:1 no branco: nunca texto nem traço); Pebble nunca
