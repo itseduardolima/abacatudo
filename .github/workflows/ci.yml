@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Placeholders: Prisma generate/typecheck/build nunca conectam num banco real, e os testes usam mocks.
+  # Segredos reais vivem só na VPS (.env, nunca no CI).
+  DATABASE_URL: postgresql://gastos:gastos@localhost:5433/gastos?schema=public
+  SESSION_SECRET: ci-placeholder-secret-not-used-in-production-000000
+  NEXT_PUBLIC_API_URL: /api
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter api db:generate
+
+      # 08-seguranca § 11: build vermelho em vulnerabilidade alta/crítica. Sem correção disponível ainda,
+      # a decisão é explícita (registrada no TODO.md), nunca silenciar o alerta.
+      - name: Audit dependencies
+        run: pnpm audit --audit-level=high
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  # "Teste unitário" do frontend (04-padroes-codigo § Testes): Cypress Component Testing.
+  components:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Cache Cypress binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Install Cypress binary
+        run: pnpm --filter web exec cypress install
+      - name: Cypress component tests
+        run: pnpm --filter web cy:run
+
+  # Um Dockerfile quebrado só aparece no deploy. Construir as imagens no PR pega isso antes
+  # (ex.: `prisma generate` na inicialização falhando para o usuário sem privilégios).
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build images
+        run: docker compose build
