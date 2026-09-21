@@ -1,0 +1,9 @@
+// Os models de domínio entram por sprint (User na Sprint 1, cada um com RLS e teste de isolamento).
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
