@@ -29,8 +29,7 @@ function accountsMock() {
     create: jest.fn(),
     findMany: jest.fn(),
     findById: jest.fn(),
-    findByExternalAccountId: jest.fn(),
-    updateFromSync: jest.fn(),
+    upsertFromSync: jest.fn(),
   } as unknown as jest.Mocked<AccountRepository>
 }
 
@@ -135,8 +134,33 @@ describe('BankingService', () => {
 
     await service.checkStatus('user-1', 'item-1')
 
-    expect(items.update).toHaveBeenCalledWith('user-1', 'item-1', { status: 'UPDATED', consentExpiresAt: null })
+    expect(items.update).toHaveBeenCalledWith('user-1', 'item-1', {
+      status: 'UPDATED',
+      consentExpiresAt: null,
+      lastErrorCode: null,
+    })
     expect(pluggy.listAccounts).toHaveBeenCalledWith('pluggy-item-1')
+  })
+
+  it('checkStatus: LOGIN_ERROR persiste o código do erro, pra não deixar o usuário sem saber o motivo', async () => {
+    const items = itemsMock()
+    items.findById.mockResolvedValue(itemRow())
+    const pluggy = pluggyMock()
+    pluggy.getItem.mockResolvedValue({
+      id: 'pluggy-item-1',
+      status: 'LOGIN_ERROR',
+      connector: { id: 200, name: 'Meu Pluggy' },
+      error: { code: 'INVALID_CREDENTIALS' },
+    })
+    const service = new BankingService(pluggy, items, accountsMock(), syncMock())
+
+    await service.checkStatus('user-1', 'item-1')
+
+    expect(items.update).toHaveBeenCalledWith('user-1', 'item-1', {
+      status: 'LOGIN_ERROR',
+      consentExpiresAt: null,
+      lastErrorCode: 'INVALID_CREDENTIALS',
+    })
   })
 
   it('checkStatus: já estava UPDATED antes, não sincroniza de novo', async () => {
@@ -155,12 +179,11 @@ describe('BankingService', () => {
     expect(pluggy.listAccounts).not.toHaveBeenCalled()
   })
 
-  it('manualSync: cria conta nova, paginação de transações e upsert idempotente', async () => {
+  it('manualSync: sincroniza conta e transações por upsert atômico, sem duplicar', async () => {
     const items = itemsMock()
     items.findById.mockResolvedValue(itemRow())
     const accounts = accountsMock()
-    accounts.findByExternalAccountId.mockResolvedValue(null)
-    accounts.create.mockResolvedValue(accountRow())
+    accounts.upsertFromSync.mockResolvedValue(accountRow())
     const pluggy = pluggyMock()
     pluggy.listAccounts.mockResolvedValue([{ id: 'ext-acc-1', type: 'CREDIT', name: 'Nubank', creditData: null }])
     pluggy.listTransactions
@@ -186,9 +209,11 @@ describe('BankingService', () => {
 
     const result = await service.manualSync('user-1', 'item-1')
 
-    expect(accounts.create).toHaveBeenCalledWith(
+    expect(accounts.upsertFromSync).toHaveBeenCalledWith(
       'user-1',
-      expect.objectContaining({ name: 'Nubank', source: 'PLUGGY', externalAccountId: 'ext-acc-1' }),
+      'ext-acc-1',
+      expect.objectContaining({ name: 'Nubank', source: 'PLUGGY' }),
+      expect.any(Object),
     )
     expect(sync.upsertTransaction).toHaveBeenCalledTimes(1)
     expect(sync.upsertTransaction).toHaveBeenCalledWith(
@@ -204,19 +229,38 @@ describe('BankingService', () => {
     expect(result).toEqual({ accountsSynced: 1, transactionsSynced: 1 })
   })
 
-  it('manualSync: conta já existente é atualizada, nunca duplicada', async () => {
+  it('manualSync: duas contas do mesmo item cada uma vira um upsert por seu próprio externalAccountId', async () => {
     const items = itemsMock()
     items.findById.mockResolvedValue(itemRow())
     const accounts = accountsMock()
-    accounts.findByExternalAccountId.mockResolvedValue(accountRow())
+    accounts.upsertFromSync
+      .mockResolvedValueOnce(accountRow({ id: 'acc-1', externalAccountId: 'ext-acc-1' }))
+      .mockResolvedValueOnce(accountRow({ id: 'acc-2', externalAccountId: 'ext-acc-2', type: 'CHECKING' }))
     const pluggy = pluggyMock()
-    pluggy.listAccounts.mockResolvedValue([{ id: 'ext-acc-1', type: 'CREDIT', name: 'Nubank', creditData: null }])
+    pluggy.listAccounts.mockResolvedValue([
+      { id: 'ext-acc-1', type: 'CREDIT', name: 'Nubank cartão', creditData: null },
+      { id: 'ext-acc-2', type: 'BANK', name: 'Nubank conta', creditData: null },
+    ])
     pluggy.listTransactions.mockResolvedValue({ results: [], next: null })
     const service = new BankingService(pluggy, items, accounts, syncMock())
 
-    await service.manualSync('user-1', 'item-1')
+    const result = await service.manualSync('user-1', 'item-1')
 
-    expect(accounts.create).not.toHaveBeenCalled()
-    expect(accounts.updateFromSync).toHaveBeenCalledWith('user-1', 'acc-1', expect.any(Object))
+    expect(accounts.upsertFromSync).toHaveBeenCalledTimes(2)
+    expect(accounts.upsertFromSync).toHaveBeenNthCalledWith(
+      1,
+      'user-1',
+      'ext-acc-1',
+      expect.objectContaining({ type: 'CREDIT_CARD' }),
+      expect.any(Object),
+    )
+    expect(accounts.upsertFromSync).toHaveBeenNthCalledWith(
+      2,
+      'user-1',
+      'ext-acc-2',
+      expect.objectContaining({ type: 'CHECKING' }),
+      expect.any(Object),
+    )
+    expect(result.accountsSynced).toBe(2)
   })
 })

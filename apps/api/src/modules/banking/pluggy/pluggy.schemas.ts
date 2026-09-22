@@ -20,6 +20,8 @@ export const pluggyItemSchema = z.object({
   connector: z.object({ id: z.number(), name: z.string() }),
   consentExpiresAt: z.string().nullable().optional(),
   parameter: z.object({ name: z.string(), data: z.string() }).nullable().optional(),
+  // Só existe quando a conexão falhou (LOGIN_ERROR/ERROR) — é o que vira lastErrorCode.
+  error: z.object({ code: z.string().nullable().optional() }).nullable().optional(),
 })
 export type PluggyItem = z.infer<typeof pluggyItemSchema>
 
@@ -38,7 +40,11 @@ export const pluggyAccountSchema = z.object({
 })
 export type PluggyAccount = z.infer<typeof pluggyAccountSchema>
 
-export const pluggyAccountsPageSchema = z.object({ results: z.array(pluggyAccountSchema) })
+export const pluggyAccountsPageSchema = z.object({
+  results: z.array(pluggyAccountSchema),
+  page: z.number().optional(),
+  totalPages: z.number().optional(),
+})
 
 export const pluggyTransactionSchema = z.object({
   id: z.string(),
@@ -52,6 +58,8 @@ export const pluggyTransactionSchema = z.object({
   // Sem .default(): o Pluggy sempre manda status; usar default aqui deixaria o campo opcional no tipo
   // inferido (peculiaridade do Zod com objectOutputType), o que não bate com a realidade dos dados.
   status: z.enum(['POSTED', 'PENDING']),
+  // Em compra parcelada, `date` é a data da parcela na fatura (pode ser bem no futuro), não a da compra —
+  // purchaseDate é a data real da compra.
   date: z.string(),
   description: z.string(),
   merchant: z.object({ name: z.string().nullable().optional() }).nullable().optional(),
@@ -61,6 +69,7 @@ export const pluggyTransactionSchema = z.object({
       totalInstallments: z.number().nullable().optional(),
       installmentNumber: z.number().nullable().optional(),
       billId: z.string().nullable().optional(),
+      purchaseDate: z.string().nullable().optional(),
     })
     .nullable()
     .optional(),

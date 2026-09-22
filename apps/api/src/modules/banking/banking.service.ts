@@ -45,6 +45,7 @@ export class BankingService {
       await this.items.update(userId, item.id, {
         status: remote.status,
         consentExpiresAt: remote.consentExpiresAt ? new Date(remote.consentExpiresAt) : null,
+        lastErrorCode: remote.error?.code ?? null,
       })
     }
 
@@ -74,17 +75,12 @@ export class BankingService {
 
     for (const pluggyAccount of pluggyAccounts) {
       const fields = mapAccountFields(pluggyAccount)
-      const existing = await this.accounts.findByExternalAccountId(userId, pluggyAccount.id)
-      const account =
-        existing ??
-        (await this.accounts.create(userId, {
-          ...fields,
-          name: pluggyAccount.name,
-          source: 'PLUGGY',
-          pluggyItemId: item.id,
-          externalAccountId: pluggyAccount.id,
-        }))
-      if (existing) await this.accounts.updateFromSync(userId, existing.id, fields)
+      const account = await this.accounts.upsertFromSync(
+        userId,
+        pluggyAccount.id,
+        { ...fields, name: pluggyAccount.name, source: 'PLUGGY', pluggyItemId: item.id },
+        fields,
+      )
       accountsSynced++
 
       let cursor: string | undefined
