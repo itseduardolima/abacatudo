@@ -114,8 +114,34 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
   `BudgetMonthService` passou a exportar `assertMonthOpen`, reaproveitado
   pelas três mutações do Envelope; `list` continua liberado (histórico é
   só leitura).
-- Próximo: Sprint 5 Etapa 3 — alertas de orçamento (70/90/100%, 7.3) e
+- **Sprint 5 Etapa 3 concluída (2026-09-22)**: alertas de orçamento (7.3) e
   "última atualização" por conta (8.6).
+  - Alertas: models `EnvelopeAlert`/`BudgetMonthAlert` (RLS + CHECK
+    `threshold IN (70,90,100)`) — a linha existir É o "já disparou neste
+    mês" (idempotente por `@@unique`, mesmo padrão do `createIfMissing`);
+    envelope pertence a um único `BudgetMonth`, então virar o mês é um
+    envelope novo com alertas zerados, sem precisar guardar o mês na
+    própria linha do alerta. `AlertService` (dentro do módulo `budget`, como
+    o 01-arquitetura já previa) calcula o gasto "Meu" do mês (só `EXPENSE`
+    de cartão, nunca `REFUND`/`CARD_PAYMENT` — diferente da fatura, que
+    neteia estorno) numa query só pro mês inteiro, separado por categoria;
+    `GET /budget/envelopes` ganhou `spentCents`/`percentUsed`/
+    `firedThresholds` por envelope e `totalSpentCents`/`totalPercentUsed`/
+    `totalFiredThresholds` pro teto variável — o GET é quem registra
+    (idempotente) os limiares batidos, não existe job/push separado ainda
+    (fica pra quando a IA/notificação da Sprint 7 tiver algo pra consumir
+    esse dado).
+  - 8.6: `Account` ganhou `lastSyncAt` (do `PluggyItem` por trás dela, não
+    campo próprio) — sempre `null` pra conta `MANUAL`/`IMPORT`; se um sync
+    falhar no meio, o item nunca chega a atualizar `lastSyncAt` (ver
+    `BankingService.runSync`), então dado velho nunca aparenta estar atual.
+  - Verificado ao vivo: envelope de R$300 batendo 70% e depois 90% (sem
+    duplicar o 70 já disparado, `firedAt` confirmado igual no banco), teto
+    total não disparando fora de hora, isolamento entre 2 Users nas duas
+    tabelas novas de alerta, e `lastSyncAt` vindo certo do `PluggyItem`
+    numa conta marcada como `PLUGGY`.
+- Próximo: Sprint 5 Etapa 4 — relatórios (9.1: gasto por categoria/
+  estabelecimento/pessoa com variação mês a mês).
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -277,8 +303,8 @@ Escopo mudou a pedido do usuário (2026-09-22): toda transação nasce "Meu", se
 
 - [x] 7.1 — Renda, fixos, poupança → teto variável: `GET`/`PUT /budget/month`, testado ao vivo
 - [x] 7.2 — Envelopes: `GET/POST/PATCH/DELETE /budget/envelopes`, testado ao vivo
-- [ ] 7.3 — Alertas 70/90/100
-- [ ] 8.6 — "Última atualização" por conta
+- [x] 7.3 — Alertas 70/90/100, testado ao vivo
+- [x] 8.6 — "Última atualização" por conta, testado ao vivo
 - [ ] 9.1 — Para onde vai o dinheiro
 
 ## Sprint 6 — Integração Pluggy
