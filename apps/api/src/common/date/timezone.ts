@@ -1,3 +1,5 @@
+import { DomainError } from '../errors/domain.error'
+
 // "Mês" e "dia" do produto são sempre calculados em America/Manaus, nunca em UTC (03-regras-negocio).
 export const PRODUCT_TIME_ZONE = 'America/Manaus'
 
@@ -69,4 +71,14 @@ export function monthRange(monthKeyValue: string): { start: Date; end: Date } {
   const start = zonedTimeToUtc(year, month, 1)
   const end = month === 12 ? zonedTimeToUtc(year + 1, 1, 1) : zonedTimeToUtc(year, month + 1, 1)
   return { start, end }
+}
+
+// Resolve o `month` de query string (ou o mês atual) pro range usado nos filtros — mesma validação que
+// Transaction/Movement precisavam repetir.
+export function resolveMonthRange(month?: string): { start: Date; end: Date } {
+  const key = month ?? monthKey(new Date())
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(key)) {
+    throw new DomainError('INVALID_MONTH', 'Mês inválido (esperado AAAA-MM).', 400)
+  }
+  return monthRange(key)
 }

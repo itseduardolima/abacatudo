@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import type { Transaction, UpdateTransactionCategoryInput, UpdateTransactionPersonInput } from '@gastos/shared'
-import { monthKey, monthRange } from '../../common/date/timezone'
+import { resolveMonthRange } from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { CategoryRepository } from '../category/category.repository'
 import { PersonRepository } from '../person/person.repository'
@@ -29,11 +29,7 @@ export class TransactionService {
   ) {}
 
   async listByMonth(userId: string, month?: string): Promise<Transaction[]> {
-    const key = month ?? monthKey(new Date())
-    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(key)) {
-      throw new DomainError('INVALID_MONTH', 'Mês inválido (esperado AAAA-MM).', 400)
-    }
-    return (await this.repo.findMany(userId, monthRange(key))).map(toTransactionDto)
+    return (await this.repo.findMany(userId, resolveMonthRange(month))).map(toTransactionDto)
   }
 
   async updatePerson(userId: string, id: string, input: UpdateTransactionPersonInput): Promise<Transaction> {
