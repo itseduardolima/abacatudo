@@ -24,4 +24,11 @@ export class TransactionRepository {
       data: { personId },
     })
   }
+
+  async updateCategory(userId: string, id: string, categoryId: string): Promise<Prisma.BatchPayload> {
+    return this.prisma.transaction.updateMany({
+      where: { userId, id, account: { type: 'CREDIT_CARD' } },
+      data: { categoryId },
+    })
+  }
 }

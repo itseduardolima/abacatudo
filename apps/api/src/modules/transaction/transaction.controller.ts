@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, 
 import type { SplitPreview, Transaction } from '@gastos/shared'
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import { PreviewSplitDto } from './dto/preview-split.dto'
+import { UpdateTransactionCategoryDto } from './dto/update-transaction-category.dto'
 import { UpdateTransactionPersonDto } from './dto/update-transaction-person.dto'
 import { UpdateTransactionSplitDto } from './dto/update-transaction-split.dto'
 import { SplitService } from './split.service'
@@ -26,6 +27,15 @@ export class TransactionController {
     @Body() body: UpdateTransactionPersonDto,
   ): Promise<Transaction> {
     return this.transactions.updatePerson(userId, id, body)
+  }
+
+  @Patch(':id/category')
+  updateCategory(
+    @CurrentUser() userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateTransactionCategoryDto,
+  ): Promise<Transaction> {
+    return this.transactions.updateCategory(userId, id, body)
   }
 
   @Post(':id/split/preview')

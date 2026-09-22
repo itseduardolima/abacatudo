@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common'
+import { CategoryModule } from '../category/category.module'
 import { PersonModule } from '../person/person.module'
 import { RuleModule } from '../rule/rule.module'
 import { SplitModule } from '../split/split.module'
@@ -11,7 +12,7 @@ import { TransactionRepository } from './transaction.repository'
 import { TransactionService } from './transaction.service'
 
 @Module({
-  imports: [PersonModule, RuleModule, SplitModule],
+  imports: [PersonModule, CategoryModule, RuleModule, SplitModule],
   controllers: [TransactionController, MovementController],
   providers: [TransactionService, TransactionRepository, MovementService, MovementRepository, SplitService],
 })
