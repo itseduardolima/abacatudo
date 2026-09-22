@@ -38,4 +38,56 @@ describe('LoginAttemptTracker', () => {
     expect(tracker.isLocked('email:a@b.com')).toBe(true)
     expect(tracker.isLocked('ip:1.2.3.4')).toBe(false)
   })
+
+  describe('varredura periódica (o Map não pode crescer sem limite)', () => {
+    afterEach(() => jest.useRealTimers())
+
+    it('remove uma chave expirada sozinha, mesmo sem isLocked() ser chamado de novo para ela', () => {
+      jest.useFakeTimers()
+      const tracker = new LoginAttemptTracker()
+      tracker.onModuleInit()
+
+      tracker.recordFailure('email:nunca-mais-consultado@b.com')
+      expect(tracker.size).toBe(1)
+
+      jest.advanceTimersByTime(LOGIN_WINDOW_MS + 1)
+
+      expect(tracker.size).toBe(0)
+      tracker.onModuleDestroy()
+    })
+
+    it('mantém uma chave ainda dentro da janela', () => {
+      jest.useFakeTimers()
+      const tracker = new LoginAttemptTracker()
+      tracker.onModuleInit()
+
+      tracker.recordFailure('email:ativo@b.com')
+      jest.advanceTimersByTime(LOGIN_WINDOW_MS - 1)
+
+      expect(tracker.size).toBe(1)
+      tracker.onModuleDestroy()
+    })
+
+    it('varre várias chaves de uma vez, removendo só as expiradas', () => {
+      jest.useFakeTimers()
+      const tracker = new LoginAttemptTracker()
+      tracker.onModuleInit()
+
+      tracker.recordFailure('email:vai-expirar-1@b.com')
+      tracker.recordFailure('email:vai-expirar-2@b.com')
+      jest.advanceTimersByTime(LOGIN_WINDOW_MS + 1)
+      tracker.recordFailure('email:ainda-ativo@b.com')
+
+      // O intervalo de varredura é o mesmo da janela (LOGIN_WINDOW_MS) — ver login-attempt.tracker.ts.
+      jest.advanceTimersByTime(LOGIN_WINDOW_MS)
+
+      expect(tracker.size).toBe(1)
+      tracker.onModuleDestroy()
+    })
+
+    it('onModuleDestroy encerra o timer sem lançar, mesmo sem onModuleInit ter sido chamado', () => {
+      const tracker = new LoginAttemptTracker()
+      expect(() => tracker.onModuleDestroy()).not.toThrow()
+    })
+  })
 })
