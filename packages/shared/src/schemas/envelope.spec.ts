@@ -44,8 +44,35 @@ describe('envelopeListSchema', () => {
       variableCapCents: 310000,
       allocatedCents: 100000,
       freeCents: 210000,
-      envelopes: [{ id: CATEGORY, categoryId: CATEGORY, amountCents: 30000, percent: null, capCents: 30000 }],
+      totalSpentCents: 90000,
+      totalPercentUsed: 29,
+      totalFiredThresholds: [],
+      envelopes: [
+        {
+          id: CATEGORY,
+          categoryId: CATEGORY,
+          amountCents: 30000,
+          percent: null,
+          capCents: 30000,
+          spentCents: 21000,
+          percentUsed: 70,
+          firedThresholds: [70],
+        },
+      ],
     })
     expect(result.success).toBe(true)
+  })
+
+  it('rejeita limiar fora de 70/90/100', () => {
+    const result = envelopeListSchema.safeParse({
+      variableCapCents: 310000,
+      allocatedCents: 0,
+      freeCents: 310000,
+      totalSpentCents: 0,
+      totalPercentUsed: 0,
+      totalFiredThresholds: [50],
+      envelopes: [],
+    })
+    expect(result.success).toBe(false)
   })
 })

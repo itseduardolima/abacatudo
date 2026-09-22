@@ -4,8 +4,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
   // Só usada por `prisma migrate dev` em desenvolvimento local, para criar/derrubar o banco-sombra
   // temporário que a Prisma usa para detectar drift. Precisa de um papel com CREATEDB — por isso aponta
   // para o superusuário `postgres` do compose de dev, nunca para o papel `gastos` (sem CREATEDB, sem
@@ -23,16 +23,18 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  sessions     Session[]
-  people       Person[]
-  categories   Category[]
-  accounts     Account[]
-  transactions Transaction[]
-  pluggyItems  PluggyItem[]
-  rules        Rule[]
-  splits       Split[]
-  budgetMonths BudgetMonth[]
-  envelopes    Envelope[]
+  sessions          Session[]
+  people            Person[]
+  categories        Category[]
+  accounts          Account[]
+  transactions      Transaction[]
+  pluggyItems       PluggyItem[]
+  rules             Rule[]
+  splits            Split[]
+  budgetMonths      BudgetMonth[]
+  envelopes         Envelope[]
+  envelopeAlerts    EnvelopeAlert[]
+  budgetMonthAlerts BudgetMonthAlert[]
 }
 
 /// Sem RLS: resolvida pelo hash do token do cookie, antes de existir userId no contexto (mesma exceção
@@ -178,7 +180,7 @@ enum TransactionStatus {
 /// quando a transação está dividida — aí quem manda é a soma dos Split (03-regras-negocio § Atribuição de
 /// pessoa e § Só a minha parte).
 model Transaction {
-  id                String             @id @default(uuid())
+  id                String            @id @default(uuid())
   userId            String
   accountId         String
   externalId        String?
@@ -265,8 +267,9 @@ model BudgetMonth {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   envelopes Envelope[]
+  alerts    BudgetMonthAlert[]
 
   @@unique([userId, month])
   @@index([userId])
@@ -286,10 +289,44 @@ model Envelope {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  budgetMonth BudgetMonth @relation(fields: [budgetMonthId], references: [id], onDelete: Cascade)
-  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  budgetMonth BudgetMonth     @relation(fields: [budgetMonthId], references: [id], onDelete: Cascade)
+  category    Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  alerts      EnvelopeAlert[]
 
   @@unique([budgetMonthId, categoryId])
+  @@index([userId])
+}
+
+/// RLS por userId. Um limiar (70/90/100) já disparado pra um Envelope — a linha existir É o "disparou"
+/// (03-regras-negocio § Orçamento mensal: cada limiar dispara uma vez por mês, não repete a cada sync).
+/// Envelope pertence a um único BudgetMonth, então @@unique([envelopeId, threshold]) já basta pro "por mês".
+model EnvelopeAlert {
+  id         String   @id @default(uuid())
+  userId     String
+  envelopeId String
+  threshold  Int
+  firedAt    DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  envelope Envelope @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
+
+  @@unique([envelopeId, threshold])
+  @@index([userId])
+}
+
+/// RLS por userId. Mesma ideia do EnvelopeAlert, só que pro teto variável do mês inteiro (não por
+/// categoria).
+model BudgetMonthAlert {
+  id            String   @id @default(uuid())
+  userId        String
+  budgetMonthId String
+  threshold     Int
+  firedAt       DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  budgetMonth BudgetMonth @relation(fields: [budgetMonthId], references: [id], onDelete: Cascade)
+
+  @@unique([budgetMonthId, threshold])
   @@index([userId])
 }

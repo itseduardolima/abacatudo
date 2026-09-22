@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
+import type { Envelope as EnvelopeRow } from '@prisma/client'
 import type { CreateEnvelopeInput, Envelope, EnvelopeList, UpdateEnvelopeInput } from '@gastos/shared'
+import { AlertService } from '../budget/alert.service'
 import { assertMonthOpen, BudgetMonthService } from '../budget/budget-month.service'
 import { computeVariableCapCents } from '../budget/budget.mapper'
 import { CategoryRepository } from '../category/category.repository'
 import { ConflictError, NotFoundError } from '../../common/errors/domain.error'
 import { EnvelopeRepository } from './envelope.repository'
-import { toEnvelopeDto } from './envelope.mapper'
+import { envelopeCapCents, toEnvelopeDto } from './envelope.mapper'
 
 const NOT_FOUND = () => new NotFoundError('ENVELOPE_NOT_FOUND', 'Envelope não encontrado.')
 
@@ -16,14 +18,34 @@ export class EnvelopeService {
     private readonly repo: EnvelopeRepository,
     private readonly budgetMonths: BudgetMonthService,
     private readonly categories: CategoryRepository,
+    private readonly alerts: AlertService,
   ) {}
 
   async list(userId: string, month?: string): Promise<EnvelopeList> {
-    const { id: budgetMonthId, variableCapCents } = await this.budgetMonths.requireId(userId, month)
+    const { id: budgetMonthId, month: key, variableCapCents } = await this.budgetMonths.requireId(userId, month)
     const rows = await this.repo.findMany(userId, budgetMonthId)
-    const envelopes = rows.map((row) => toEnvelopeDto(row, variableCapCents))
+    // 1 query só pro mês inteiro (total + por categoria), em vez de 1 query de gasto por envelope.
+    const { totalCents, byCategoryCents } = await this.alerts.monthSpend(userId, key)
+
+    const envelopes: Envelope[] = []
+    for (const row of rows) {
+      const capCents = envelopeCapCents(row, variableCapCents)
+      const spentCents = byCategoryCents.get(row.categoryId) ?? 0
+      const alert = await this.alerts.envelopeAlert(userId, row.id, spentCents, capCents)
+      envelopes.push(toEnvelopeDto(row, capCents, alert))
+    }
+
     const allocatedCents = envelopes.reduce((sum, envelope) => sum + envelope.capCents, 0)
-    return { variableCapCents, allocatedCents, freeCents: variableCapCents - allocatedCents, envelopes }
+    const totalAlert = await this.alerts.budgetMonthAlert(userId, budgetMonthId, totalCents, variableCapCents)
+    return {
+      variableCapCents,
+      allocatedCents,
+      freeCents: variableCapCents - allocatedCents,
+      totalSpentCents: totalAlert.spentCents,
+      totalPercentUsed: totalAlert.percentUsed,
+      totalFiredThresholds: totalAlert.firedThresholds,
+      envelopes,
+    }
   }
 
   async create(userId: string, month: string | undefined, input: CreateEnvelopeInput): Promise<Envelope> {
@@ -38,7 +60,7 @@ export class EnvelopeService {
         amountCents: input.amountCents ?? null,
         percent: input.percent ?? null,
       })
-      return toEnvelopeDto(row, variableCapCents)
+      return this.withAlert(userId, row, key, variableCapCents)
     } catch (error) {
       if (isUniqueViolation(error)) {
         throw new ConflictError('ENVELOPE_ALREADY_EXISTS', 'Essa categoria já tem envelope neste mês.')
@@ -60,7 +82,7 @@ export class EnvelopeService {
 
     const updated = await this.repo.findById(userId, id)
     if (!updated) throw NOT_FOUND()
-    return toEnvelopeDto(updated, computeVariableCapCents(updated.budgetMonth))
+    return this.withAlert(userId, updated, updated.budgetMonth.month, computeVariableCapCents(updated.budgetMonth))
   }
 
   async remove(userId: string, id: string): Promise<void> {
@@ -70,6 +92,18 @@ export class EnvelopeService {
 
     const result = await this.repo.delete(userId, id)
     if (result.count === 0) throw NOT_FOUND()
+  }
+
+  private async withAlert(
+    userId: string,
+    row: EnvelopeRow,
+    month: string,
+    variableCapCents: number,
+  ): Promise<Envelope> {
+    const capCents = envelopeCapCents(row, variableCapCents)
+    const spentCents = await this.alerts.categorySpentCents(userId, row.categoryId, month)
+    const alert = await this.alerts.envelopeAlert(userId, row.id, spentCents, capCents)
+    return toEnvelopeDto(row, capCents, alert)
   }
 }
 

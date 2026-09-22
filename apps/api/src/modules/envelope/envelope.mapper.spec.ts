@@ -1,4 +1,5 @@
-import { envelopeCapCents } from './envelope.mapper'
+import type { Envelope as EnvelopeRow } from '@prisma/client'
+import { envelopeCapCents, toEnvelopeDto } from './envelope.mapper'
 
 describe('envelopeCapCents', () => {
   it('valor fixo: capCents é o próprio valor, ignora o teto', () => {
@@ -13,5 +14,33 @@ describe('envelopeCapCents', () => {
 
   it('nenhum dos dois (não deveria acontecer, CHECK no banco impede): zero', () => {
     expect(envelopeCapCents({ amountCents: null, percent: null }, 310000)).toBe(0)
+  })
+})
+
+describe('toEnvelopeDto', () => {
+  it('junta os campos do envelope com o status de alerta já calculado', () => {
+    const row = {
+      id: 'env-1',
+      userId: 'user-1',
+      budgetMonthId: 'bm-1',
+      categoryId: 'cat-1',
+      amountCents: 30000,
+      percent: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } satisfies EnvelopeRow
+
+    const dto = toEnvelopeDto(row, 30000, { spentCents: 21000, percentUsed: 70, firedThresholds: [70] })
+
+    expect(dto).toEqual({
+      id: 'env-1',
+      categoryId: 'cat-1',
+      amountCents: 30000,
+      percent: null,
+      capCents: 30000,
+      spentCents: 21000,
+      percentUsed: 70,
+      firedThresholds: [70],
+    })
   })
 })

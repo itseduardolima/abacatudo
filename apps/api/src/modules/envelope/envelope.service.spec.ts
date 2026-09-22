@@ -1,10 +1,13 @@
 import type { BudgetMonth as BudgetMonthRow, Category as CategoryRow, Envelope as EnvelopeRow } from '@prisma/client'
 import { Prisma } from '@prisma/client'
 import { ConflictError, NotFoundError } from '../../common/errors/domain.error'
+import type { AlertService, AlertStatus } from '../budget/alert.service'
 import type { BudgetMonthService } from '../budget/budget-month.service'
 import type { CategoryRepository } from '../category/category.repository'
 import { EnvelopeService } from './envelope.service'
 import type { EnvelopeRepository, EnvelopeWithBudgetMonth } from './envelope.repository'
+
+const NO_ALERT: AlertStatus = { spentCents: 0, percentUsed: 0, firedThresholds: [] }
 
 function budgetMonthsMock() {
   return { requireId: jest.fn() } as unknown as jest.Mocked<BudgetMonthService>
@@ -12,6 +15,15 @@ function budgetMonthsMock() {
 
 function categoriesMock() {
   return { findActiveById: jest.fn() } as unknown as jest.Mocked<CategoryRepository>
+}
+
+function alertsMock() {
+  return {
+    monthSpend: jest.fn().mockResolvedValue({ totalCents: 0, byCategoryCents: new Map<string, number>() }),
+    categorySpentCents: jest.fn().mockResolvedValue(0),
+    envelopeAlert: jest.fn().mockResolvedValue(NO_ALERT),
+    budgetMonthAlert: jest.fn().mockResolvedValue(NO_ALERT),
+  } as unknown as jest.Mocked<AlertService>
 }
 
 function repoMock() {
@@ -75,7 +87,7 @@ describe('EnvelopeService', () => {
         envelopeRow({ id: 'env-1', amountCents: 30000, percent: null }),
         envelopeRow({ id: 'env-2', amountCents: null, percent: 10 }),
       ])
-      const service = new EnvelopeService(repo, budgetMonths, categoriesMock())
+      const service = new EnvelopeService(repo, budgetMonths, categoriesMock(), alertsMock())
 
       const result = await service.list('user-1', '2026-09')
 
@@ -83,6 +95,27 @@ describe('EnvelopeService', () => {
       expect(result.allocatedCents).toBe(30000 + 31000)
       expect(result.freeCents).toBe(310000 - 30000 - 31000)
       expect(result.envelopes).toHaveLength(2)
+    })
+
+    it('passa o gasto por categoria (do monthSpend) pro alerta de cada envelope, e o total pro alerta do teto', async () => {
+      const budgetMonths = budgetMonthsMock()
+      budgetMonths.requireId.mockResolvedValue({ id: 'bm-1', month: '2026-09', variableCapCents: 310000 })
+      const repo = repoMock()
+      repo.findMany.mockResolvedValue([envelopeRow({ id: 'env-1', categoryId: 'cat-1', amountCents: 30000 })])
+      const alerts = alertsMock()
+      alerts.monthSpend.mockResolvedValue({ totalCents: 21000, byCategoryCents: new Map([['cat-1', 21000]]) })
+      alerts.envelopeAlert.mockResolvedValue({ spentCents: 21000, percentUsed: 70, firedThresholds: [70] })
+      alerts.budgetMonthAlert.mockResolvedValue({ spentCents: 21000, percentUsed: 7, firedThresholds: [] })
+      const service = new EnvelopeService(repo, budgetMonths, categoriesMock(), alerts)
+
+      const result = await service.list('user-1', '2026-09')
+
+      expect(alerts.envelopeAlert).toHaveBeenCalledWith('user-1', 'env-1', 21000, 30000)
+      expect(alerts.budgetMonthAlert).toHaveBeenCalledWith('user-1', 'bm-1', 21000, 310000)
+      expect(result.envelopes[0]).toMatchObject({ spentCents: 21000, percentUsed: 70, firedThresholds: [70] })
+      expect(result.totalSpentCents).toBe(21000)
+      expect(result.totalPercentUsed).toBe(7)
+      expect(result.totalFiredThresholds).toEqual([])
     })
   })
 
@@ -92,7 +125,7 @@ describe('EnvelopeService', () => {
       budgetMonths.requireId.mockResolvedValue({ id: 'bm-1', month: '2026-09', variableCapCents: 310000 })
       const categories = categoriesMock()
       categories.findActiveById.mockResolvedValue(null)
-      const service = new EnvelopeService(repoMock(), budgetMonths, categories)
+      const service = new EnvelopeService(repoMock(), budgetMonths, categories, alertsMock())
 
       await expect(
         service.create('user-1', '2026-09', { categoryId: 'cat-de-outro', amountCents: 30000 }),
@@ -106,7 +139,7 @@ describe('EnvelopeService', () => {
       categories.findActiveById.mockResolvedValue(categoryRow())
       const repo = repoMock()
       repo.create.mockResolvedValue(envelopeRow({ amountCents: null, percent: 20 }))
-      const service = new EnvelopeService(repo, budgetMonths, categories)
+      const service = new EnvelopeService(repo, budgetMonths, categories, alertsMock())
 
       const result = await service.create('user-1', '2026-09', { categoryId: 'cat-1', percent: 20 })
 
@@ -123,7 +156,7 @@ describe('EnvelopeService', () => {
       repo.create.mockRejectedValue(
         new Prisma.PrismaClientKnownRequestError('duplicate', { code: 'P2002', clientVersion: 'x' }),
       )
-      const service = new EnvelopeService(repo, budgetMonths, categories)
+      const service = new EnvelopeService(repo, budgetMonths, categories, alertsMock())
 
       await expect(
         service.create('user-1', '2026-09', { categoryId: 'cat-1', amountCents: 30000 }),
@@ -133,7 +166,7 @@ describe('EnvelopeService', () => {
     it('422 quando o mês do envelope já existia e está fechado', async () => {
       const budgetMonths = budgetMonthsMock()
       budgetMonths.requireId.mockResolvedValue({ id: 'bm-1', month: '2000-01', variableCapCents: 310000 })
-      const service = new EnvelopeService(repoMock(), budgetMonths, categoriesMock())
+      const service = new EnvelopeService(repoMock(), budgetMonths, categoriesMock(), alertsMock())
 
       await expect(
         service.create('user-1', '2000-01', { categoryId: 'cat-1', amountCents: 30000 }),
@@ -145,7 +178,7 @@ describe('EnvelopeService', () => {
     it('404 quando o envelope não existe (ou não é do usuário)', async () => {
       const repo = repoMock()
       repo.update.mockResolvedValue({ count: 0 })
-      const service = new EnvelopeService(repo, budgetMonthsMock(), categoriesMock())
+      const service = new EnvelopeService(repo, budgetMonthsMock(), categoriesMock(), alertsMock())
 
       await expect(service.update('user-1', 'env-de-outro', { amountCents: 1000 })).rejects.toBeInstanceOf(
         NotFoundError,
@@ -160,7 +193,7 @@ describe('EnvelopeService', () => {
         budgetMonth: budgetMonthRow(),
       }
       repo.findById.mockResolvedValue(withBudgetMonth)
-      const service = new EnvelopeService(repo, budgetMonthsMock(), categoriesMock())
+      const service = new EnvelopeService(repo, budgetMonthsMock(), categoriesMock(), alertsMock())
 
       const result = await service.update('user-1', 'env-1', { percent: 50 })
 
@@ -173,7 +206,7 @@ describe('EnvelopeService', () => {
         ...envelopeRow(),
         budgetMonth: budgetMonthRow({ month: '2000-01' }),
       })
-      const service = new EnvelopeService(repo, budgetMonthsMock(), categoriesMock())
+      const service = new EnvelopeService(repo, budgetMonthsMock(), categoriesMock(), alertsMock())
 
       await expect(service.update('user-1', 'env-1', { amountCents: 1000 })).rejects.toMatchObject({
         code: 'BUDGET_MONTH_CLOSED',
@@ -186,7 +219,7 @@ describe('EnvelopeService', () => {
     it('404 quando o envelope não existe (ou não é do usuário)', async () => {
       const repo = repoMock()
       repo.delete.mockResolvedValue({ count: 0 })
-      const service = new EnvelopeService(repo, budgetMonthsMock(), categoriesMock())
+      const service = new EnvelopeService(repo, budgetMonthsMock(), categoriesMock(), alertsMock())
 
       await expect(service.remove('user-1', 'env-de-outro')).rejects.toBeInstanceOf(NotFoundError)
     })
@@ -197,7 +230,7 @@ describe('EnvelopeService', () => {
         ...envelopeRow(),
         budgetMonth: budgetMonthRow({ month: '2000-01' }),
       })
-      const service = new EnvelopeService(repo, budgetMonthsMock(), categoriesMock())
+      const service = new EnvelopeService(repo, budgetMonthsMock(), categoriesMock(), alertsMock())
 
       await expect(service.remove('user-1', 'env-1')).rejects.toMatchObject({ code: 'BUDGET_MONTH_CLOSED' })
       expect(repo.delete).not.toHaveBeenCalled()
