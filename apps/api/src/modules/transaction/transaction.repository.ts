@@ -18,13 +18,6 @@ export class TransactionRepository {
     return this.prisma.transaction.findFirst({ where: { userId, id, account: { type: 'CREDIT_CARD' } } })
   }
 
-  async updatePerson(userId: string, id: string, personId: string): Promise<Prisma.BatchPayload> {
-    return this.prisma.transaction.updateMany({
-      where: { userId, id, account: { type: 'CREDIT_CARD' } },
-      data: { personId },
-    })
-  }
-
   async updateCategory(userId: string, id: string, categoryId: string): Promise<Prisma.BatchPayload> {
     return this.prisma.transaction.updateMany({
       where: { userId, id, account: { type: 'CREDIT_CARD' } },

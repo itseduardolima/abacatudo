@@ -10,11 +10,6 @@ export class SplitRepository {
     return this.prisma.split.findMany({ where: { userId, transactionId } })
   }
 
-  // Sem tocar em Transaction.personId — quem chama (ex.: corrigir a pessoa direto) já cuida disso.
-  async deleteAll(userId: string, transactionId: string): Promise<void> {
-    await this.prisma.split.deleteMany({ where: { userId, transactionId } })
-  }
-
   // Atômico: zera personId (a transação passa a valer pela soma dos splits) e substitui os splits
   // inteiros — nunca mistura splits antigos com novos.
   async replaceAll(
@@ -33,8 +28,10 @@ export class SplitRepository {
     })
   }
 
-  // Desfaz a divisão: remove os splits e devolve a transação pra um dono só.
-  async clear(userId: string, transactionId: string, personId: string): Promise<void> {
+  // Atômico: remove qualquer split e devolve a transação pra um dono só — usado tanto pra desfazer uma
+  // divisão (volta pro self) quanto pra corrigir a pessoa direto (splits antigos nunca podem sobrar
+  // "escondidos" depois, ou computeInvoice os herdaria por engano).
+  async setSinglePerson(userId: string, transactionId: string, personId: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       await setUserInTransaction(tx, userId)
       await tx.split.deleteMany({ where: { userId, transactionId } })

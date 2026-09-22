@@ -11,7 +11,6 @@ function repoMock() {
   return {
     findMany: jest.fn(),
     findById: jest.fn(),
-    updatePerson: jest.fn(),
     updateCategory: jest.fn(),
   } as unknown as jest.Mocked<TransactionRepository>
 }
@@ -29,7 +28,7 @@ function rulesMock() {
 }
 
 function splitsMock() {
-  return { deleteAll: jest.fn() } as unknown as jest.Mocked<SplitRepository>
+  return { setSinglePerson: jest.fn() } as unknown as jest.Mocked<SplitRepository>
 }
 
 function row(overrides: Partial<TransactionRow> = {}): TransactionRow {
@@ -143,13 +142,12 @@ describe('TransactionService', () => {
       await expect(
         service.updatePerson('user-1', 'tx-1', { personId: 'person-de-outro', alwaysForMerchant: false }),
       ).rejects.toBeInstanceOf(NotFoundError)
-      expect(repo.updatePerson).not.toHaveBeenCalled()
+      expect(repo.findById).toHaveBeenCalledTimes(1)
     })
 
-    it('troca a pessoa, desfaz split se tiver, devolve a transação atualizada', async () => {
+    it('troca a pessoa e desfaz split se tiver, atomicamente, devolve a transação atualizada', async () => {
       const repo = repoMock()
       repo.findById.mockResolvedValueOnce(row()).mockResolvedValueOnce(row({ personId: 'person-2' }))
-      repo.updatePerson.mockResolvedValue({ count: 1 })
       const people = peopleMock()
       people.findActiveById.mockResolvedValue(personRow())
       const splits = splitsMock()
@@ -157,8 +155,7 @@ describe('TransactionService', () => {
 
       const result = await service.updatePerson('user-1', 'tx-1', { personId: 'person-2', alwaysForMerchant: false })
 
-      expect(repo.updatePerson).toHaveBeenCalledWith('user-1', 'tx-1', 'person-2')
-      expect(splits.deleteAll).toHaveBeenCalledWith('user-1', 'tx-1')
+      expect(splits.setSinglePerson).toHaveBeenCalledWith('user-1', 'tx-1', 'person-2')
       expect(result.personId).toBe('person-2')
     })
 
@@ -168,13 +165,14 @@ describe('TransactionService', () => {
       const people = peopleMock()
       people.findActiveById.mockResolvedValue(personRow())
       const rules = rulesMock()
-      const service = newService({ repo, people, rules })
+      const splits = splitsMock()
+      const service = newService({ repo, people, rules, splits })
 
       await expect(
         service.updatePerson('user-1', 'tx-1', { personId: 'person-2', alwaysForMerchant: true }),
       ).rejects.toBeInstanceOf(DomainError)
       expect(rules.upsertPerson).not.toHaveBeenCalled()
-      expect(repo.updatePerson).not.toHaveBeenCalled()
+      expect(splits.setSinglePerson).not.toHaveBeenCalled()
     })
 
     it('alwaysForMerchant cria/atualiza a Rule com o merchant normalizado', async () => {
@@ -182,7 +180,6 @@ describe('TransactionService', () => {
       repo.findById
         .mockResolvedValueOnce(row({ merchant: '  Loja da Família  ' }))
         .mockResolvedValueOnce(row({ merchant: '  Loja da Família  ', personId: 'person-2' }))
-      repo.updatePerson.mockResolvedValue({ count: 1 })
       const people = peopleMock()
       people.findActiveById.mockResolvedValue(personRow())
       const rules = rulesMock()

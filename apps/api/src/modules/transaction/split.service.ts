@@ -57,7 +57,7 @@ export class SplitService {
     const self = await this.people.findSelf(userId)
     if (!self) throw new DomainError('SELF_PERSON_NOT_FOUND', 'Pessoa "Eu" não encontrada.', 500)
 
-    await this.splits.clear(userId, transactionId, self.id)
+    await this.splits.setSinglePerson(userId, transactionId, self.id)
     const updated = await this.transactions.findById(userId, transactionId)
     if (!updated) throw NOT_FOUND()
     return toTransactionDto(updated)

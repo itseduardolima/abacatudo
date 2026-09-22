@@ -14,7 +14,7 @@ function peopleMock() {
 }
 
 function splitsMock() {
-  return { replaceAll: jest.fn(), clear: jest.fn() } as unknown as jest.Mocked<SplitRepository>
+  return { replaceAll: jest.fn(), setSinglePerson: jest.fn() } as unknown as jest.Mocked<SplitRepository>
 }
 
 function row(overrides: Partial<TransactionRow> = {}): TransactionRow {
@@ -172,7 +172,7 @@ describe('SplitService', () => {
 
       const result = await service.clear('user-1', 'tx-1')
 
-      expect(splits.clear).toHaveBeenCalledWith('user-1', 'tx-1', 'self-1')
+      expect(splits.setSinglePerson).toHaveBeenCalledWith('user-1', 'tx-1', 'self-1')
       expect(result.personId).toBe('self-1')
     })
   })

@@ -44,10 +44,9 @@ export class TransactionService {
       await this.rules.upsertPerson(userId, normalizeMerchant(existing.merchant), input.personId)
     }
 
-    const result = await this.repo.updatePerson(userId, id, input.personId)
-    if (result.count === 0) throw NOT_FOUND()
-    // Corrigir a pessoa direto é uma forma de desfazer uma divisão — a transação volta a ter um dono só.
-    await this.splits.deleteAll(userId, id)
+    // Atômico: corrigir a pessoa direto também desfaz uma divisão, se tiver — nunca deixa split antigo
+    // sobrar "escondido" depois que a pessoa foi trocada.
+    await this.splits.setSinglePerson(userId, id, input.personId)
 
     const updated = await this.repo.findById(userId, id)
     if (!updated) throw NOT_FOUND()
