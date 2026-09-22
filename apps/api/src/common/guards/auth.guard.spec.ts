@@ -2,6 +2,7 @@ import type { ExecutionContext } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { Public } from '../decorators/public.decorator'
 import { UnauthorizedError } from '../errors/domain.error'
+import type { RequestWithUser } from '../types/request'
 import { AuthGuard } from './auth.guard'
 
 class Ctrl {
@@ -10,18 +11,27 @@ class Ctrl {
   closed() {}
 }
 
-function contextFor(method: 'open' | 'closed'): ExecutionContext {
-  return { getHandler: () => Ctrl.prototype[method], getClass: () => Ctrl } as unknown as ExecutionContext
+function contextFor(method: 'open' | 'closed', userId?: string): ExecutionContext {
+  const request: Partial<RequestWithUser> = userId ? { userId } : {}
+  return {
+    getHandler: () => Ctrl.prototype[method],
+    getClass: () => Ctrl,
+    switchToHttp: () => ({ getRequest: () => request }),
+  } as unknown as ExecutionContext
 }
 
 describe('AuthGuard', () => {
   const guard = new AuthGuard(new Reflector())
 
-  it('deixa passar rota @Public()', () => {
+  it('deixa passar rota @Public() mesmo sem userId', () => {
     expect(guard.canActivate(contextFor('open'))).toBe(true)
   })
 
-  it('recusa por padrão qualquer rota sem @Public() (falha fechada)', () => {
+  it('deixa passar rota fechada quando o SessionMiddleware já resolveu o userId', () => {
+    expect(guard.canActivate(contextFor('closed', 'user-1'))).toBe(true)
+  })
+
+  it('recusa por padrão uma rota sem @Public() e sem userId no request (falha fechada)', () => {
     expect(() => guard.canActivate(contextFor('closed'))).toThrow(UnauthorizedError)
   })
 
