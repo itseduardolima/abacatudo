@@ -142,14 +142,37 @@ describe('PluggyClient', () => {
     expect(authCalls).toHaveLength(2)
   })
 
-  it('listAccounts devolve a lista de contas do item', async () => {
+  it('listAccounts devolve a lista de contas do item (1 página só)', async () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
-      .mockResolvedValueOnce(jsonResponse(200, { results: [{ id: 'acc-1', type: 'CREDIT', name: 'Nubank' }] }))
+      .mockResolvedValueOnce(
+        jsonResponse(200, { results: [{ id: 'acc-1', type: 'CREDIT', name: 'Nubank' }], page: 1, totalPages: 1 }),
+      )
     const client = new PluggyClient(configMock())
 
     await expect(client.listAccounts('item-1')).resolves.toEqual([{ id: 'acc-1', type: 'CREDIT', name: 'Nubank' }])
-    expect(fetchMock.mock.calls[1][0]).toBe('https://api.pluggy.ai/accounts?itemId=item-1')
+    expect(fetchMock.mock.calls[1][0]).toBe('https://api.pluggy.ai/accounts?itemId=item-1&page=1')
+  })
+
+  it('listAccounts percorre todas as páginas quando totalPages > 1', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
+      .mockResolvedValueOnce(
+        jsonResponse(200, { results: [{ id: 'acc-1', type: 'CREDIT', name: 'Nubank' }], page: 1, totalPages: 2 }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(200, { results: [{ id: 'acc-2', type: 'BANK', name: 'Nubank conta' }], page: 2, totalPages: 2 }),
+      )
+    const client = new PluggyClient(configMock())
+
+    const result = await client.listAccounts('item-1')
+
+    expect(result).toEqual([
+      { id: 'acc-1', type: 'CREDIT', name: 'Nubank' },
+      { id: 'acc-2', type: 'BANK', name: 'Nubank conta' },
+    ])
+    expect(fetchMock.mock.calls[1][0]).toBe('https://api.pluggy.ai/accounts?itemId=item-1&page=1')
+    expect(fetchMock.mock.calls[2][0]).toBe('https://api.pluggy.ai/accounts?itemId=item-1&page=2')
   })
 
   it('listTransactions sem cursor usa o endpoint v2; `next` na prática é só querystring, não URL absoluta', async () => {

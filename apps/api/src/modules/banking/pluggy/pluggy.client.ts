@@ -17,6 +17,8 @@ const REQUEST_TIMEOUT_MS = 15_000
 const MAX_ATTEMPTS = 3
 // Único conector gratuito para uso pessoal (07-integracao-bancaria § Resultado do spike).
 const MEU_PLUGGY_CONNECTOR_ID = 200
+// Trava de segurança contra paginação que nunca termina — bem acima do que uma pessoa física teria de contas.
+const MAX_ACCOUNT_PAGES = 20
 // A resposta da criação do item vem com `parameter: null` — o link OAuth ainda está sendo gerado (visto
 // na prática: ~2s). Espera curta e limitada antes de desistir.
 const AUTHORIZE_URL_POLL_ATTEMPTS = 5
@@ -52,9 +54,16 @@ export class PluggyClient {
     return this.request('GET', `/items/${pluggyItemId}`, pluggyItemSchema)
   }
 
+  // Paginado de verdade (visto na prática: a resposta vem com total/totalPages/page) — sem isso, alguém com
+  // contas suficientes pra estourar uma página perdia contas do sync silenciosamente.
   async listAccounts(pluggyItemId: string): Promise<PluggyAccount[]> {
-    const page = await this.request('GET', `/accounts?itemId=${pluggyItemId}`, pluggyAccountsPageSchema)
-    return page.results
+    const results: PluggyAccount[] = []
+    for (let page = 1; page <= MAX_ACCOUNT_PAGES; page++) {
+      const data = await this.request('GET', `/accounts?itemId=${pluggyItemId}&page=${page}`, pluggyAccountsPageSchema)
+      results.push(...data.results)
+      if (page >= (data.totalPages ?? 1)) break
+    }
+    return results
   }
 
   async listTransactions(
