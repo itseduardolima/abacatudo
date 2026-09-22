@@ -49,8 +49,14 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
   estabelecimento normalizado, rejeita (`400 MERCHANT_REQUIRED_FOR_RULE`) se a transação não tiver
   merchant. Verificado ao vivo contra Postgres real: troca de pessoa, criação da `Rule` (linha conferida
   no banco), rejeição sem merchant, 404 em movimentação e em pessoa inexistente.
-- Próximo: Sprint 3 Etapa 3 — model `Split` e dividir uma compra entre pessoas (soma tem que fechar com o
-  total).
+- **Sprint 3 Etapa 3 concluída (2026-09-22)**: model `Split` + RLS, `POST .../split/preview` (divisão igual
+  calculada pela API, nunca no cliente — resto de centavos pros primeiros), `PUT .../split` (substitui os
+  splits, exige soma exata, rejeita pessoa duplicada), `DELETE .../split` (desfaz, volta pro self).
+  Corrigir a pessoa direto (`PATCH .../person`) também desfaz um split ativo. Verificado ao vivo contra
+  Postgres real: os 6 cenários (preview, grava, soma errada, pessoa duplicada, desfazer, e desfazer via
+  correção de pessoa) todos se comportaram certo.
+- Próximo: Sprint 3 Etapa 4 — categorização automática (regra + merchant confirmado + sem categoria; a
+  sugestão de IA fica pra Sprint 7).
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -182,7 +188,7 @@ Escopo mudou a pedido do usuário (2026-09-22): toda transação nasce "Meu", se
 
 - [x] 4.1 — Corrigir pessoa em 1 toque: `PATCH /transactions/:id/person`, testado ao vivo
 - [x] 4.2 — "Sempre para este estabelecimento": `alwaysForMerchant` no mesmo endpoint, testado ao vivo
-- [ ] 4.4 — Dividir compra
+- [x] 4.4 — Dividir compra: model `Split`, preview + PUT + DELETE, testado ao vivo
 - [ ] 4.5 — Categorização automática por regras/histórico
 
 ### Bugs achados só ao rodar de verdade (e corrigidos)
