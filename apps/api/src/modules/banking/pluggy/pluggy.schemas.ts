@@ -62,7 +62,9 @@ export const pluggyTransactionSchema = z.object({
   // purchaseDate é a data real da compra.
   date: z.string(),
   description: z.string(),
-  merchant: z.object({ name: z.string().nullable().optional() }).nullable().optional(),
+  // Campo real do Pluggy é businessName, não name (visto na prática) — sem isso, merchant ficava sempre
+  // null e "sempre para este estabelecimento" (Rule) não tinha o que casar.
+  merchant: z.object({ businessName: z.string().nullable().optional() }).nullable().optional(),
   creditCardMetadata: z
     .object({
       cardNumber: z.string().nullable().optional(),

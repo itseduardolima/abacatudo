@@ -37,7 +37,7 @@ export function mapTransaction(tx: PluggyTransaction): MappedTransaction {
     // quando a compra de fato aconteceu — é isso que conta pra "gasto do mês" (03-regras-negocio).
     occurredAt: dayFromDateString(card?.purchaseDate ?? tx.date),
     description: tx.description,
-    merchant: tx.merchant?.name ?? null,
+    merchant: tx.merchant?.businessName ?? null,
     cardLast4: card?.cardNumber ?? null,
     installmentNumber: card?.installmentNumber ?? null,
     installmentTotal: card?.totalInstallments ?? null,

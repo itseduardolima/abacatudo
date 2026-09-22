@@ -57,7 +57,7 @@ describe('mapTransaction', () => {
     const result = mapTransaction(
       tx({
         amount: -89.9,
-        merchant: { name: 'Loja X' },
+        merchant: { businessName: 'Loja X' },
         creditCardMetadata: { cardNumber: '1234', totalInstallments: 3, installmentNumber: 1, billId: 'bill-1' },
       }),
     )
