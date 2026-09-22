@@ -1,0 +1,145 @@
+import type { BudgetMonth as BudgetMonthRow } from '@prisma/client'
+import { DomainError } from '../../common/errors/domain.error'
+import { BudgetMonthService } from './budget-month.service'
+import type { BudgetMonthRepository } from './budget-month.repository'
+
+function repoMock() {
+  return {
+    findByMonth: jest.fn(),
+    findMostRecentBefore: jest.fn(),
+    create: jest.fn(),
+    upsert: jest.fn(),
+  } as unknown as jest.Mocked<BudgetMonthRepository>
+}
+
+function row(overrides: Partial<BudgetMonthRow> = {}): BudgetMonthRow {
+  return {
+    id: 'bm-1',
+    userId: 'user-1',
+    month: '2026-09',
+    incomeCents: 500000,
+    benefitCents: 60000,
+    fixedExpensesCents: 200000,
+    savingsGoalCents: 50000,
+    createdAt: new Date('2026-09-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-09-01T00:00:00.000Z'),
+    ...overrides,
+  }
+}
+
+describe('BudgetMonthService', () => {
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-15T12:00:00.000Z'))
+  })
+  afterEach(() => jest.useRealTimers())
+
+  describe('getOrCreate', () => {
+    it('mês já configurado: devolve com o teto variável calculado', async () => {
+      const repo = repoMock()
+      repo.findByMonth.mockResolvedValue(row())
+      const service = new BudgetMonthService(repo)
+
+      const result = await service.getOrCreate('user-1', '2026-09')
+
+      expect(result).toEqual({
+        month: '2026-09',
+        incomeCents: 500000,
+        benefitCents: 60000,
+        fixedExpensesCents: 200000,
+        savingsGoalCents: 50000,
+        variableCapCents: 310000,
+      })
+    })
+
+    it('mês atual sem configuração: cria copiando o mês configurado mais recente', async () => {
+      const repo = repoMock()
+      repo.findByMonth.mockResolvedValue(null)
+      repo.findMostRecentBefore.mockResolvedValue(row({ month: '2026-08' }))
+      repo.create.mockResolvedValue(row({ month: '2026-09' }))
+      const service = new BudgetMonthService(repo)
+
+      await service.getOrCreate('user-1', '2026-09')
+
+      expect(repo.create).toHaveBeenCalledWith('user-1', '2026-09', {
+        incomeCents: 500000,
+        benefitCents: 60000,
+        fixedExpensesCents: 200000,
+        savingsGoalCents: 50000,
+      })
+    })
+
+    it('mês futuro sem histórico nenhum: cria zerado', async () => {
+      const repo = repoMock()
+      repo.findByMonth.mockResolvedValue(null)
+      repo.findMostRecentBefore.mockResolvedValue(null)
+      repo.create.mockResolvedValue(
+        row({ month: '2026-12', incomeCents: 0, benefitCents: 0, fixedExpensesCents: 0, savingsGoalCents: 0 }),
+      )
+      const service = new BudgetMonthService(repo)
+
+      await service.getOrCreate('user-1', '2026-12')
+
+      expect(repo.create).toHaveBeenCalledWith('user-1', '2026-12', {
+        incomeCents: 0,
+        benefitCents: 0,
+        fixedExpensesCents: 0,
+        savingsGoalCents: 0,
+      })
+    })
+
+    it('mês passado sem configuração: zero, sem gravar nada', async () => {
+      const repo = repoMock()
+      repo.findByMonth.mockResolvedValue(null)
+      const service = new BudgetMonthService(repo)
+
+      const result = await service.getOrCreate('user-1', '2026-01')
+
+      expect(result).toEqual({
+        month: '2026-01',
+        incomeCents: 0,
+        benefitCents: 0,
+        fixedExpensesCents: 0,
+        savingsGoalCents: 0,
+        variableCapCents: 0,
+      })
+      expect(repo.create).not.toHaveBeenCalled()
+      expect(repo.findMostRecentBefore).not.toHaveBeenCalled()
+    })
+
+    it('mês em formato inválido é rejeitado antes de tocar no banco', async () => {
+      const repo = repoMock()
+      const service = new BudgetMonthService(repo)
+
+      await expect(service.getOrCreate('user-1', 'setembro')).rejects.toBeInstanceOf(DomainError)
+      expect(repo.findByMonth).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('update', () => {
+    it('mês atual/futuro: grava', async () => {
+      const repo = repoMock()
+      repo.upsert.mockResolvedValue(row({ month: '2026-09', incomeCents: 600000 }))
+      const service = new BudgetMonthService(repo)
+
+      const input = { incomeCents: 600000, benefitCents: 60000, fixedExpensesCents: 200000, savingsGoalCents: 50000 }
+      await service.update('user-1', '2026-09', input)
+
+      expect(repo.upsert).toHaveBeenCalledWith('user-1', '2026-09', input)
+    })
+
+    it('mês fechado (passado) é rejeitado, nunca reescreve o histórico', async () => {
+      const repo = repoMock()
+      const service = new BudgetMonthService(repo)
+
+      await expect(
+        service.update('user-1', '2026-08', {
+          incomeCents: 0,
+          benefitCents: 0,
+          fixedExpensesCents: 0,
+          savingsGoalCents: 0,
+        }),
+      ).rejects.toBeInstanceOf(DomainError)
+      expect(repo.upsert).not.toHaveBeenCalled()
+    })
+  })
+})

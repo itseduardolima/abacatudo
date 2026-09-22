@@ -11,6 +11,7 @@ import { SessionMiddleware } from './common/middlewares/session.middleware'
 import { AccountModule } from './modules/account/account.module'
 import { AuthModule } from './modules/auth/auth.module'
 import { BankingModule } from './modules/banking/banking.module'
+import { BudgetModule } from './modules/budget/budget.module'
 import { CategoryModule } from './modules/category/category.module'
 import { HealthModule } from './modules/health/health.module'
 import { InvoiceModule } from './modules/invoice/invoice.module'
@@ -38,6 +39,7 @@ import { PrismaModule } from './prisma/prisma.module'
     BankingModule,
     TransactionModule,
     InvoiceModule,
+    BudgetModule,
     HealthModule,
   ],
   providers: [
