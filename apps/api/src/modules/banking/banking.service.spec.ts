@@ -1,6 +1,8 @@
-import type { Account as AccountRow, PluggyItem as PluggyItemRow } from '@prisma/client'
+import type { Account as AccountRow, Person as PersonRow, PluggyItem as PluggyItemRow, Rule } from '@prisma/client'
 import { NotFoundError } from '../../common/errors/domain.error'
 import type { AccountRepository } from '../account/account.repository'
+import type { PersonRepository } from '../person/person.repository'
+import type { RuleRepository } from '../rule/rule.repository'
 import type { BankingSyncRepository } from './banking-sync.repository'
 import { BankingService } from './banking.service'
 import type { PluggyClient } from './pluggy/pluggy.client'
@@ -35,6 +37,39 @@ function accountsMock() {
 
 function syncMock() {
   return { upsertTransaction: jest.fn() } as unknown as jest.Mocked<BankingSyncRepository>
+}
+
+// findSelf resolve pra "self-1" por padrão — a maioria dos testes não olha pra atribuição de pessoa.
+function peopleMock() {
+  const mock = { findSelf: jest.fn() } as unknown as jest.Mocked<PersonRepository>
+  mock.findSelf.mockResolvedValue(personRow())
+  return mock
+}
+
+function rulesMock() {
+  const mock = { findMany: jest.fn() } as unknown as jest.Mocked<RuleRepository>
+  mock.findMany.mockResolvedValue([])
+  return mock
+}
+
+function newService(
+  overrides: {
+    pluggy?: jest.Mocked<PluggyClient>
+    items?: jest.Mocked<PluggyItemRepository>
+    accounts?: jest.Mocked<AccountRepository>
+    sync?: jest.Mocked<BankingSyncRepository>
+    people?: jest.Mocked<PersonRepository>
+    rules?: jest.Mocked<RuleRepository>
+  } = {},
+) {
+  return new BankingService(
+    overrides.pluggy ?? pluggyMock(),
+    overrides.items ?? itemsMock(),
+    overrides.accounts ?? accountsMock(),
+    overrides.sync ?? syncMock(),
+    overrides.people ?? peopleMock(),
+    overrides.rules ?? rulesMock(),
+  )
 }
 
 function itemRow(overrides: Partial<PluggyItemRow> = {}): PluggyItemRow {
@@ -72,6 +107,31 @@ function accountRow(overrides: Partial<AccountRow> = {}): AccountRow {
   }
 }
 
+function personRow(overrides: Partial<PersonRow> = {}): PersonRow {
+  return {
+    id: 'self-1',
+    userId: 'user-1',
+    name: 'Eu',
+    isSelf: true,
+    archivedAt: null,
+    createdAt: new Date('2026-09-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-09-01T00:00:00.000Z'),
+    ...overrides,
+  }
+}
+
+function ruleRow(overrides: Partial<Rule> = {}): Rule {
+  return {
+    id: 'rule-1',
+    userId: 'user-1',
+    merchant: 'loja da família',
+    personId: 'person-2',
+    createdAt: new Date('2026-09-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-09-01T00:00:00.000Z'),
+    ...overrides,
+  }
+}
+
 describe('BankingService', () => {
   it('connect: cria o item Meu Pluggy e devolve a URL de autorização', async () => {
     const pluggy = pluggyMock()
@@ -81,7 +141,7 @@ describe('BankingService', () => {
     })
     const items = itemsMock()
     items.create.mockResolvedValue(itemRow())
-    const service = new BankingService(pluggy, items, accountsMock(), syncMock())
+    const service = newService({ pluggy, items })
 
     const result = await service.connect('user-1')
 
@@ -96,7 +156,7 @@ describe('BankingService', () => {
   it('checkStatus: 404 quando a conexão não é do usuário', async () => {
     const items = itemsMock()
     items.findById.mockResolvedValue(null)
-    const service = new BankingService(pluggyMock(), items, accountsMock(), syncMock())
+    const service = newService({ items })
 
     await expect(service.checkStatus('user-1', 'item-de-outro')).rejects.toBeInstanceOf(NotFoundError)
   })
@@ -110,7 +170,7 @@ describe('BankingService', () => {
       status: 'UPDATING',
       connector: { id: 200, name: 'Meu Pluggy' },
     })
-    const service = new BankingService(pluggy, items, accountsMock(), syncMock())
+    const service = newService({ pluggy, items })
 
     await service.checkStatus('user-1', 'item-1')
 
@@ -130,7 +190,7 @@ describe('BankingService', () => {
       connector: { id: 200, name: 'Meu Pluggy' },
     })
     pluggy.listAccounts.mockResolvedValue([])
-    const service = new BankingService(pluggy, items, accountsMock(), syncMock())
+    const service = newService({ pluggy, items })
 
     await service.checkStatus('user-1', 'item-1')
 
@@ -152,7 +212,7 @@ describe('BankingService', () => {
       connector: { id: 200, name: 'Meu Pluggy' },
       error: { code: 'INVALID_CREDENTIALS' },
     })
-    const service = new BankingService(pluggy, items, accountsMock(), syncMock())
+    const service = newService({ pluggy, items })
 
     await service.checkStatus('user-1', 'item-1')
 
@@ -172,7 +232,7 @@ describe('BankingService', () => {
       status: 'UPDATED',
       connector: { id: 200, name: 'Meu Pluggy' },
     })
-    const service = new BankingService(pluggy, items, accountsMock(), syncMock())
+    const service = newService({ pluggy, items })
 
     await service.checkStatus('user-1', 'item-1')
 
@@ -194,6 +254,8 @@ describe('BankingService', () => {
             amount: 50,
             type: 'DEBIT',
             operationType: null,
+            category: null,
+            categoryId: null,
             status: 'POSTED',
             date: '2026-09-21',
             description: 'PAG*LOJA',
@@ -205,7 +267,7 @@ describe('BankingService', () => {
       })
       .mockResolvedValueOnce({ results: [], next: null })
     const sync = syncMock()
-    const service = new BankingService(pluggy, items, accounts, sync)
+    const service = newService({ pluggy, items, accounts, sync })
 
     const result = await service.manualSync('user-1', 'item-1')
 
@@ -219,6 +281,7 @@ describe('BankingService', () => {
     expect(sync.upsertTransaction).toHaveBeenCalledWith(
       'user-1',
       'acc-1',
+      'self-1',
       expect.objectContaining({ externalId: 'tx-1' }),
     )
     expect(pluggy.listTransactions).toHaveBeenNthCalledWith(
@@ -242,7 +305,7 @@ describe('BankingService', () => {
       { id: 'ext-acc-2', type: 'BANK', name: 'Nubank conta', creditData: null },
     ])
     pluggy.listTransactions.mockResolvedValue({ results: [], next: null })
-    const service = new BankingService(pluggy, items, accounts, syncMock())
+    const service = newService({ pluggy, items, accounts })
 
     const result = await service.manualSync('user-1', 'item-1')
 
@@ -262,5 +325,86 @@ describe('BankingService', () => {
       expect.any(Object),
     )
     expect(result.accountsSynced).toBe(2)
+  })
+
+  it('manualSync: sem regra, a transação nasce "Meu" (personId do self)', async () => {
+    const items = itemsMock()
+    items.findById.mockResolvedValue(itemRow())
+    const accounts = accountsMock()
+    accounts.upsertFromSync.mockResolvedValue(accountRow())
+    const pluggy = pluggyMock()
+    pluggy.listAccounts.mockResolvedValue([{ id: 'ext-acc-1', type: 'CREDIT', name: 'Nubank', creditData: null }])
+    pluggy.listTransactions.mockResolvedValue({
+      results: [
+        {
+          id: 'tx-1',
+          amount: 50,
+          type: 'DEBIT',
+          operationType: null,
+          category: null,
+          categoryId: null,
+          status: 'POSTED',
+          date: '2026-09-21',
+          description: 'PAG*MERCADO',
+          merchant: { businessName: 'Mercado Livre' },
+          creditCardMetadata: null,
+        },
+      ],
+      next: null,
+    })
+    const sync = syncMock()
+    const people = peopleMock()
+    people.findSelf.mockResolvedValue(personRow({ id: 'self-42' }))
+    const rules = rulesMock()
+    const service = newService({ pluggy, items, accounts, sync, people, rules })
+
+    await service.manualSync('user-1', 'item-1')
+
+    expect(sync.upsertTransaction).toHaveBeenCalledWith('user-1', 'acc-1', 'self-42', expect.any(Object))
+  })
+
+  it('manualSync: com Rule pro estabelecimento (normalizado), atribui a pessoa da regra', async () => {
+    const items = itemsMock()
+    items.findById.mockResolvedValue(itemRow())
+    const accounts = accountsMock()
+    accounts.upsertFromSync.mockResolvedValue(accountRow())
+    const pluggy = pluggyMock()
+    pluggy.listAccounts.mockResolvedValue([{ id: 'ext-acc-1', type: 'CREDIT', name: 'Nubank', creditData: null }])
+    pluggy.listTransactions.mockResolvedValue({
+      results: [
+        {
+          id: 'tx-1',
+          amount: 50,
+          type: 'DEBIT',
+          operationType: null,
+          category: null,
+          categoryId: null,
+          status: 'POSTED',
+          date: '2026-09-21',
+          description: 'PAG*LOJA DA FAMILIA',
+          merchant: { businessName: '  Loja da Família  ' },
+          creditCardMetadata: null,
+        },
+      ],
+      next: null,
+    })
+    const sync = syncMock()
+    const rules = rulesMock()
+    rules.findMany.mockResolvedValue([ruleRow({ merchant: 'loja da família', personId: 'person-2' })])
+    const service = newService({ pluggy, items, accounts, sync, rules })
+
+    await service.manualSync('user-1', 'item-1')
+
+    expect(sync.upsertTransaction).toHaveBeenCalledWith('user-1', 'acc-1', 'person-2', expect.any(Object))
+  })
+
+  it('manualSync: sem Pessoa self cadastrada, falha alto (invariante quebrada)', async () => {
+    const items = itemsMock()
+    items.findById.mockResolvedValue(itemRow())
+    const people = peopleMock()
+    people.findSelf.mockResolvedValue(null)
+    const service = newService({ items, people })
+
+    await expect(service.manualSync('user-1', 'item-1')).rejects.toThrow('Pessoa "Eu" não encontrada.')
   })
 })

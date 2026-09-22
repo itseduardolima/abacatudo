@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common'
-import type { PluggyItem as PluggyItemRow } from '@prisma/client'
+import type { PluggyItem as PluggyItemRow, Rule } from '@prisma/client'
 import type { BankConnection, ConnectBankResponse, SyncResult } from '@gastos/shared'
-import { NotFoundError } from '../../common/errors/domain.error'
+import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository } from '../account/account.repository'
+import { PersonRepository } from '../person/person.repository'
+import { normalizeMerchant } from '../rule/normalize-merchant'
+import { RuleRepository } from '../rule/rule.repository'
 import { BankingSyncRepository } from './banking-sync.repository'
 import { mapAccountFields, mapTransaction } from './banking.mapper'
 import { PluggyClient } from './pluggy/pluggy.client'
@@ -17,6 +20,8 @@ export class BankingService {
     private readonly items: PluggyItemRepository,
     private readonly accounts: AccountRepository,
     private readonly sync: BankingSyncRepository,
+    private readonly people: PersonRepository,
+    private readonly rules: RuleRepository,
   ) {}
 
   async connect(userId: string): Promise<ConnectBankResponse> {
@@ -69,6 +74,10 @@ export class BankingService {
     const item = await this.items.findById(userId, itemId)
     if (!item) throw NOT_FOUND()
 
+    const selfPerson = await this.people.findSelf(userId)
+    if (!selfPerson) throw new DomainError('SELF_PERSON_NOT_FOUND', 'Pessoa "Eu" não encontrada.', 500)
+    const ruleByMerchant = new Map((await this.rules.findMany(userId)).map((rule: Rule) => [rule.merchant, rule]))
+
     const pluggyAccounts = await this.pluggy.listAccounts(item.pluggyItemId)
     let accountsSynced = 0
     let transactionsSynced = 0
@@ -87,7 +96,9 @@ export class BankingService {
       do {
         const page = await this.pluggy.listTransactions(pluggyAccount.id, cursor)
         for (const tx of page.results) {
-          await this.sync.upsertTransaction(userId, account.id, mapTransaction(tx))
+          const mapped = mapTransaction(tx)
+          const personId = resolvePersonId(mapped.merchant ?? null, ruleByMerchant, selfPerson.id)
+          await this.sync.upsertTransaction(userId, account.id, personId, mapped)
           transactionsSynced++
         }
         cursor = page.next ?? undefined
@@ -97,6 +108,13 @@ export class BankingService {
     await this.items.update(userId, item.id, { lastSyncAt: new Date() })
     return { accountsSynced, transactionsSynced }
   }
+}
+
+// Toda transação nasce "Meu" (03-regras-negocio § Atribuição de pessoa) a não ser que uma Rule diga outra
+// pessoa pra este estabelecimento.
+function resolvePersonId(merchant: string | null, ruleByMerchant: Map<string, Rule>, selfPersonId: string): string {
+  if (!merchant) return selfPersonId
+  return ruleByMerchant.get(normalizeMerchant(merchant))?.personId ?? selfPersonId
 }
 
 function toConnectionDto(row: PluggyItemRow): BankConnection {
