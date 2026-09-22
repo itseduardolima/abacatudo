@@ -92,6 +92,11 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
   `variableCapCents` = renda + benefício − fixos − poupança, calculado, nunca guardado. Verificado ao vivo:
   os 5 cenários (criar zerado, gravar, virada copiando, rejeitar mês fechado, ler mês fechado sem linha
   nova) todos bateram.
+- **Code review da Sprint 5 Etapa 1 (2026-09-22)**: 2 achados, os dois corrigidos e verificados ao vivo —
+  `getOrCreate` criava linha persistida pra qualquer mês futuro só por ter sido perguntado num GET (ex.:
+  `month=9999-12`), agora só cria pro mês atual/seguinte, o resto devolve zero sem gravar; e o
+  find-then-create tinha uma race no `@@unique([userId, month])` (2 GETs concorrentes pro mesmo mês novo
+  podiam derrubar um deles com 500) — virou `createIfMissing`, um upsert atômico com update vazio.
 - Próximo: Sprint 5 Etapa 2 — envelopes por categoria (7.2).
 
 ## Decisões já tomadas (2026-09-21)
