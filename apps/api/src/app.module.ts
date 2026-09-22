@@ -8,8 +8,11 @@ import { DomainExceptionFilter } from './common/filters/domain-exception.filter'
 import { AuthGuard } from './common/guards/auth.guard'
 import { RequestIdMiddleware } from './common/middlewares/request-id.middleware'
 import { SessionMiddleware } from './common/middlewares/session.middleware'
+import { AccountModule } from './modules/account/account.module'
 import { AuthModule } from './modules/auth/auth.module'
+import { CategoryModule } from './modules/category/category.module'
 import { HealthModule } from './modules/health/health.module'
+import { PersonModule } from './modules/person/person.module'
 import { PrismaModule } from './prisma/prisma.module'
 
 // Módulos de domínio entram aqui conforme forem criados, um por vez.
@@ -26,6 +29,9 @@ import { PrismaModule } from './prisma/prisma.module'
     }),
     PrismaModule,
     AuthModule,
+    AccountModule,
+    PersonModule,
+    CategoryModule,
     HealthModule,
   ],
   providers: [
