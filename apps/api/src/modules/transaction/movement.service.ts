@@ -1,19 +1,41 @@
 import { Injectable } from '@nestjs/common'
-import type { Transaction } from '@gastos/shared'
-import { monthKey, monthRange } from '../../common/date/timezone'
+import type { MovementTotals, Transaction } from '@gastos/shared'
+import { resolveMonthRange } from '../../common/date/timezone'
 import { DomainError } from '../../common/errors/domain.error'
 import { MovementRepository } from './movement.repository'
 import { toTransactionDto } from './transaction.mapper'
+
+export interface MovementListQuery {
+  month?: string
+  accountId?: string
+  direction?: string
+  search?: string
+}
 
 @Injectable()
 export class MovementService {
   constructor(private readonly repo: MovementRepository) {}
 
-  async listByMonth(userId: string, month?: string): Promise<Transaction[]> {
-    const key = month ?? monthKey(new Date())
-    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(key)) {
-      throw new DomainError('INVALID_MONTH', 'Mês inválido (esperado AAAA-MM).', 400)
-    }
-    return (await this.repo.findMany(userId, monthRange(key))).map(toTransactionDto)
+  async listByMonth(userId: string, query: MovementListQuery): Promise<Transaction[]> {
+    const range = resolveMonthRange(query.month)
+    const direction = resolveDirection(query.direction)
+    const rows = await this.repo.findMany(userId, range, {
+      accountId: query.accountId,
+      direction,
+      search: query.search,
+    })
+    return rows.map(toTransactionDto)
   }
+
+  async totals(userId: string, month?: string): Promise<MovementTotals> {
+    return this.repo.totals(userId, resolveMonthRange(month))
+  }
+}
+
+function resolveDirection(direction?: string): 'IN' | 'OUT' | undefined {
+  if (!direction) return undefined
+  if (direction !== 'IN' && direction !== 'OUT') {
+    throw new DomainError('INVALID_DIRECTION', 'Direção inválida (esperado IN ou OUT).', 400)
+  }
+  return direction
 }
