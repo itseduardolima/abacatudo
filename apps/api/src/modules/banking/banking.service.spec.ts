@@ -365,6 +365,48 @@ describe('BankingService', () => {
     expect(sync.upsertTransaction).toHaveBeenCalledWith('user-1', 'acc-1', 'self-42', null, expect.any(Object))
   })
 
+  it('manualSync: conta de movimentação nunca ganha pessoa nem categoria, mesmo com Rule pro merchant', async () => {
+    const items = itemsMock()
+    items.findById.mockResolvedValue(itemRow())
+    const accounts = accountsMock()
+    accounts.upsertFromSync.mockResolvedValue(accountRow({ type: 'CHECKING' }))
+    const pluggy = pluggyMock()
+    pluggy.listAccounts.mockResolvedValue([{ id: 'ext-acc-1', type: 'BANK', name: 'Nubank conta', creditData: null }])
+    pluggy.listTransactions.mockResolvedValue({
+      results: [
+        {
+          id: 'tx-1',
+          amount: 50,
+          type: 'CREDIT',
+          operationType: null,
+          category: null,
+          categoryId: null,
+          status: 'POSTED',
+          date: '2026-09-21',
+          description: 'Pix recebido',
+          merchant: { businessName: 'Loja da Família' },
+          creditCardMetadata: null,
+        },
+      ],
+      next: null,
+    })
+    const sync = syncMock()
+    const rules = rulesMock()
+    // Regra existe (criada pelo lado do cartão), mas não vale pra movimentação.
+    rules.findMany.mockResolvedValue([ruleRow({ merchant: 'loja da família', personId: 'person-2' })])
+    const service = newService({ pluggy, items, accounts, sync, rules })
+
+    await service.manualSync('user-1', 'item-1')
+
+    expect(sync.upsertTransaction).toHaveBeenCalledWith(
+      'user-1',
+      'acc-1',
+      null,
+      null,
+      expect.objectContaining({ kind: 'INCOME' }),
+    )
+  })
+
   it('manualSync: com Rule pro estabelecimento (normalizado), atribui a pessoa e a categoria da regra', async () => {
     const items = itemsMock()
     items.findById.mockResolvedValue(itemRow())

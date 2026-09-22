@@ -84,6 +84,7 @@ export class BankingService {
 
     for (const pluggyAccount of pluggyAccounts) {
       const fields = mapAccountFields(pluggyAccount)
+      const isCreditCard = fields.type === 'CREDIT_CARD'
       const account = await this.accounts.upsertFromSync(
         userId,
         pluggyAccount.id,
@@ -96,10 +97,12 @@ export class BankingService {
       do {
         const page = await this.pluggy.listTransactions(pluggyAccount.id, cursor)
         for (const tx of page.results) {
-          const mapped = mapTransaction(tx)
+          const mapped = mapTransaction(tx, isCreditCard)
           const merchant = mapped.merchant ?? null
-          const personId = resolvePersonId(merchant, ruleByMerchant, selfPerson.id)
-          const categoryId = resolveCategoryId(merchant, ruleByMerchant)
+          // Pessoa/categoria só existem em cartão de crédito (03-regras-negocio § Escopo) — movimentação
+          // nunca ganha nenhum dos dois, nem por Rule.
+          const personId = isCreditCard ? resolvePersonId(merchant, ruleByMerchant, selfPerson.id) : null
+          const categoryId = isCreditCard ? resolveCategoryId(merchant, ruleByMerchant) : null
           await this.sync.upsertTransaction(userId, account.id, personId, categoryId, mapped)
           transactionsSynced++
         }

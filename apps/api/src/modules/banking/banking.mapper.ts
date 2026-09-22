@@ -13,11 +13,14 @@ export type MappedTransaction = Omit<Prisma.TransactionUncheckedCreateInput, 'us
 // de fatura nunca é gasto.
 const CARD_PAYMENT_CATEGORY_ID = '05100000'
 
-export function resolveKind(tx: PluggyTransaction): TransactionKind {
+// CREDIT vira REFUND só em cartão de crédito (estorno de compra). Em conta de movimentação (corrente,
+// benefício), CREDIT é dinheiro entrando de verdade (Pix recebido, depósito) — vira INCOME, não estorno.
+export function resolveKind(tx: PluggyTransaction, isCreditCard: boolean): TransactionKind {
   if (tx.categoryId === CARD_PAYMENT_CATEGORY_ID || tx.category?.toLowerCase() === 'credit card payment') {
     return 'CARD_PAYMENT'
   }
-  return tx.type === 'CREDIT' ? 'REFUND' : 'EXPENSE'
+  if (tx.type !== 'CREDIT') return 'EXPENSE'
+  return isCreditCard ? 'REFUND' : 'INCOME'
 }
 
 // Pluggy manda data pura ("2026-09-21") às vezes; meio-dia UTC evita cruzar dia ao converter para
@@ -26,11 +29,11 @@ export function dayFromDateString(date: string): Date {
   return /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T12:00:00.000Z`) : new Date(date)
 }
 
-export function mapTransaction(tx: PluggyTransaction): MappedTransaction {
+export function mapTransaction(tx: PluggyTransaction, isCreditCard: boolean): MappedTransaction {
   const card = tx.creditCardMetadata
   return {
     externalId: tx.id,
-    kind: resolveKind(tx),
+    kind: resolveKind(tx, isCreditCard),
     status: tx.status,
     amountCents: Math.round(Math.abs(tx.amount) * 100),
     // Em parcelada, `date` é quando a parcela cai na fatura (pode ser meses à frente); purchaseDate é

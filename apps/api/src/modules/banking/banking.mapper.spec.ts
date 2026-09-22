@@ -19,24 +19,29 @@ function tx(overrides: Partial<PluggyTransaction> = {}): PluggyTransaction {
 }
 
 describe('resolveKind', () => {
-  it('compra normal (DEBIT) é EXPENSE', () => {
-    expect(resolveKind(tx({ type: 'DEBIT' }))).toBe('EXPENSE')
+  it('compra normal (DEBIT) é EXPENSE, em cartão ou movimentação', () => {
+    expect(resolveKind(tx({ type: 'DEBIT' }), true)).toBe('EXPENSE')
+    expect(resolveKind(tx({ type: 'DEBIT' }), false)).toBe('EXPENSE')
   })
 
-  it('CREDIT sem categoria de pagamento é estorno (REFUND)', () => {
-    expect(resolveKind(tx({ type: 'CREDIT' }))).toBe('REFUND')
+  it('CREDIT em cartão sem categoria de pagamento é estorno (REFUND)', () => {
+    expect(resolveKind(tx({ type: 'CREDIT' }), true)).toBe('REFUND')
+  })
+
+  it('CREDIT em movimentação é dinheiro entrando de verdade (INCOME), não estorno', () => {
+    expect(resolveKind(tx({ type: 'CREDIT' }), false)).toBe('INCOME')
   })
 
   it('operationType "PAGAMENTO" sozinho não basta (o Pluggy usa o mesmo valor pra compra parcelada)', () => {
-    expect(resolveKind(tx({ type: 'DEBIT', operationType: 'PAGAMENTO' }))).toBe('EXPENSE')
+    expect(resolveKind(tx({ type: 'DEBIT', operationType: 'PAGAMENTO' }), true)).toBe('EXPENSE')
   })
 
   it('categoryId de pagamento de fatura é CARD_PAYMENT, nunca gasto', () => {
-    expect(resolveKind(tx({ type: 'CREDIT', categoryId: '05100000' }))).toBe('CARD_PAYMENT')
+    expect(resolveKind(tx({ type: 'CREDIT', categoryId: '05100000' }), true)).toBe('CARD_PAYMENT')
   })
 
   it('category "Credit card payment" também é CARD_PAYMENT (fallback sem categoryId)', () => {
-    expect(resolveKind(tx({ type: 'CREDIT', category: 'Credit card payment' }))).toBe('CARD_PAYMENT')
+    expect(resolveKind(tx({ type: 'CREDIT', category: 'Credit card payment' }), true)).toBe('CARD_PAYMENT')
   })
 })
 
@@ -60,6 +65,7 @@ describe('mapTransaction', () => {
         merchant: { businessName: 'Loja X' },
         creditCardMetadata: { cardNumber: '1234', totalInstallments: 3, installmentNumber: 1, billId: 'bill-1' },
       }),
+      true,
     )
     expect(result.amountCents).toBe(8990)
     expect(result.merchant).toBe('Loja X')
@@ -69,7 +75,7 @@ describe('mapTransaction', () => {
   })
 
   it('sem metadados de cartão, os campos ficam null', () => {
-    const result = mapTransaction(tx())
+    const result = mapTransaction(tx(), true)
     expect(result.cardLast4).toBeNull()
     expect(result.installmentNumber).toBeNull()
   })
@@ -86,13 +92,19 @@ describe('mapTransaction', () => {
           purchaseDate: '2026-06-21T22:35:59.001Z',
         },
       }),
+      true,
     )
     expect(new Date(result.occurredAt).toISOString()).toBe('2026-06-21T22:35:59.001Z')
   })
 
   it('sem purchaseDate, cai pra `date`', () => {
-    const result = mapTransaction(tx({ date: '2026-09-21' }))
+    const result = mapTransaction(tx({ date: '2026-09-21' }), true)
     expect(new Date(result.occurredAt).toISOString()).toBe('2026-09-21T12:00:00.000Z')
+  })
+
+  it('em conta de movimentação, CREDIT vira INCOME', () => {
+    const result = mapTransaction(tx({ type: 'CREDIT' }), false)
+    expect(result.kind).toBe('INCOME')
   })
 })
 
