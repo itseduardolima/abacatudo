@@ -1,2 +1,5 @@
 export * from './schemas/common'
 export * from './schemas/auth'
+export * from './schemas/account'
+export * from './schemas/person'
+export * from './schemas/category'
