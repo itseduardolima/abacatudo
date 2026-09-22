@@ -30,13 +30,14 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
   retry/timeout, schemas Zod), (3) módulo `banking` (conectar, checar status por polling, sincronizar) e o
   par `TransactionRepository`/`MovementRepository` (5.1, 3.4 básico). Cobre 8.1/8.2/8.3 da Sprint 6, feitos
   fora de ordem porque o usuário pediu Pluggy antes de import/lançamento manual.
-- **Verificado ao vivo (2026-09-22)**: Docker recuperado (processo do Docker Desktop tinha travado sem
-  gerar o socket; matei tudo e reabri limpo), API de pé contra o Postgres real, RLS/`AuthGuard` cobrindo
-  as rotas novas, `POST /banking/items` chamado contra a API de verdade do Pluggy com credencial nova do
-  usuário. Achei e corrigi 1 bug real nesse teste: ver "Bugs achados só ao rodar de verdade" da Sprint 6.
-- Próximo: usar `authorizeUrl` de verdade (abrir no navegador e autorizar com uma conta real) pra testar
-  `checkStatus` virando `UPDATED` e disparando o sync; depois Sprint 3 (classificação), que já tem
-  `Transaction` pra usar.
+- **Verificado ao vivo, de ponta a ponta (2026-09-22)**: Docker recuperado (o Docker Desktop tinha travado
+  sem gerar o socket; matei tudo e reabri limpo), API de pé contra o Postgres real, o usuário autorizou de
+  verdade um Nubank real no Chrome, `checkStatus` detectou `UPDATED` e disparou o sync sozinho. **3 bugs
+  reais achados e corrigidos** nesse teste (link OAuth assíncrono, paginação do cursor, categoria de
+  pagamento de fatura) — ver "Bugs achados só ao rodar de verdade" da Sprint 6. Sprint 6 fecha 8.1/8.2/8.3
+  de verdade agora; 5.1 e 3.4 (básico) também.
+  Limpei o usuário/item de teste depois (no banco e no Pluggy) — banco de dev volta vazio.
+- Próximo: Sprint 3 (classificação), que já tem `Transaction`/`banking` provados contra dado real pra usar.
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -178,10 +179,12 @@ nunca com o superusuário.
 ## Sprint 6 — Integração Pluggy
 
 Construída fora de ordem (2026-09-22), a pedido do usuário, em 3 etapas: model → `PluggyClient` → módulo
-`banking`. **Verificado ao vivo em 2026-09-22** contra o Postgres real e a API de verdade do Pluggy
-(credencial nova do usuário, nunca colada no chat — só no `.env`). Falta só autorizar de verdade num banco
-real pra ver `checkStatus`/sync completarem (não fiz isso: exigiria entrar com credencial bancária real, o
-que não faço por mim mesmo — é o usuário quem abre `authorizeUrl` e loga).
+`banking`. **Verificado ao vivo e de ponta a ponta em 2026-09-22**: Docker recuperado, credencial nova do
+usuário no `.env` (nunca colada no chat), `connect()` real, autorização de verdade no Chrome (o usuário
+logou num Nubank real), `checkStatus` detectou `UPDATED` e disparou o sync sozinho, sync manual repetido
+depois de cada correção. Resultado final: 2 contas (1 corrente, 1 cartão) e 1670 transações reais
+sincronizadas sem duplicar, `/transactions` só com o cartão (409 compra + 3 estorno + 39 pagamento de
+fatura) e `/movements` só com o resto — como o desenho previa.
 
 - [x] 8.1 — Conectar banco: `POST /banking/items` cria o item Meu Pluggy (único conector gratuito, spike já
       provou isso) e devolve `authorizeUrl`; sem webhook, então o front faz _polling_ em
@@ -192,13 +195,19 @@ que não faço por mim mesmo — é o usuário quem abre `authorizeUrl` e loga).
       `checkStatus` vê o status virar `UPDATED` (automático). **Falta o job diário agendado** — ver gap acima
 - [ ] 8.4 — Aviso de consentimento (`consentExpiresAt` já é lido e salvo; falta a UI de aviso)
 - [ ] 8.5 — Desconectar
+- [ ] 2.3 — Cartão adicional → pessoa
 
 ### Bugs achados só ao rodar de verdade (e corrigidos)
 
 - `createMeuPluggyItem` assumia que a `authorizeUrl` vinha pronta na resposta de `POST /items` — na prática
   o Pluggy devolve `parameter: null` e só popula o link OAuth uns 2s depois. Corrigido com um polling curto
   e limitado (`waitForAuthorizeUrl`, 5 tentativas de 1,5s) antes de desistir.
-- [ ] 2.3 — Cartão adicional → pessoa
+- `listTransactions` tratava o cursor `next` como URL absoluta e colava direto em `BASE_URL` — na prática o
+  Pluggy manda só a querystring (`?accountId=...&after=...`), então cada conta parava na primeira página
+  (500 transações) sem avisar erro nenhum. Corrigido montando o path certo (`/v2/transactions${cursor}`).
+- `resolveKind` tentava achar pagamento de fatura pelo `operationType`, mas o Pluggy manda "PAGAMENTO" tanto
+  pra compra parcelada quanto pro pagamento em si — nunca distinguia. O sinal certo é a `category`/
+  `categoryId` que o Pluggy já classifica ("Credit card payment" / `05100000`), adicionado ao schema.
 
 ## Sprint 7 — Insights e IA
 
