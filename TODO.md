@@ -53,11 +53,6 @@ Regra de marcação: só marque `[x]` quando bater a Definition of Done de
 - [ ] **Estados de orçamento (OK/Atenção/Estourou)**: o estilo não define
       cores de status; adaptei (Linen/Forest, Fog+contorno, Alarm Red, sempre
       com ícone e texto). Validar no protótipo (Sprint 0, HU 0.7).
-- [ ] **Licença do SVG do mascote** (`avocado-yoga.svg`, veio de Downloads,
-      origem desconhecida): confirmar que a licença permite uso comercial e
-      logo/marca registrada antes de publicar em produção. Vetor de banco de
-      imagens costuma proibir uso como marca; se for o caso, comprar a licença
-      estendida ou redesenhar.
 - [ ] **Uso dos logos de bancos** (Nubank, BB, PicPay em `brand/bancos/`):
       confirmar o guia de marca de cada um e a licença. O logo do BB veio em
       azul único, sem o amarelo da marca; conferir se é a versão permitida.

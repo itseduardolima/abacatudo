@@ -8,5 +8,4 @@
 | `icon-maskable.svg` / `icon-maskable-512.png`   | Ícone maskable (mascote a 60%, dentro da zona segura)            |
 | `apple-touch-icon.png`                          | 180x180 para iOS                                                 |
 
-Logos de bancos em `bancos/` (ver o README de lá). Regras de uso em `apps/web/docs/DESIGN_SYSTEM.md` § Marca. **Pendência:** confirmar a
-licença do SVG do mascote antes de usar em produção (ver `TODO.md`).
+Logos de bancos em `bancos/` (ver o README de lá). Regras de uso em `apps/web/docs/DESIGN_SYSTEM.md` § Marca. Domínio público, sem direitos autorais.
