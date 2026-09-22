@@ -1,4 +1,4 @@
-import { transactionSchema } from './transaction'
+import { transactionSchema, updateTransactionPersonInputSchema } from './transaction'
 
 const VALID = {
   id: '11111111-1111-1111-1111-111111111111',
@@ -30,5 +30,18 @@ describe('transactionSchema', () => {
   it('rejeita kind ou status fora do enum', () => {
     expect(transactionSchema.safeParse({ ...VALID, kind: 'PIX' }).success).toBe(false)
     expect(transactionSchema.safeParse({ ...VALID, status: 'DONE' }).success).toBe(false)
+  })
+})
+
+describe('updateTransactionPersonInputSchema', () => {
+  it('alwaysForMerchant é opcional, padrão false', () => {
+    const result = updateTransactionPersonInputSchema.safeParse({ personId: VALID.id })
+    expect(result.success).toBe(true)
+    expect(result.success && result.data.alwaysForMerchant).toBe(false)
+  })
+
+  it('rejeita personId inválido e campo extra', () => {
+    expect(updateTransactionPersonInputSchema.safeParse({ personId: 'não-é-uuid' }).success).toBe(false)
+    expect(updateTransactionPersonInputSchema.safeParse({ personId: VALID.id, note: 'x' }).success).toBe(false)
   })
 })

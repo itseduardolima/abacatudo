@@ -29,3 +29,13 @@ export const transactionSchema = z
   })
   .strict()
 export type Transaction = z.infer<typeof transactionSchema>
+
+// Corrigir a pessoa de uma transação (03-regras-negocio § Atribuição de pessoa). alwaysForMerchant cria/
+// atualiza a Rule do estabelecimento — a API rejeita se a transação não tiver merchant identificado.
+export const updateTransactionPersonInputSchema = z
+  .object({
+    personId: idSchema,
+    alwaysForMerchant: z.boolean().default(false),
+  })
+  .strict()
+export type UpdateTransactionPersonInput = z.infer<typeof updateTransactionPersonInputSchema>
