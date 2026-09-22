@@ -21,6 +21,10 @@ export class PersonRepository {
     return this.prisma.person.findFirst({ where: { userId, id } })
   }
 
+  findSelf(userId: string): Promise<Person | null> {
+    return this.prisma.person.findFirst({ where: { userId, isSelf: true } })
+  }
+
   archive(userId: string, id: string): Promise<Prisma.BatchPayload> {
     return this.prisma.person.updateMany({ where: { userId, id, isSelf: false }, data: { archivedAt: new Date() } })
   }
