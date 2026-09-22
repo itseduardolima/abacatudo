@@ -7,6 +7,8 @@ import { validateEnv } from './common/config/env'
 import { DomainExceptionFilter } from './common/filters/domain-exception.filter'
 import { AuthGuard } from './common/guards/auth.guard'
 import { RequestIdMiddleware } from './common/middlewares/request-id.middleware'
+import { SessionMiddleware } from './common/middlewares/session.middleware'
+import { AuthModule } from './modules/auth/auth.module'
 import { HealthModule } from './modules/health/health.module'
 import { PrismaModule } from './prisma/prisma.module'
 
@@ -23,6 +25,7 @@ import { PrismaModule } from './prisma/prisma.module'
       },
     }),
     PrismaModule,
+    AuthModule,
     HealthModule,
   ],
   providers: [
@@ -34,6 +37,13 @@ import { PrismaModule } from './prisma/prisma.module'
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    // RequestIdMiddleware primeiro, sem exclude: todo log de toda rota precisa do requestId já no
+    // AsyncLocalStorage antes do resto da cadeia rodar (09-operacao § 3).
     consumer.apply(RequestIdMiddleware).forRoutes('*path')
+
+    // SessionMiddleware resolve a sessão e estabelece o userId no contexto (ver o comentário em
+    // SessionMiddleware) — health fica de fora, não faz sentido gastar uma consulta por checagem de
+    // uptime (09-operacao § 1).
+    consumer.apply(SessionMiddleware).exclude('health').forRoutes('*path')
   }
 }
