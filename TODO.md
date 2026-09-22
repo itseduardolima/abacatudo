@@ -55,8 +55,18 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
   Corrigir a pessoa direto (`PATCH .../person`) também desfaz um split ativo. Verificado ao vivo contra
   Postgres real: os 6 cenários (preview, grava, soma errada, pessoa duplicada, desfazer, e desfazer via
   correção de pessoa) todos se comportaram certo.
-- Próximo: Sprint 3 Etapa 4 — categorização automática (regra + merchant confirmado + sem categoria; a
-  sugestão de IA fica pra Sprint 7).
+- **Sprint 3 Etapa 4 concluída (2026-09-22) — Sprint 3 fechada**: `Rule` ganhou `categoryId` opcional (junto
+  do `personId`, também opcional agora — pelo menos um dos dois preenchido, `CHECK` no banco), com
+  `upsertPerson`/`upsertCategory` cada um mexendo só no seu campo. Sync resolve a categoria da mesma forma
+  que a pessoa (Rule decide; sem Rule, "sem categoria" — não tem "padrão" pra categoria como tem pra
+  pessoa). `PATCH /transactions/:id/category` corrige a categoria, com `alwaysForMerchant` criando/
+  atualizando a `Rule`. Verificado ao vivo: correção, criação da regra (só `categoryId`, `personId` ficou
+  null), 404 de categoria inexistente.
+  **Gap consciente**: o pipeline do spec (03-regras-negocio § Categorias e regras) tem um item 3 "mesmo
+  merchant já confirmado pelo usuário" (aprende sem precisar de `Rule` explícita) que não foi construído —
+  precisaria decidir como distinguir categoria "confirmada pelo usuário" de categoria "herdada por sync",
+  o que hoje não existe no schema. Registrado aqui pra decidir antes de expandir classificação.
+- Próximo: Sprint 4 — Fatura só com a minha parte + Movimentações (5.2, 5.3, 6.1, 6.2).
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -189,7 +199,8 @@ Escopo mudou a pedido do usuário (2026-09-22): toda transação nasce "Meu", se
 - [x] 4.1 — Corrigir pessoa em 1 toque: `PATCH /transactions/:id/person`, testado ao vivo
 - [x] 4.2 — "Sempre para este estabelecimento": `alwaysForMerchant` no mesmo endpoint, testado ao vivo
 - [x] 4.4 — Dividir compra: model `Split`, preview + PUT + DELETE, testado ao vivo
-- [ ] 4.5 — Categorização automática por regras/histórico
+- [~] 4.5 — Categorização automática: `Rule` decide (testado ao vivo); falta "mesmo merchant já confirmado
+  pelo usuário" (gap consciente, ver "Em andamento agora") e a sugestão de IA (Sprint 7)
 
 ### Bugs achados só ao rodar de verdade (e corrigidos)
 
