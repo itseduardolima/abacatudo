@@ -10,9 +10,11 @@ import { RequestIdMiddleware } from './common/middlewares/request-id.middleware'
 import { SessionMiddleware } from './common/middlewares/session.middleware'
 import { AccountModule } from './modules/account/account.module'
 import { AuthModule } from './modules/auth/auth.module'
+import { BankingModule } from './modules/banking/banking.module'
 import { CategoryModule } from './modules/category/category.module'
 import { HealthModule } from './modules/health/health.module'
 import { PersonModule } from './modules/person/person.module'
+import { TransactionModule } from './modules/transaction/transaction.module'
 import { PrismaModule } from './prisma/prisma.module'
 
 // Módulos de domínio entram aqui conforme forem criados, um por vez.
@@ -32,6 +34,8 @@ import { PrismaModule } from './prisma/prisma.module'
     AccountModule,
     PersonModule,
     CategoryModule,
+    BankingModule,
+    TransactionModule,
     HealthModule,
   ],
   providers: [
