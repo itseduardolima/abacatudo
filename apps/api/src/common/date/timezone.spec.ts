@@ -1,0 +1,54 @@
+import { dateKey, monthKey, monthRange } from './timezone'
+
+describe('monthKey / dateKey', () => {
+  it('compra às 23h30 do dia 31 (horário de Manaus) não cai no mês seguinte por fuso', () => {
+    // 2026-10-01T03:30:00Z = 2026-09-30T23:30:00 em Manaus (UTC-4).
+    const purchaseAt = new Date('2026-10-01T03:30:00.000Z')
+    expect(monthKey(purchaseAt)).toBe('2026-09')
+    expect(dateKey(purchaseAt)).toBe('2026-09-30')
+  })
+
+  it('um instante já depois da virada UTC do mês, mas ainda de madrugada em Manaus', () => {
+    expect(monthKey(new Date('2026-10-01T03:59:59.999Z'))).toBe('2026-09')
+  })
+
+  it('logo depois da meia-noite em Manaus já vira o mês seguinte', () => {
+    // 2026-10-01T04:00:00.000Z = 2026-10-01T00:00:00 em Manaus.
+    expect(monthKey(new Date('2026-10-01T04:00:00.000Z'))).toBe('2026-10')
+    expect(dateKey(new Date('2026-10-01T04:00:00.000Z'))).toBe('2026-10-01')
+  })
+
+  it('meio-dia UTC de um dia comum não muda de mês', () => {
+    expect(monthKey(new Date('2026-09-15T12:00:00.000Z'))).toBe('2026-09')
+  })
+})
+
+describe('monthRange', () => {
+  it('o início do mês é meia-noite em Manaus, em UTC', () => {
+    const { start } = monthRange('2026-09')
+    expect(start.toISOString()).toBe('2026-09-01T04:00:00.000Z')
+  })
+
+  it('o fim é exclusivo: o primeiro instante do mês seguinte', () => {
+    const { end } = monthRange('2026-09')
+    expect(end.toISOString()).toBe('2026-10-01T04:00:00.000Z')
+  })
+
+  it('dezembro vira janeiro do ano seguinte corretamente', () => {
+    const { end } = monthRange('2026-12')
+    expect(end.toISOString()).toBe('2027-01-01T04:00:00.000Z')
+  })
+
+  it('inclui a compra das 23h30 do dia 31 e exclui o instante exato da virada', () => {
+    const { start, end } = monthRange('2026-09')
+    const lateOnThe30th = new Date('2026-10-01T03:30:00.000Z')
+    expect(lateOnThe30th >= start && lateOnThe30th < end).toBe(true)
+    expect(end < new Date('2026-10-01T04:00:00.001Z')).toBe(true)
+  })
+
+  it('rejeita uma chave de mês em formato inválido', () => {
+    expect(() => monthRange('2026-9')).toThrow('monthKey inválido')
+    expect(() => monthRange('2026-13')).toThrow('monthKey inválido')
+    expect(() => monthRange('lixo')).toThrow('monthKey inválido')
+  })
+})
