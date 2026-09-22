@@ -86,8 +86,13 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
   "escondido" que `computeInvoice` priorizava sobre a pessoa nova; virou 1 chamada atômica reaproveitando o
   `$transaction` que `SplitRepository` já tinha, renomeado pra `setSinglePerson`); a checagem de
   `accountId` obrigatório da fatura vivia solta no controller, sem teste — movida pro `InvoiceService`.
-- Próximo: Sprint 5 — Orçamento e relatórios (7.1–7.3, 8.6, 9.1), que consome `GET /invoice/summary` como o
-  "Meu do mês".
+- **Sprint 5 iniciada (2026-09-22) — Etapa 1 concluída**: model `BudgetMonth` + RLS, `GET`/`PUT
+/budget/month?month=` (7.1). Virada de mês copia a config do mês mais recente já configurado; mês
+  fechado (passado) é imutável (`422 BUDGET_MONTH_CLOSED` no PUT, GET devolve zero sem gravar nada).
+  `variableCapCents` = renda + benefício − fixos − poupança, calculado, nunca guardado. Verificado ao vivo:
+  os 5 cenários (criar zerado, gravar, virada copiando, rejeitar mês fechado, ler mês fechado sem linha
+  nova) todos bateram.
+- Próximo: Sprint 5 Etapa 2 — envelopes por categoria (7.2).
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -247,7 +252,7 @@ Escopo mudou a pedido do usuário (2026-09-22): toda transação nasce "Meu", se
 
 ## Sprint 5 — Orçamento e relatórios
 
-- [ ] 7.1 — Renda, fixos, poupança → teto variável
+- [x] 7.1 — Renda, fixos, poupança → teto variável: `GET`/`PUT /budget/month`, testado ao vivo
 - [ ] 7.2 — Envelopes
 - [ ] 7.3 — Alertas 70/90/100
 - [ ] 8.6 — "Última atualização" por conta
