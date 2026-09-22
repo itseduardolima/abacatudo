@@ -1,13 +1,22 @@
 import { Injectable } from '@nestjs/common'
-import type { Transaction } from '@gastos/shared'
+import type { Transaction, UpdateTransactionPersonInput } from '@gastos/shared'
 import { monthKey, monthRange } from '../../common/date/timezone'
-import { DomainError } from '../../common/errors/domain.error'
+import { DomainError, NotFoundError } from '../../common/errors/domain.error'
+import { PersonRepository } from '../person/person.repository'
+import { normalizeMerchant } from '../rule/normalize-merchant'
+import { RuleRepository } from '../rule/rule.repository'
 import { toTransactionDto } from './transaction.mapper'
 import { TransactionRepository } from './transaction.repository'
 
+const NOT_FOUND = () => new NotFoundError('TRANSACTION_NOT_FOUND', 'Transação não encontrada.')
+
 @Injectable()
 export class TransactionService {
-  constructor(private readonly repo: TransactionRepository) {}
+  constructor(
+    private readonly repo: TransactionRepository,
+    private readonly people: PersonRepository,
+    private readonly rules: RuleRepository,
+  ) {}
 
   async listByMonth(userId: string, month?: string): Promise<Transaction[]> {
     const key = month ?? monthKey(new Date())
@@ -15,5 +24,31 @@ export class TransactionService {
       throw new DomainError('INVALID_MONTH', 'Mês inválido (esperado AAAA-MM).', 400)
     }
     return (await this.repo.findMany(userId, monthRange(key))).map(toTransactionDto)
+  }
+
+  async updatePerson(userId: string, id: string, input: UpdateTransactionPersonInput): Promise<Transaction> {
+    const existing = await this.repo.findById(userId, id)
+    if (!existing) throw NOT_FOUND()
+
+    const person = await this.people.findById(userId, input.personId)
+    if (!person) throw new NotFoundError('PERSON_NOT_FOUND', 'Pessoa não encontrada.')
+
+    if (input.alwaysForMerchant) {
+      if (!existing.merchant) {
+        throw new DomainError(
+          'MERCHANT_REQUIRED_FOR_RULE',
+          'Essa transação não tem estabelecimento identificado — não dá pra criar uma regra.',
+          400,
+        )
+      }
+      await this.rules.upsert(userId, normalizeMerchant(existing.merchant), input.personId)
+    }
+
+    const result = await this.repo.updatePerson(userId, id, input.personId)
+    if (result.count === 0) throw NOT_FOUND()
+
+    const updated = await this.repo.findById(userId, id)
+    if (!updated) throw NOT_FOUND()
+    return toTransactionDto(updated)
   }
 }
