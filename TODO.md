@@ -59,6 +59,14 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
 - **Logo: abacate em pose de ioga** (`brand/`). Ícones do PWA já gerados
   (512, 192, 180, maskable). Só sobre fundo claro; mínimo 56px.
 
+- **Toda transação nasce "Meu" (2026-09-22)**: sem fila "a classificar" —
+  padrão é o Dono (`Person isSelf`), o User corrige (troca a pessoa ou
+  divide) quando for de outra pessoa. Muda o pipeline de atribuição de
+  pessoa e a fatura (agora só `Fatura = Meu + Não é meu`) — ver
+  `docs/specs/03-regras-negocio.md` § Atribuição de pessoa e § Só a minha
+  parte. HU 4.1 do backlog foi reescrita de acordo (era "caixa a
+  classificar", virou "corrigir pessoa em 1 toque").
+
 - **Uso individual (2026-09-21)**: só o dono usa. O convite de outra pessoa (HU 1.4) sai do escopo. O
   isolamento por usuário no banco (RLS) continua, porque custa pouco e é uma proteção extra.
 

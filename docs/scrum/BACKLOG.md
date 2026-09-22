@@ -68,7 +68,7 @@ Prioridade: **P0** bloqueia o MVP (importar extrato, classificar, ver o mês),
 
 | #   | HU                                                                                 | Critérios de aceite                                                                                                    | Pts | P   |
 | --- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --- | --- |
-| 4.1 | Como Dono, quero uma caixa **"A classificar"** com resolução em **1 toque**.       | Sem pessoa = fila; `Meu`/pessoa/`Dividir`; faixa "R$ X sem dono" no início; fora do orçamento até classificar          | 5   | P0  |
+| 4.1 | Como Dono, quero **corrigir a pessoa** de uma transação em **1 toque**.            | Toda transação nasce "Meu" (padrão); trocar pra pessoa/`Dividir` em 1 toque; sem fila de pendência                     | 3   | P0  |
 | 4.2 | Como Dono, quero "**sempre para este estabelecimento**" ao classificar.            | Cria `Rule`; reaplica só nas não confirmadas; nunca sobrescreve confirmada                                             | 5   | P0  |
 | 4.3 | Como Dono, quero classificar **em lote**.                                          | Multi-seleção + uma pessoa/categoria                                                                                   | 3   | P1  |
 | 4.4 | Como Dono, quero **dividir** uma compra entre pessoas.                             | Soma dos splits = total (API rejeita se não fechar); "dividir igual" distribui o resto de centavos; preview vem da API | 5   | P0  |

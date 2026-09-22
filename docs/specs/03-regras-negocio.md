@@ -11,14 +11,14 @@ Pix, TED, boleto, saque, saldo de benefício (VR/VA) e demais movimentações
 de conta **podem ser exibidos, mas em telas e funcionalidades separadas**, e
 nunca se misturam com a gestão.
 
-| Vale só para compra no cartão de crédito           | Vale para débito, Pix, benefício e contas ("Movimentações") |
-| -------------------------------------------------- | ----------------------------------------------------------- |
-| Categoria, regras, IA de categoria                 | Lista/extrato, filtros e busca                              |
-| Pessoa (meu x não é meu), divisão, "a classificar" | Totais de entrada e saída do mês (só informativos)          |
-| Fatura "só a minha parte"                          | Rótulo de transferência entre contas próprias               |
-| Orçamento, envelopes, alertas, ritmo, parcelas     | Nota opcional por lançamento                                |
-| Relatórios, assinaturas, "onde economizar"         | —                                                           |
-| Resumo e chat da IA                                | —                                                           |
+| Vale só para compra no cartão de crédito        | Vale para débito, Pix, benefício e contas ("Movimentações") |
+| ----------------------------------------------- | ----------------------------------------------------------- |
+| Categoria, regras, IA de categoria              | Lista/extrato, filtros e busca                              |
+| Pessoa (meu x não é meu, padrão é meu), divisão | Totais de entrada e saída do mês (só informativos)          |
+| Fatura "só a minha parte"                       | Rótulo de transferência entre contas próprias               |
+| Orçamento, envelopes, alertas, ritmo, parcelas  | Nota opcional por lançamento                                |
+| Relatórios, assinaturas, "onde economizar"      | —                                                           |
+| Resumo e chat da IA                             | —                                                           |
 
 - **Cartão = cartão de crédito.** O que decide é o **tipo da conta**
   (`Account.type = CREDIT_CARD`), sem heurística por lançamento: toda
@@ -138,25 +138,31 @@ Detalhe e números em [07-integracao-bancaria](./07-integracao-bancaria.md) § F
 
 ## Atribuição de pessoa ("meu" x "não é meu")
 
-Ordem do pipeline, parando no primeiro que decidir:
+**Decisão de produto (2026-09-22): toda transação nasce "Meu".** Não existe
+fila de pendência — o User corrige depois, transação a transação ou em
+lote, quando for de outra pessoa. Isso troca uma fila que precisa ser
+zerada por uma correção pontual quando alguém da família usa o cartão.
 
-1. **Já confirmada pelo User** → nunca muda sozinha.
-2. **Cartão adicional/virtual** (`CardHolderHint`).
+Ordem do pipeline na criação (sync ou lançamento manual), parando no
+primeiro que decidir:
+
+1. **Já confirmada pelo User** → nunca muda sozinha, nem em re-sync.
+2. **Cartão adicional/virtual** (`CardHolderHint`), quando existir (2.3).
 3. **Regra do User** (`Rule` com `personId`): por estabelecimento, por conta,
    por faixa de valor, ou combinação.
-4. **Mesmo estabelecimento já confirmado** para uma Person em >= 3
-   ocorrências consecutivas sem exceção → sugere (não aplica) a mesma
-   Person.
-5. **Sem decisão** → `personId = null`, entra na caixa **"A classificar"**.
+4. **Sem regra** → o Dono (`Person` `isSelf`). É o padrão de toda transação
+   nova; nunca fica sem pessoa.
 
 Regras:
 
-- **Padrão é "a classificar", não "meu".** Transação sem pessoa **não**
-  entra no orçamento; aparece em faixa de aviso ("R$ X ainda sem dono")
-  para evitar falsa sensação de folga. (Configurável depois; v1 fixo.)
-- Classificar em 1 toque: `Meu`, uma Person, ou `Dividir`. Ao classificar,
-  o app oferece **"sempre que for este estabelecimento"** (cria `Rule`).
-- Classificar em lote: selecionar várias e aplicar uma pessoa.
+- **Padrão é "Meu".** Toda transação de cartão de crédito nasce atribuída
+  ao Dono; entra no orçamento normalmente até o User corrigir. Quem
+  compartilha o cartão com frequência com a mesma pessoa deve criar uma
+  `Rule` (item 3) pra não precisar corrigir toda vez.
+- Corrigir a pessoa (trocar pra outra Person, ou `Dividir`) em 1 toque; ao
+  corrigir, o app oferece **"sempre que for este estabelecimento"** (cria
+  `Rule`).
+- Corrigir em lote: selecionar várias e aplicar uma pessoa.
 - **Divisão (`Split`)**: uma transação pode ser dividida entre Persons com
   valores em centavos; a soma dos splits **tem que ser igual** ao total (a
   API rejeita se não fechar). "Dividir igualmente" distribui o resto de
@@ -195,8 +201,8 @@ endpoints próprios (`/movements`), módulo próprio (`movement`).
   de entrada e saída do mês**, rotulados como "não entram no orçamento"; nota
   opcional por lançamento.
 - **O que NÃO existe aqui**: categoria, pessoa, divisão, regra, envelope,
-  alerta, relatório de economia, "a classificar" e IA. Nada de Movimentações
-  alimenta o orçamento ou os relatórios do cartão.
+  alerta, relatório de economia e IA. Nada de Movimentações alimenta o
+  orçamento ou os relatórios do cartão.
 - **Rótulos informativos (P2)**: lançamento que casa com outro em **conta
   própria** (mesmo valor, sentidos opostos, <= 2 dias) recebe o rótulo
   "transferência entre suas contas" (`kind = TRANSFER`) para não parecer
@@ -230,16 +236,15 @@ que o User quer é enxergar **só o que é dele**.
   ```
   Fatura            R$ 2.000,00   (o que o banco cobra)
   − Não é meu       R$   700,00   (soma das Persons não-self + splits delas)
-  − A classificar   R$   150,00   (aviso: ainda sem dono)
-  = Meu             R$ 1.150,00   (o número que vale para o orçamento)
+  = Meu             R$ 1.300,00   (o número que vale para o orçamento)
   ```
 
-  O valor de destaque é **"Meu"**. "A classificar" nunca é escondido dentro
-  de "Meu" nem de "Não é meu": aparece à parte até ser resolvido, para o
-  total não parecer menor do que é.
+  O valor de destaque é **"Meu"**. Como toda transação nasce "Meu" (ver
+  "Atribuição de pessoa"), não existe uma terceira faixa de pendência — o
+  que ainda não foi corrigido já conta como "Meu" até o User editar.
 
-- Invariante testada: `Fatura = Meu + Não é meu + A classificar`, para
-  qualquer fatura e qualquer combinação de splits (centavo a centavo).
+- Invariante testada: `Fatura = Meu + Não é meu`, para qualquer fatura e
+  qualquer combinação de splits (centavo a centavo).
 - **Split** entre self e outras Persons conta para o "Meu" só a fatia do
   self.
 - `Person` continua existindo só como **rótulo de quem gastou** (para
@@ -270,8 +275,8 @@ teto variável = renda mensal (fixa + benefícios)
   (valor em centavos ou percentual). Sobra não alocada fica em "Livre".
 - Só entra no orçamento: **compra no cartão de crédito** (conta `CREDIT_CARD`,
   `kind = EXPENSE`), com `personId` = self (ou split de self), no mês de
-  `occurredAt`. Não entram: nada que não seja cartão de crédito (débito, Pix etc.), a linha
-  `CARD_PAYMENT`, gastos de outras Persons e "a classificar".
+  `occurredAt`. Não entram: nada que não seja cartão de crédito (débito, Pix
+  etc.), a linha `CARD_PAYMENT` e gastos de outras Persons.
 - **Alertas**: 70%, 90% e 100% do envelope e do teto total. Cada limiar
   dispara **uma vez** por mês por envelope (não repete a cada sync).
 - **Ritmo**: para cada envelope, `restante ÷ dias restantes` = valor por
