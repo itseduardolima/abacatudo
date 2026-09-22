@@ -22,6 +22,8 @@ export const accountSchema = z
     creditLimitCents: centsSchema.nullable(),
     archivedAt: z.string().datetime().nullable(),
     createdAt: z.string().datetime(),
+    // Última sincronização com o banco (8.6) — sempre null pra conta MANUAL/IMPORT, que não sincroniza.
+    lastSyncAt: z.string().datetime().nullable(),
   })
   .strict()
 export type Account = z.infer<typeof accountSchema>

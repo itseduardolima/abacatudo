@@ -1,6 +1,6 @@
 import type { Account as AccountRow, Person as PersonRow } from '@prisma/client'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
-import type { AccountRepository } from '../account/account.repository'
+import type { AccountRepository, AccountWithLastSync } from '../account/account.repository'
 import type { PersonRepository } from '../person/person.repository'
 import { InvoiceService } from './invoice.service'
 import type { InvoiceRepository } from './invoice.repository'
@@ -17,7 +17,7 @@ function repoMock() {
   return { findRows: jest.fn() } as unknown as jest.Mocked<InvoiceRepository>
 }
 
-function accountRow(overrides: Partial<AccountRow> = {}): AccountRow {
+function accountRow(overrides: Partial<AccountRow> = {}): AccountWithLastSync {
   return {
     id: 'acc-1',
     userId: 'user-1',
@@ -33,6 +33,7 @@ function accountRow(overrides: Partial<AccountRow> = {}): AccountRow {
     createdAt: new Date('2026-09-01T00:00:00.000Z'),
     updatedAt: new Date('2026-09-01T00:00:00.000Z'),
     ...overrides,
+    pluggyItem: null,
   }
 }
 

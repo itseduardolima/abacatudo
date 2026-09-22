@@ -2,6 +2,10 @@ import { Inject, Injectable } from '@nestjs/common'
 import type { Account, Prisma } from '@prisma/client'
 import { PRISMA, type PrismaService } from '../../prisma/prisma.client'
 
+// "Última atualização" (8.6) é do PluggyItem, não da própria linha da conta — conta manual nunca tem
+// (lastSyncAt fica null pra ela); ver AccountService.toDto.
+export type AccountWithLastSync = Account & { pluggyItem: { lastSyncAt: Date | null } | null }
+
 @Injectable()
 export class AccountRepository {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaService) {}
@@ -10,15 +14,19 @@ export class AccountRepository {
     return this.prisma.account.create({ data: { ...data, userId } })
   }
 
-  findMany(userId: string, includeArchived: boolean): Promise<Account[]> {
+  findMany(userId: string, includeArchived: boolean): Promise<AccountWithLastSync[]> {
     return this.prisma.account.findMany({
       where: { userId, ...(includeArchived ? {} : { archivedAt: null }) },
       orderBy: { createdAt: 'asc' },
+      include: { pluggyItem: { select: { lastSyncAt: true } } },
     })
   }
 
-  findById(userId: string, id: string): Promise<Account | null> {
-    return this.prisma.account.findFirst({ where: { userId, id } })
+  findById(userId: string, id: string): Promise<AccountWithLastSync | null> {
+    return this.prisma.account.findFirst({
+      where: { userId, id },
+      include: { pluggyItem: { select: { lastSyncAt: true } } },
+    })
   }
 
   // Upsert atômico por [userId, externalAccountId] (unique no schema) — sem isso, duas sincronizações

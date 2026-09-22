@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common'
-import type { Account as AccountRow } from '@prisma/client'
 import type { Account, CreateAccountInput } from '@gastos/shared'
 import { NotFoundError } from '../../common/errors/domain.error'
-import { AccountRepository } from './account.repository'
+import { AccountRepository, type AccountWithLastSync } from './account.repository'
 
 @Injectable()
 export class AccountService {
@@ -17,7 +16,9 @@ export class AccountService {
       dueDay: input.dueDay ?? null,
       creditLimitCents: input.creditLimitCents ?? null,
     })
-    return toDto(row)
+    // Recém-criada, sempre MANUAL (source PLUGGY só existe pelo sync) — nunca tem PluggyItem pra puxar
+    // lastSyncAt.
+    return toDto({ ...row, pluggyItem: null })
   }
 
   async list(userId: string, includeArchived: boolean): Promise<Account[]> {
@@ -32,7 +33,10 @@ export class AccountService {
   }
 }
 
-function toDto(row: AccountRow): Account {
+// lastSyncAt: "última atualização" (8.6) é a do PluggyItem por trás da conta — dado velho nunca parece
+// atual (se um sync não terminou de verdade, o item nunca chega a atualizar lastSyncAt, ver
+// BankingService.runSync). Conta MANUAL/IMPORT não tem PluggyItem, então é sempre null (não sincroniza).
+function toDto(row: AccountWithLastSync): Account {
   return {
     id: row.id,
     name: row.name,
@@ -43,5 +47,6 @@ function toDto(row: AccountRow): Account {
     creditLimitCents: row.creditLimitCents,
     archivedAt: row.archivedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
+    lastSyncAt: row.pluggyItem?.lastSyncAt?.toISOString() ?? null,
   }
 }
