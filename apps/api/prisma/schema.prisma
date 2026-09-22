@@ -32,6 +32,7 @@ model User {
   rules        Rule[]
   splits       Split[]
   budgetMonths BudgetMonth[]
+  envelopes    Envelope[]
 }
 
 /// Sem RLS: resolvida pelo hash do token do cookie, antes de existir userId no contexto (mesma exceção
@@ -80,6 +81,7 @@ model Category {
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   rules        Rule[]
+  envelopes    Envelope[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -263,8 +265,31 @@ model BudgetMonth {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  envelopes Envelope[]
 
   @@unique([userId, month])
+  @@index([userId])
+}
+
+/// RLS por userId. Divide o teto variável de um BudgetMonth por categoria (03-regras-negocio § Orçamento
+/// mensal). amountCents (fixo) ou percent (do teto variável) — exatamente um dos dois, nunca os dois nem
+/// nenhum (CHECK na migration). O que não foi alocado em nenhum envelope é "Livre" (calculado, não
+/// guardado).
+model Envelope {
+  id            String   @id @default(uuid())
+  userId        String
+  budgetMonthId String
+  categoryId    String
+  amountCents   Int?
+  percent       Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  budgetMonth BudgetMonth @relation(fields: [budgetMonthId], references: [id], onDelete: Cascade)
+  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([budgetMonthId, categoryId])
   @@index([userId])
 }
