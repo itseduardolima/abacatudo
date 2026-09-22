@@ -66,6 +66,11 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
   merchant já confirmado pelo usuário" (aprende sem precisar de `Rule` explícita) que não foi construído —
   precisaria decidir como distinguir categoria "confirmada pelo usuário" de categoria "herdada por sync",
   o que hoje não existe no schema. Registrado aqui pra decidir antes de expandir classificação.
+- **Code review da Sprint 3 (2026-09-22)**: 2 achados, os dois corrigidos e verificados ao vivo — `preview`
+  de split não validava pessoa duplicada como `replace` valida (agora os dois usam a mesma checagem);
+  pessoa/categoria arquivada podia ser atribuída via `PATCH .../person`, `.../category` e o split
+  (`findById` não filtrava `archivedAt` — criado `findActiveById`, usado só nesses endpoints de
+  atribuição; `findById` puro continua igual pra não quebrar o fluxo de arquivar).
 - Próximo: Sprint 4 — Fatura só com a minha parte + Movimentações (5.2, 5.3, 6.1, 6.2).
 
 ## Decisões já tomadas (2026-09-21)
