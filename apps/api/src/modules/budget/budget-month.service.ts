@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common'
+import type { BudgetMonth as BudgetMonthRow } from '@prisma/client'
 import type { BudgetMonth, UpdateBudgetMonthInput } from '@gastos/shared'
 import { monthKey } from '../../common/date/timezone'
 import { DomainError } from '../../common/errors/domain.error'
 import { BudgetMonthRepository } from './budget-month.repository'
-import { toBudgetMonthDto } from './budget.mapper'
+import { computeVariableCapCents, toBudgetMonthDto } from './budget.mapper'
 
 const MONTH_KEY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
 const ZERO = { incomeCents: 0, benefitCents: 0, fixedExpensesCents: 0, savingsGoalCents: 0 }
@@ -18,21 +19,19 @@ export class BudgetMonthService {
   // arbitrariamente distante só porque alguém perguntou.
   async getOrCreate(userId: string, month?: string): Promise<BudgetMonth> {
     const key = resolveKey(month)
-    const existing = await this.repo.findByMonth(userId, key)
-    if (existing) return toBudgetMonthDto(existing)
+    const row = await this.resolveRow(userId, key)
+    return row ? toBudgetMonthDto(row) : { month: key, ...ZERO, variableCapCents: 0 }
+  }
 
-    if (!isCurrentOrNextMonth(key)) {
-      return { month: key, ...ZERO, variableCapCents: 0 }
+  // Pra quem precisa do id de verdade (Envelope, por FK) e do teto já calculado — rejeita se o mês nunca
+  // foi configurado e está fora da janela de auto-create (não dá pra pendurar envelope em nada).
+  async requireId(userId: string, month?: string): Promise<{ id: string; variableCapCents: number }> {
+    const key = resolveKey(month)
+    const row = await this.resolveRow(userId, key)
+    if (!row) {
+      throw new DomainError('BUDGET_MONTH_NOT_CONFIGURED', 'Configure a renda desse mês antes de criar envelopes.', 422)
     }
-
-    const previous = await this.repo.findMostRecentBefore(userId, key)
-    const created = await this.repo.createIfMissing(userId, key, {
-      incomeCents: previous?.incomeCents ?? 0,
-      benefitCents: previous?.benefitCents ?? 0,
-      fixedExpensesCents: previous?.fixedExpensesCents ?? 0,
-      savingsGoalCents: previous?.savingsGoalCents ?? 0,
-    })
-    return toBudgetMonthDto(created)
+    return { id: row.id, variableCapCents: computeVariableCapCents(row) }
   }
 
   // Mês fechado é imutável: editar a renda de hoje nunca reescreve o passado.
@@ -43,6 +42,20 @@ export class BudgetMonthService {
     }
     const row = await this.repo.upsert(userId, key, input)
     return toBudgetMonthDto(row)
+  }
+
+  private async resolveRow(userId: string, key: string): Promise<BudgetMonthRow | null> {
+    const existing = await this.repo.findByMonth(userId, key)
+    if (existing) return existing
+    if (!isCurrentOrNextMonth(key)) return null
+
+    const previous = await this.repo.findMostRecentBefore(userId, key)
+    return this.repo.createIfMissing(userId, key, {
+      incomeCents: previous?.incomeCents ?? 0,
+      benefitCents: previous?.benefitCents ?? 0,
+      fixedExpensesCents: previous?.fixedExpensesCents ?? 0,
+      savingsGoalCents: previous?.savingsGoalCents ?? 0,
+    })
   }
 }
 

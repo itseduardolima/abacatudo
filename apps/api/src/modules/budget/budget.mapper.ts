@@ -3,6 +3,16 @@ import type { BudgetMonth } from '@gastos/shared'
 
 // teto variável = renda + benefício − gastos fixos − meta de poupança (03-regras-negocio § Orçamento
 // mensal). Pode dar negativo (o User se comprometeu além da renda) — mostrar isso é o ponto, não esconder.
+// Exportado à parte porque envelope também precisa dele pra calcular capCents de percentual.
+export function computeVariableCapCents(values: {
+  incomeCents: number
+  benefitCents: number
+  fixedExpensesCents: number
+  savingsGoalCents: number
+}): number {
+  return values.incomeCents + values.benefitCents - values.fixedExpensesCents - values.savingsGoalCents
+}
+
 export function toBudgetMonthDto(row: BudgetMonthRow): BudgetMonth {
   return {
     month: row.month,
@@ -10,6 +20,6 @@ export function toBudgetMonthDto(row: BudgetMonthRow): BudgetMonth {
     benefitCents: row.benefitCents,
     fixedExpensesCents: row.fixedExpensesCents,
     savingsGoalCents: row.savingsGoalCents,
-    variableCapCents: row.incomeCents + row.benefitCents - row.fixedExpensesCents - row.savingsGoalCents,
+    variableCapCents: computeVariableCapCents(row),
   }
 }
