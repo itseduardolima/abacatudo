@@ -25,21 +25,19 @@ export class BudgetMonthService {
 
   // Pra quem precisa do id de verdade (Envelope, por FK) e do teto já calculado — rejeita se o mês nunca
   // foi configurado e está fora da janela de auto-create (não dá pra pendurar envelope em nada).
-  async requireId(userId: string, month?: string): Promise<{ id: string; variableCapCents: number }> {
+  async requireId(userId: string, month?: string): Promise<{ id: string; month: string; variableCapCents: number }> {
     const key = resolveKey(month)
     const row = await this.resolveRow(userId, key)
     if (!row) {
       throw new DomainError('BUDGET_MONTH_NOT_CONFIGURED', 'Configure a renda desse mês antes de criar envelopes.', 422)
     }
-    return { id: row.id, variableCapCents: computeVariableCapCents(row) }
+    return { id: row.id, month: key, variableCapCents: computeVariableCapCents(row) }
   }
 
   // Mês fechado é imutável: editar a renda de hoje nunca reescreve o passado.
   async update(userId: string, month: string | undefined, input: UpdateBudgetMonthInput): Promise<BudgetMonth> {
     const key = resolveKey(month)
-    if (isPast(key)) {
-      throw new DomainError('BUDGET_MONTH_CLOSED', 'Mês fechado não pode ser editado.', 422)
-    }
+    assertMonthOpen(key)
     const row = await this.repo.upsert(userId, key, input)
     return toBudgetMonthDto(row)
   }
@@ -69,6 +67,14 @@ function resolveKey(month?: string): string {
 
 function isPast(month: string): boolean {
   return month < monthKey(new Date())
+}
+
+// Exportada porque o "mês fechado é imutável" também vale pra tudo que pendura em BudgetMonth (Envelope
+// inclusive) — não só pra editar a renda direto.
+export function assertMonthOpen(month: string): void {
+  if (isPast(month)) {
+    throw new DomainError('BUDGET_MONTH_CLOSED', 'Mês fechado não pode ser editado.', 422)
+  }
 }
 
 // Janela em que o auto-create do GET vale: o mês atual, ou o seguinte (pra planejar com antecedência).

@@ -69,7 +69,7 @@ describe('EnvelopeService', () => {
   describe('list', () => {
     it('soma capCents dos envelopes e calcula "Livre"', async () => {
       const budgetMonths = budgetMonthsMock()
-      budgetMonths.requireId.mockResolvedValue({ id: 'bm-1', variableCapCents: 310000 })
+      budgetMonths.requireId.mockResolvedValue({ id: 'bm-1', month: '2026-09', variableCapCents: 310000 })
       const repo = repoMock()
       repo.findMany.mockResolvedValue([
         envelopeRow({ id: 'env-1', amountCents: 30000, percent: null }),
@@ -89,7 +89,7 @@ describe('EnvelopeService', () => {
   describe('create', () => {
     it('404 quando a categoria não existe (ou não é do usuário)', async () => {
       const budgetMonths = budgetMonthsMock()
-      budgetMonths.requireId.mockResolvedValue({ id: 'bm-1', variableCapCents: 310000 })
+      budgetMonths.requireId.mockResolvedValue({ id: 'bm-1', month: '2026-09', variableCapCents: 310000 })
       const categories = categoriesMock()
       categories.findActiveById.mockResolvedValue(null)
       const service = new EnvelopeService(repoMock(), budgetMonths, categories)
@@ -101,7 +101,7 @@ describe('EnvelopeService', () => {
 
     it('cria e devolve com capCents calculado', async () => {
       const budgetMonths = budgetMonthsMock()
-      budgetMonths.requireId.mockResolvedValue({ id: 'bm-1', variableCapCents: 310000 })
+      budgetMonths.requireId.mockResolvedValue({ id: 'bm-1', month: '2026-09', variableCapCents: 310000 })
       const categories = categoriesMock()
       categories.findActiveById.mockResolvedValue(categoryRow())
       const repo = repoMock()
@@ -116,7 +116,7 @@ describe('EnvelopeService', () => {
 
     it('409 quando a categoria já tem envelope neste mês', async () => {
       const budgetMonths = budgetMonthsMock()
-      budgetMonths.requireId.mockResolvedValue({ id: 'bm-1', variableCapCents: 310000 })
+      budgetMonths.requireId.mockResolvedValue({ id: 'bm-1', month: '2026-09', variableCapCents: 310000 })
       const categories = categoriesMock()
       categories.findActiveById.mockResolvedValue(categoryRow())
       const repo = repoMock()
@@ -128,6 +128,16 @@ describe('EnvelopeService', () => {
       await expect(
         service.create('user-1', '2026-09', { categoryId: 'cat-1', amountCents: 30000 }),
       ).rejects.toBeInstanceOf(ConflictError)
+    })
+
+    it('422 quando o mês do envelope já existia e está fechado', async () => {
+      const budgetMonths = budgetMonthsMock()
+      budgetMonths.requireId.mockResolvedValue({ id: 'bm-1', month: '2000-01', variableCapCents: 310000 })
+      const service = new EnvelopeService(repoMock(), budgetMonths, categoriesMock())
+
+      await expect(
+        service.create('user-1', '2000-01', { categoryId: 'cat-1', amountCents: 30000 }),
+      ).rejects.toMatchObject({ code: 'BUDGET_MONTH_CLOSED' })
     })
   })
 
@@ -156,6 +166,20 @@ describe('EnvelopeService', () => {
 
       expect(result.capCents).toBe(155000)
     })
+
+    it('422 quando o mês do BudgetMonth relacionado já fechou', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValue({
+        ...envelopeRow(),
+        budgetMonth: budgetMonthRow({ month: '2000-01' }),
+      })
+      const service = new EnvelopeService(repo, budgetMonthsMock(), categoriesMock())
+
+      await expect(service.update('user-1', 'env-1', { amountCents: 1000 })).rejects.toMatchObject({
+        code: 'BUDGET_MONTH_CLOSED',
+      })
+      expect(repo.update).not.toHaveBeenCalled()
+    })
   })
 
   describe('remove', () => {
@@ -165,6 +189,18 @@ describe('EnvelopeService', () => {
       const service = new EnvelopeService(repo, budgetMonthsMock(), categoriesMock())
 
       await expect(service.remove('user-1', 'env-de-outro')).rejects.toBeInstanceOf(NotFoundError)
+    })
+
+    it('422 quando o mês do BudgetMonth relacionado já fechou', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValue({
+        ...envelopeRow(),
+        budgetMonth: budgetMonthRow({ month: '2000-01' }),
+      })
+      const service = new EnvelopeService(repo, budgetMonthsMock(), categoriesMock())
+
+      await expect(service.remove('user-1', 'env-1')).rejects.toMatchObject({ code: 'BUDGET_MONTH_CLOSED' })
+      expect(repo.delete).not.toHaveBeenCalled()
     })
   })
 })

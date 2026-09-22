@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
 import type { CreateEnvelopeInput, Envelope, EnvelopeList, UpdateEnvelopeInput } from '@gastos/shared'
-import { BudgetMonthService } from '../budget/budget-month.service'
+import { assertMonthOpen, BudgetMonthService } from '../budget/budget-month.service'
 import { computeVariableCapCents } from '../budget/budget.mapper'
 import { CategoryRepository } from '../category/category.repository'
 import { ConflictError, NotFoundError } from '../../common/errors/domain.error'
@@ -27,7 +27,8 @@ export class EnvelopeService {
   }
 
   async create(userId: string, month: string | undefined, input: CreateEnvelopeInput): Promise<Envelope> {
-    const { id: budgetMonthId, variableCapCents } = await this.budgetMonths.requireId(userId, month)
+    const { id: budgetMonthId, month: key, variableCapCents } = await this.budgetMonths.requireId(userId, month)
+    assertMonthOpen(key)
 
     const category = await this.categories.findActiveById(userId, input.categoryId)
     if (!category) throw new NotFoundError('CATEGORY_NOT_FOUND', 'Categoria não encontrada.')
@@ -47,6 +48,10 @@ export class EnvelopeService {
   }
 
   async update(userId: string, id: string, input: UpdateEnvelopeInput): Promise<Envelope> {
+    const existing = await this.repo.findById(userId, id)
+    if (!existing) throw NOT_FOUND()
+    assertMonthOpen(existing.budgetMonth.month)
+
     const result = await this.repo.update(userId, id, {
       amountCents: input.amountCents ?? null,
       percent: input.percent ?? null,
@@ -59,6 +64,10 @@ export class EnvelopeService {
   }
 
   async remove(userId: string, id: string): Promise<void> {
+    const existing = await this.repo.findById(userId, id)
+    if (!existing) throw NOT_FOUND()
+    assertMonthOpen(existing.budgetMonth.month)
+
     const result = await this.repo.delete(userId, id)
     if (result.count === 0) throw NOT_FOUND()
   }
