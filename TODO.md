@@ -12,9 +12,8 @@ Detalhe de cada item (critério de aceite, pontos, prioridade) está em
 estado — não duplique critério de aceite aqui, só referencie o número da HU.
 
 Regra de marcação: só marque `[x]` quando bater a Definition of Done de
-`docs/scrum/SPRINTS.md` (typecheck + testes + teste de isolamento com 2 Users
-
-- sem conta de dinheiro no frontend) — não quando o código só "existe".
+`docs/scrum/SPRINTS.md` (typecheck + testes + teste de isolamento com 2 Users,
+sem conta de dinheiro no frontend) — não quando o código só "existe".
 
 ## Em andamento agora
 
