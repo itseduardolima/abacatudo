@@ -209,6 +209,27 @@ fatura) e `/movements` só com o resto — como o desenho previa.
   pra compra parcelada quanto pro pagamento em si — nunca distinguia. O sinal certo é a `category`/
   `categoryId` que o Pluggy já classifica ("Credit card payment" / `05100000`), adicionado ao schema.
 
+### Code review (2026-09-22) — 4 achados, todos corrigidos e reverificados ao vivo
+
+- **`lastErrorCode` era campo morto**: existia na coluna e no DTO, mas nada escrevia nele — conexão com
+  `LOGIN_ERROR`/`ERROR` não dava motivo nenhum pro usuário. `checkStatus` agora persiste `error.code` do
+  Pluggy (schema `pluggyItemSchema` ganhou o campo `error`).
+- **`listAccounts` não paginava**: a resposta real vem com `total`/`totalPages`/`page`, mas só a primeira
+  página era lida — alguém com contas suficientes pra estourar uma página perdia o resto do sync
+  silenciosamente. Corrigido com um loop limitado a `MAX_ACCOUNT_PAGES` (20).
+- **Race de conta duplicada**: o dedup em `runSync` era "checa depois cria", não atômico — duas
+  sincronizações simultâneas do mesmo item podiam criar duas contas pra mesma conta real. Fechado com
+  `@@unique([userId, externalAccountId])` no schema (NULL nunca colide com NULL, então conta manual
+  continua livre) e um `upsert` atômico em `AccountRepository.upsertFromSync`.
+- **`occurredAt` usava a data errada em parcela**: dado real mostrou uma parcela com `date` quase 1 ano à
+  frente de `creditCardMetadata.purchaseDate` (a data real da compra) — `date` é quando a parcela cai na
+  fatura, não quando a compra aconteceu. Corrigido pra preferir `purchaseDate`; reverificado com sync real
+  — as 3 parcelas de uma mesma compra agora compartilham a mesma `occurredAt`, em vez de espalhadas em
+  meses futuros.
+
+Todos os 4 reverificados contra Postgres real e uma nova autorização de verdade no Nubank (144 testes,
+typecheck/lint/build limpos).
+
 ## Sprint 7 — Insights e IA
 
 - [ ] 9.2 — Assinaturas
