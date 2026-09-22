@@ -115,6 +115,9 @@ model Account {
   pluggyItem   PluggyItem?   @relation(fields: [pluggyItemId], references: [id])
   transactions Transaction[]
 
+  // NULL não colide com NULL no Postgres, então isso só trava duplicata de conta sincronizada pelo Pluggy
+  // (externalAccountId preenchido) — conta manual continua livre. Fecha a race do upsert em runSync.
+  @@unique([userId, externalAccountId])
   @@index([userId])
 }
 
