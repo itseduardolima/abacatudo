@@ -17,11 +17,11 @@ function repoMock() {
 }
 
 function peopleMock() {
-  return { findById: jest.fn() } as unknown as jest.Mocked<PersonRepository>
+  return { findActiveById: jest.fn() } as unknown as jest.Mocked<PersonRepository>
 }
 
 function categoriesMock() {
-  return { findById: jest.fn() } as unknown as jest.Mocked<CategoryRepository>
+  return { findActiveById: jest.fn() } as unknown as jest.Mocked<CategoryRepository>
 }
 
 function rulesMock() {
@@ -137,7 +137,7 @@ describe('TransactionService', () => {
       const repo = repoMock()
       repo.findById.mockResolvedValue(row())
       const people = peopleMock()
-      people.findById.mockResolvedValue(null)
+      people.findActiveById.mockResolvedValue(null)
       const service = newService({ repo, people })
 
       await expect(
@@ -151,7 +151,7 @@ describe('TransactionService', () => {
       repo.findById.mockResolvedValueOnce(row()).mockResolvedValueOnce(row({ personId: 'person-2' }))
       repo.updatePerson.mockResolvedValue({ count: 1 })
       const people = peopleMock()
-      people.findById.mockResolvedValue(personRow())
+      people.findActiveById.mockResolvedValue(personRow())
       const splits = splitsMock()
       const service = newService({ repo, people, splits })
 
@@ -166,7 +166,7 @@ describe('TransactionService', () => {
       const repo = repoMock()
       repo.findById.mockResolvedValue(row({ merchant: null }))
       const people = peopleMock()
-      people.findById.mockResolvedValue(personRow())
+      people.findActiveById.mockResolvedValue(personRow())
       const rules = rulesMock()
       const service = newService({ repo, people, rules })
 
@@ -184,7 +184,7 @@ describe('TransactionService', () => {
         .mockResolvedValueOnce(row({ merchant: '  Loja da Família  ', personId: 'person-2' }))
       repo.updatePerson.mockResolvedValue({ count: 1 })
       const people = peopleMock()
-      people.findById.mockResolvedValue(personRow())
+      people.findActiveById.mockResolvedValue(personRow())
       const rules = rulesMock()
       const service = newService({ repo, people, rules })
 
@@ -209,7 +209,7 @@ describe('TransactionService', () => {
       const repo = repoMock()
       repo.findById.mockResolvedValue(row())
       const categories = categoriesMock()
-      categories.findById.mockResolvedValue(null)
+      categories.findActiveById.mockResolvedValue(null)
       const service = newService({ repo, categories })
 
       await expect(
@@ -223,7 +223,7 @@ describe('TransactionService', () => {
       repo.findById.mockResolvedValueOnce(row()).mockResolvedValueOnce(row({ categoryId: 'cat-1' }))
       repo.updateCategory.mockResolvedValue({ count: 1 })
       const categories = categoriesMock()
-      categories.findById.mockResolvedValue(categoryRow())
+      categories.findActiveById.mockResolvedValue(categoryRow())
       const service = newService({ repo, categories })
 
       const result = await service.updateCategory('user-1', 'tx-1', {
@@ -239,7 +239,7 @@ describe('TransactionService', () => {
       const repo = repoMock()
       repo.findById.mockResolvedValue(row({ merchant: null }))
       const categories = categoriesMock()
-      categories.findById.mockResolvedValue(categoryRow())
+      categories.findActiveById.mockResolvedValue(categoryRow())
       const rules = rulesMock()
       const service = newService({ repo, categories, rules })
 
@@ -257,7 +257,7 @@ describe('TransactionService', () => {
         .mockResolvedValueOnce(row({ merchant: '  Mercado Central  ', categoryId: 'cat-1' }))
       repo.updateCategory.mockResolvedValue({ count: 1 })
       const categories = categoriesMock()
-      categories.findById.mockResolvedValue(categoryRow())
+      categories.findActiveById.mockResolvedValue(categoryRow())
       const rules = rulesMock()
       const service = newService({ repo, categories, rules })
 

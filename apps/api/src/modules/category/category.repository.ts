@@ -21,6 +21,12 @@ export class CategoryRepository {
     return this.prisma.category.findFirst({ where: { userId, id } })
   }
 
+  // Pra atribuir (transação): categoria arquivada some das listas de escolha, então também não pode ser
+  // um destino novo.
+  findActiveById(userId: string, id: string): Promise<Category | null> {
+    return this.prisma.category.findFirst({ where: { userId, id, archivedAt: null } })
+  }
+
   // where combinando id (única) + userId: Prisma resolve como UPDATE ... WHERE id = ? AND userId = ?, e
   // lança P2025 se 0 linhas baterem — cobre tanto "não existe" quanto "é de outro usuário" sem distinguir.
   rename(userId: string, id: string, name: string): Promise<Category> {

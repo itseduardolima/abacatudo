@@ -21,6 +21,12 @@ export class PersonRepository {
     return this.prisma.person.findFirst({ where: { userId, id } })
   }
 
+  // Pra atribuir (transação, split): pessoa arquivada some das listas de escolha, então também não pode
+  // ser um destino novo (03-regras-negocio, "arquivar" § Pessoas).
+  findActiveById(userId: string, id: string): Promise<Person | null> {
+    return this.prisma.person.findFirst({ where: { userId, id, archivedAt: null } })
+  }
+
   findSelf(userId: string): Promise<Person | null> {
     return this.prisma.person.findFirst({ where: { userId, isSelf: true } })
   }

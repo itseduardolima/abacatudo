@@ -40,7 +40,7 @@ export class TransactionService {
     const existing = await this.repo.findById(userId, id)
     if (!existing) throw NOT_FOUND()
 
-    const person = await this.people.findById(userId, input.personId)
+    const person = await this.people.findActiveById(userId, input.personId)
     if (!person) throw new NotFoundError('PERSON_NOT_FOUND', 'Pessoa não encontrada.')
 
     if (input.alwaysForMerchant) {
@@ -62,7 +62,7 @@ export class TransactionService {
     const existing = await this.repo.findById(userId, id)
     if (!existing) throw NOT_FOUND()
 
-    const category = await this.categories.findById(userId, input.categoryId)
+    const category = await this.categories.findActiveById(userId, input.categoryId)
     if (!category) throw new NotFoundError('CATEGORY_NOT_FOUND', 'Categoria não encontrada.')
 
     if (input.alwaysForMerchant) {

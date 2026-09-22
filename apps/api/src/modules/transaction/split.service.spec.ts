@@ -10,7 +10,7 @@ function transactionsMock() {
 }
 
 function peopleMock() {
-  return { findById: jest.fn(), findSelf: jest.fn() } as unknown as jest.Mocked<PersonRepository>
+  return { findActiveById: jest.fn(), findSelf: jest.fn() } as unknown as jest.Mocked<PersonRepository>
 }
 
 function splitsMock() {
@@ -69,17 +69,25 @@ describe('SplitService', () => {
       const transactions = transactionsMock()
       transactions.findById.mockResolvedValue(row())
       const people = peopleMock()
-      people.findById.mockResolvedValueOnce(personRow()).mockResolvedValueOnce(null)
+      people.findActiveById.mockResolvedValueOnce(personRow()).mockResolvedValueOnce(null)
       const service = new SplitService(transactions, people, splitsMock())
 
       await expect(service.preview('user-1', 'tx-1', ['p1', 'p2'])).rejects.toBeInstanceOf(NotFoundError)
+    })
+
+    it('rejeita pessoa duplicada — o preview nunca promete o que o replace recusaria depois', async () => {
+      const transactions = transactionsMock()
+      transactions.findById.mockResolvedValue(row({ amountCents: 1000 }))
+      const service = new SplitService(transactions, peopleMock(), splitsMock())
+
+      await expect(service.preview('user-1', 'tx-1', ['p1', 'p1'])).rejects.toBeInstanceOf(DomainError)
     })
 
     it('devolve a divisão igual calculada pela API (nunca pelo cliente)', async () => {
       const transactions = transactionsMock()
       transactions.findById.mockResolvedValue(row({ amountCents: 1000 }))
       const people = peopleMock()
-      people.findById.mockResolvedValue(personRow())
+      people.findActiveById.mockResolvedValue(personRow())
       const service = new SplitService(transactions, people, splitsMock())
 
       const result = await service.preview('user-1', 'tx-1', ['p1', 'p2', 'p3'])
@@ -94,7 +102,7 @@ describe('SplitService', () => {
       const transactions = transactionsMock()
       transactions.findById.mockResolvedValue(row({ amountCents: 1000 }))
       const people = peopleMock()
-      people.findById.mockResolvedValue(personRow())
+      people.findActiveById.mockResolvedValue(personRow())
       const splits = splitsMock()
       const service = new SplitService(transactions, people, splits)
 
@@ -113,7 +121,7 @@ describe('SplitService', () => {
       const transactions = transactionsMock()
       transactions.findById.mockResolvedValue(row({ amountCents: 1000 }))
       const people = peopleMock()
-      people.findById.mockResolvedValue(personRow())
+      people.findActiveById.mockResolvedValue(personRow())
       const splits = splitsMock()
       const service = new SplitService(transactions, people, splits)
 
@@ -134,7 +142,7 @@ describe('SplitService', () => {
         .mockResolvedValueOnce(row({ amountCents: 1000, personId: 'self-1' }))
         .mockResolvedValueOnce(row({ amountCents: 1000, personId: null }))
       const people = peopleMock()
-      people.findById.mockResolvedValue(personRow())
+      people.findActiveById.mockResolvedValue(personRow())
       const splits = splitsMock()
       const service = new SplitService(transactions, people, splits)
 

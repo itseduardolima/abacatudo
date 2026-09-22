@@ -20,6 +20,7 @@ export class SplitService {
   async preview(userId: string, transactionId: string, personIds: string[]): Promise<SplitPreview> {
     const transaction = await this.transactions.findById(userId, transactionId)
     if (!transaction) throw NOT_FOUND()
+    this.assertNoDuplicates(personIds)
     await this.assertPeopleExist(userId, personIds)
 
     return { splits: splitEqually(transaction.amountCents, personIds) }
@@ -30,9 +31,7 @@ export class SplitService {
     if (!transaction) throw NOT_FOUND()
 
     const personIds = input.splits.map((split) => split.personId)
-    if (new Set(personIds).size !== personIds.length) {
-      throw new DomainError('DUPLICATE_PERSON_IN_SPLIT', 'Cada pessoa só pode aparecer uma vez na divisão.', 400)
-    }
+    this.assertNoDuplicates(personIds)
     await this.assertPeopleExist(userId, personIds)
 
     const sum = input.splits.reduce((total, split) => total + split.amountCents, 0)
@@ -66,8 +65,16 @@ export class SplitService {
 
   private async assertPeopleExist(userId: string, personIds: string[]): Promise<void> {
     for (const personId of personIds) {
-      const person = await this.people.findById(userId, personId)
+      const person = await this.people.findActiveById(userId, personId)
       if (!person) throw new NotFoundError('PERSON_NOT_FOUND', 'Pessoa não encontrada.')
+    }
+  }
+
+  // Mesma checagem pro preview e pro replace — o preview nunca pode prometer uma divisão que o replace
+  // recusaria depois.
+  private assertNoDuplicates(personIds: string[]): void {
+    if (new Set(personIds).size !== personIds.length) {
+      throw new DomainError('DUPLICATE_PERSON_IN_SPLIT', 'Cada pessoa só pode aparecer uma vez na divisão.', 400)
     }
   }
 }
