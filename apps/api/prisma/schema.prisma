@@ -78,6 +78,7 @@ model Category {
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  rules        Rule[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -205,18 +206,22 @@ model Transaction {
   @@index([accountId, occurredAt])
 }
 
-/// RLS por userId. "Sempre para este estabelecimento" (03-regras-negocio § Atribuição de pessoa): uma
-/// regra por estabelecimento normalizado por User, decide a pessoa antes do padrão (self).
+/// RLS por userId. "Sempre para este estabelecimento" (03-regras-negocio § Atribuição de pessoa e §
+/// Categorias e regras): uma regra por estabelecimento normalizado por User, decide a pessoa (antes do
+/// padrão self) e/ou a categoria (antes de "sem categoria") — pelo menos um dos dois preenchido, nunca os
+/// dois vazios (CHECK na migration).
 model Rule {
-  id        String   @id @default(uuid())
-  userId    String
-  merchant  String
-  personId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(uuid())
+  userId     String
+  merchant   String
+  personId   String?
+  categoryId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  person   Person?   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@unique([userId, merchant])
   @@index([userId])
