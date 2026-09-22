@@ -1,4 +1,4 @@
-// Os models de domínio entram por sprint (User na Sprint 1, cada um com RLS e teste de isolamento).
+// Os models de domínio entram por sprint, cada um com RLS e teste de isolamento (08-seguranca § 1).
 generator client {
   provider = "prisma-client-js"
 }
@@ -6,4 +6,70 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // Só usada por `prisma migrate dev` em desenvolvimento local, para criar/derrubar o banco-sombra
+  // temporário que a Prisma usa para detectar drift. Precisa de um papel com CREATEDB — por isso aponta
+  // para o superusuário `postgres` do compose de dev, nunca para o papel `gastos` (sem CREATEDB, sem
+  // BYPASSRLS — 08-seguranca § 1). Não existe em produção: lá só roda `prisma migrate deploy`, que nunca
+  // cria banco-sombra.
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+/// Sem RLS (08-seguranca § 1, exceção documentada): resolvida pelo e-mail no login, antes de existir
+/// userId no contexto. Acesso só pelo AuthRepository — regra de lint em eslint.config.mjs.
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions   Session[]
+  people     Person[]
+  categories Category[]
+}
+
+/// Sem RLS: resolvida pelo hash do token do cookie, antes de existir userId no contexto (mesma exceção
+/// de User). tokenHash é o SHA-256 do token opaco — o valor em si nunca é persistido.
+model Session {
+  id         String    @id @default(uuid())
+  userId     String
+  tokenHash  String    @unique
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// RLS por userId (08-seguranca § 1). Todo User tem uma Person isSelf, criada pelo seed.
+model Person {
+  id         String    @id @default(uuid())
+  userId     String
+  name       String
+  isSelf     Boolean   @default(false)
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// RLS por userId. Nome único por User (03-regras-negocio § Categorias e regras).
+model Category {
+  id         String    @id @default(uuid())
+  userId     String
+  name       String
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId])
 }
