@@ -17,6 +17,8 @@ function row(overrides: Partial<AccountRow> = {}): AccountRow {
     closingDay: 20,
     dueDay: 27,
     creditLimitCents: 500000,
+    pluggyItemId: null,
+    externalAccountId: null,
     archivedAt: null,
     createdAt: new Date('2026-09-01T00:00:00.000Z'),
     updatedAt: new Date('2026-09-01T00:00:00.000Z'),

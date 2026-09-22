@@ -23,10 +23,12 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  sessions   Session[]
-  people     Person[]
-  categories Category[]
-  accounts   Account[]
+  sessions     Session[]
+  people       Person[]
+  categories   Category[]
+  accounts     Account[]
+  transactions Transaction[]
+  pluggyItems  PluggyItem[]
 }
 
 /// Sem RLS: resolvida pelo hash do token do cookie, antes de existir userId no contexto (mesma exceção
@@ -55,7 +57,8 @@ model Person {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
 
   @@index([userId])
 }
@@ -69,7 +72,8 @@ model Category {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -91,21 +95,102 @@ enum AccountSource {
 /// (categoria, pessoa, orçamento); CHECKING/CASH são movimentação, só consulta (04-padroes-codigo:
 /// TransactionRepository só devolve CREDIT_CARD, MovementRepository só o resto — mesma tabela).
 model Account {
-  id               String        @id @default(uuid())
-  userId           String
-  name             String
-  type             AccountType
-  source           AccountSource @default(MANUAL)
-  // Só fazem sentido em CREDIT_CARD; a API rejeita se vierem para CHECKING/CASH (nunca uma checagem no
-  // banco — mass assignment é responsabilidade do schema Zod, ver packages/shared/src/schemas/account.ts).
-  closingDay       Int?
-  dueDay           Int?
-  creditLimitCents Int?
-  archivedAt       DateTime?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id                String        @id @default(uuid())
+  userId            String
+  name              String
+  type              AccountType
+  source            AccountSource @default(MANUAL)
+  // Só fazem sentido em CREDIT_CARD; a API rejeita se vierem para CHECKING/CASH (mass assignment é do
+  // schema Zod, ver packages/shared/src/schemas/account.ts).
+  closingDay        Int?
+  dueDay            Int?
+  creditLimitCents  Int?
+  pluggyItemId      String?
+  externalAccountId String?
+  archivedAt        DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pluggyItem   PluggyItem?   @relation(fields: [pluggyItemId], references: [id])
+  transactions Transaction[]
 
   @@index([userId])
+}
+
+enum PluggyItemStatus {
+  WAITING_USER_INPUT
+  UPDATED
+  LOGIN_ERROR
+  OUTDATED
+  ERROR
+}
+
+/// RLS por userId. Nenhuma credencial de banco guardada: pluggyItemId é identificador, não segredo
+/// (08-seguranca § 14). Sem webhook (Meu Pluggy não tem, ver 07-integracao-bancaria) — o status muda por
+/// polling logo após conectar, e depois pelo sync diário/manual.
+model PluggyItem {
+  id               String           @id @default(uuid())
+  userId           String
+  pluggyItemId     String           @unique
+  institutionName  String
+  status           PluggyItemStatus @default(WAITING_USER_INPUT)
+  lastErrorCode    String?
+  consentExpiresAt DateTime?
+  lastSyncAt       DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accounts Account[]
+
+  @@index([userId])
+}
+
+enum TransactionKind {
+  EXPENSE
+  INCOME
+  TRANSFER
+  REFUND
+  CARD_PAYMENT
+}
+
+enum TransactionStatus {
+  POSTED
+  PENDING
+}
+
+/// RLS por userId. "Cartão" x "movimentação" nunca é um campo aqui — é Account.type que decide
+/// (03-regras-negocio § Escopo); esta é a mesma tabela que TransactionRepository e MovementRepository leem
+/// com filtros diferentes (04-padroes-codigo). categoryId/personId/note só fazem sentido quando a conta é
+/// CREDIT_CARD — a API rejeita fora disso.
+model Transaction {
+  id                String             @id @default(uuid())
+  userId            String
+  accountId         String
+  externalId        String?
+  kind              TransactionKind
+  status            TransactionStatus @default(POSTED)
+  amountCents       Int
+  occurredAt        DateTime
+  description       String
+  merchant          String?
+  categoryId        String?
+  personId          String?
+  note              String?
+  cardLast4         String?
+  installmentNumber Int?
+  installmentTotal  Int?
+  billId            String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account  Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id])
+  person   Person?   @relation(fields: [personId], references: [id])
+
+  @@unique([accountId, externalId])
+  @@index([userId])
+  @@index([accountId, occurredAt])
 }
