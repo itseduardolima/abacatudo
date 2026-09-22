@@ -119,6 +119,30 @@ describe('AuthService.login', () => {
 
     expect(attempts.isLocked('email:a@b.com')).toBe(false)
   })
+
+  it('login bem-sucedido NÃO reseta o contador do IP (evita bypass do bloqueio por IP via login legítimo em outra conta)', async () => {
+    const passwordHash = await argon2.hash('a-senha-certa', { type: argon2.argon2id })
+    const repo = repoMock()
+    repo.findUserForLogin.mockResolvedValue(null)
+    const { svc, attempts } = await service(repo)
+
+    // 4 tentativas falhas contra e-mails de OUTRAS pessoas, do mesmo IP do atacante.
+    for (let i = 0; i < 4; i++) {
+      await svc.login({ email: `vitima${i}@b.com`, password: 'x' }, META).catch(() => undefined)
+    }
+
+    // O atacante faz login de verdade na PRÓPRIA conta, pelo mesmo IP.
+    repo.findUserForLogin.mockResolvedValueOnce({ id: 'user-1', email: 'atacante@b.com', passwordHash })
+    repo.createSession.mockResolvedValueOnce({ id: 'session-1' })
+    await svc.login({ email: 'atacante@b.com', password: 'a-senha-certa' }, META)
+
+    // Se o contador do IP tivesse sido resetado pelo login legítimo, esta 5ª falha (contra mais uma
+    // vítima) não bloquearia. O IP precisa continuar bloqueado assim que chegar ao limite de novo.
+    repo.findUserForLogin.mockResolvedValue(null)
+    await svc.login({ email: 'vitima-nova@b.com', password: 'x' }, META).catch(() => undefined)
+
+    expect(attempts.isLocked(`ip:${META.ip}`)).toBe(true)
+  })
 })
 
 describe('AuthService.resolveSession', () => {

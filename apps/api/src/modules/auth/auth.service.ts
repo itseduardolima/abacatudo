@@ -64,8 +64,11 @@ export class AuthService implements OnModuleInit {
       this.attempts.recordFailure(ipKey)
       throw INVALID_CREDENTIALS()
     }
+    // Só a chave do e-mail é resetada aqui — nunca a do IP. Resetar o IP a cada login bem-sucedido
+    // permitiria a um atacante com UMA conta válida "limpar" o bloqueio por IP a qualquer momento (login
+    // legítimo na própria conta, repita as tentativas contra outras contas), esvaziando a defesa por IP
+    // exigida por 03-regras-negocio.md § Autenticação. O contador do IP só expira pela janela de tempo.
     this.attempts.reset(emailKey)
-    this.attempts.reset(ipKey)
 
     const { token, tokenHash } = generateSessionToken()
     await this.repo.createSession({ userId: user.id, tokenHash, userAgent: meta.userAgent })
