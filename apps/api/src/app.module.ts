@@ -13,6 +13,7 @@ import { AuthModule } from './modules/auth/auth.module'
 import { BankingModule } from './modules/banking/banking.module'
 import { CategoryModule } from './modules/category/category.module'
 import { HealthModule } from './modules/health/health.module'
+import { InvoiceModule } from './modules/invoice/invoice.module'
 import { PersonModule } from './modules/person/person.module'
 import { TransactionModule } from './modules/transaction/transaction.module'
 import { PrismaModule } from './prisma/prisma.module'
@@ -36,6 +37,7 @@ import { PrismaModule } from './prisma/prisma.module'
     CategoryModule,
     BankingModule,
     TransactionModule,
+    InvoiceModule,
     HealthModule,
   ],
   providers: [
