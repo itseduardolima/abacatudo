@@ -17,6 +17,10 @@ const REQUEST_TIMEOUT_MS = 15_000
 const MAX_ATTEMPTS = 3
 // Único conector gratuito para uso pessoal (07-integracao-bancaria § Resultado do spike).
 const MEU_PLUGGY_CONNECTOR_ID = 200
+// A resposta da criação do item vem com `parameter: null` — o link OAuth ainda está sendo gerado (visto
+// na prática: ~2s). Espera curta e limitada antes de desistir.
+const AUTHORIZE_URL_POLL_ATTEMPTS = 5
+const AUTHORIZE_URL_POLL_MS = 1500
 
 export class PluggyUnavailableError extends DomainError {
   constructor() {
@@ -41,9 +45,7 @@ export class PluggyClient {
       connectorId: MEU_PLUGGY_CONNECTOR_ID,
       parameters: {},
     })
-    const authorizeUrl = item.parameter?.data
-    if (!authorizeUrl) throw new PluggyUnavailableError()
-    return { pluggyItemId: item.id, authorizeUrl }
+    return { pluggyItemId: item.id, authorizeUrl: await this.waitForAuthorizeUrl(item) }
   }
 
   getItem(pluggyItemId: string): Promise<PluggyItem> {
@@ -62,6 +64,16 @@ export class PluggyClient {
     const path = cursor ?? `/v2/transactions?accountId=${accountId}`
     const page = await this.request('GET', path, pluggyTransactionsPageSchema)
     return { results: page.results, next: page.next ?? null }
+  }
+
+  private async waitForAuthorizeUrl(item: PluggyItem): Promise<string> {
+    if (item.parameter?.data) return item.parameter.data
+    for (let attempt = 1; attempt <= AUTHORIZE_URL_POLL_ATTEMPTS; attempt++) {
+      await sleep(AUTHORIZE_URL_POLL_MS)
+      const refreshed = await this.getItem(item.id)
+      if (refreshed.parameter?.data) return refreshed.parameter.data
+    }
+    throw new PluggyUnavailableError()
   }
 
   private async apiKey(): Promise<string> {

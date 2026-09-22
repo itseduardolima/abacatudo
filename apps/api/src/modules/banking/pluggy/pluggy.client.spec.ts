@@ -64,15 +64,45 @@ describe('PluggyClient', () => {
     expect((itemCall[1].headers as Record<string, string>)['x-api-key']).toBe(apiKey)
   })
 
-  it('createMeuPluggyItem: sem URL de autorização na resposta, falha', async () => {
+  it('createMeuPluggyItem: URL de autorização não vem na resposta da criação — espera e busca de novo (link OAuth é assíncrono)', async () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
       .mockResolvedValueOnce(
         jsonResponse(200, { id: 'item-1', status: 'WAITING_USER_INPUT', connector: { id: 200, name: 'MeuPluggy' } }),
       )
+      .mockResolvedValueOnce(
+        jsonResponse(200, {
+          id: 'item-1',
+          status: 'WAITING_USER_INPUT',
+          connector: { id: 200, name: 'MeuPluggy' },
+          parameter: { name: 'oauthCode', data: 'https://my.pluggy.ai/oauth/authorize?x=1' },
+        }),
+      )
+    jest.useFakeTimers()
     const client = new PluggyClient(configMock())
 
-    await expect(client.createMeuPluggyItem()).rejects.toBeInstanceOf(PluggyUnavailableError)
+    const assertion = expect(client.createMeuPluggyItem()).resolves.toEqual({
+      pluggyItemId: 'item-1',
+      authorizeUrl: 'https://my.pluggy.ai/oauth/authorize?x=1',
+    })
+    await jest.runAllTimersAsync()
+    await assertion
+    jest.useRealTimers()
+  })
+
+  it('createMeuPluggyItem: URL de autorização nunca aparece, desiste depois do limite de tentativas', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
+      .mockResolvedValue(
+        jsonResponse(200, { id: 'item-1', status: 'WAITING_USER_INPUT', connector: { id: 200, name: 'MeuPluggy' } }),
+      )
+    jest.useFakeTimers()
+    const client = new PluggyClient(configMock())
+
+    const assertion = expect(client.createMeuPluggyItem()).rejects.toBeInstanceOf(PluggyUnavailableError)
+    await jest.runAllTimersAsync()
+    await assertion
+    jest.useRealTimers()
   })
 
   it('reaproveita a API key enquanto ela não expira (uma chamada a /auth só)', async () => {
