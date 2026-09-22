@@ -33,7 +33,9 @@ export function mapTransaction(tx: PluggyTransaction): MappedTransaction {
     kind: resolveKind(tx),
     status: tx.status,
     amountCents: Math.round(Math.abs(tx.amount) * 100),
-    occurredAt: dayFromDateString(tx.date),
+    // Em parcelada, `date` é quando a parcela cai na fatura (pode ser meses à frente); purchaseDate é
+    // quando a compra de fato aconteceu — é isso que conta pra "gasto do mês" (03-regras-negocio).
+    occurredAt: dayFromDateString(card?.purchaseDate ?? tx.date),
     description: tx.description,
     merchant: tx.merchant?.name ?? null,
     cardLast4: card?.cardNumber ?? null,

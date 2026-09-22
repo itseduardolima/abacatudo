@@ -73,6 +73,27 @@ describe('mapTransaction', () => {
     expect(result.cardLast4).toBeNull()
     expect(result.installmentNumber).toBeNull()
   })
+
+  it('parcela usa purchaseDate (data real da compra), não a data da parcela na fatura', () => {
+    const result = mapTransaction(
+      tx({
+        date: '2027-05-21',
+        creditCardMetadata: {
+          cardNumber: '9391',
+          totalInstallments: 12,
+          installmentNumber: 12,
+          billId: null,
+          purchaseDate: '2026-06-21T22:35:59.001Z',
+        },
+      }),
+    )
+    expect(new Date(result.occurredAt).toISOString()).toBe('2026-06-21T22:35:59.001Z')
+  })
+
+  it('sem purchaseDate, cai pra `date`', () => {
+    const result = mapTransaction(tx({ date: '2026-09-21' }))
+    expect(new Date(result.occurredAt).toISOString()).toBe('2026-09-21T12:00:00.000Z')
+  })
 })
 
 describe('mapAccountFields', () => {
