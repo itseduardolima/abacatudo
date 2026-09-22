@@ -20,4 +20,12 @@ export class AccountRepository {
   findById(userId: string, id: string): Promise<Account | null> {
     return this.prisma.account.findFirst({ where: { userId, id } })
   }
+
+  findByExternalAccountId(userId: string, externalAccountId: string): Promise<Account | null> {
+    return this.prisma.account.findFirst({ where: { userId, externalAccountId } })
+  }
+
+  async updateFromSync(userId: string, id: string, data: Prisma.AccountUpdateInput): Promise<void> {
+    await this.prisma.account.updateMany({ where: { userId, id }, data })
+  }
 }
