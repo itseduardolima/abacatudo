@@ -33,13 +33,16 @@ CHECK`) com `FORCE ROW LEVEL SECURITY` em toda tabela de domínio
   `userStorage.run({ userId }, ...)`; o `await` da query fica **dentro** do
   callback (devolver a `PrismaPromise` sem awaitar perde o contexto do
   `AsyncLocalStorage` — pegadinha real já documentada no `pdv-web`).
-- **Tabelas de autenticação — a exceção à RLS**: `User`, `Invite`, `Session`
-  e `PasswordReset` **não têm RLS**. Motivo: são consultadas _antes_ de haver
-  contexto de usuário (achar o User por e-mail no login; achar a `Session`
-  pelo `tokenHash` do cookie; achar o convite/reset pelo hash do token). Com
-  RLS por `app.user_id` essas consultas voltariam sempre vazias — é um
-  círculo: a sessão é o que revela quem é o usuário. Como aqui a RLS não
-  protege, o **filtro na camada de aplicação é a única barreira**, então:
+- **Tabelas de autenticação — a exceção à RLS**: `User` e `Session`
+  (implementadas na Sprint 1) **não têm RLS**. `PasswordReset` entra com a
+  mesma exceção quando a HU 1.5 (redefinir senha) for construída. `Invite`
+  não existe mais: convidar outra pessoa saiu do escopo (decisão de
+  2026-09-21, uso individual). Motivo da exceção: são consultadas _antes_ de
+  haver contexto de usuário (achar o User por e-mail no login; achar a
+  `Session` pelo `tokenHash` do cookie). Com RLS por `app.user_id` essas
+  consultas voltariam sempre vazias — é um círculo: a sessão é o que revela
+  quem é o usuário. Como aqui a RLS não protege, o **filtro na camada de
+  aplicação é a única barreira**, então:
   - só o `AuthRepository` toca nessas tabelas; nenhum outro módulo as importa
     (regra de lint `no-restricted-imports`/`no-restricted-syntax` no
     `apps/api`);
@@ -47,8 +50,13 @@ CHECK`) com `FORCE ROW LEVEL SECURITY` em toda tabela de domínio
     listagem**; `tokenHash`/`passwordHash` nunca saem em resposta;
   - "listar/encerrar minhas sessões" filtra **sempre** por `userId` da
     sessão atual, e encerrar a sessão de outro User responde `404`;
-  - depois de resolvida a `Session`, o `AuthGuard` põe o `userId` no contexto
-    e **todas as demais tabelas** seguem sob RLS normalmente;
+  - a `Session` é resolvida por um `SessionMiddleware` (não pelo `AuthGuard`):
+    um Guard não consegue estabelecer o contexto do `AsyncLocalStorage` para
+    o que roda depois dele (`canActivate()` já retornou quando o handler
+    começa) — só uma Middleware, que envolve o `next()` de dentro do
+    `.run()`. O `AuthGuard` só confere se o `userId` já foi resolvido e
+    recusa a rota (falha fechada) se não; depois disso **todas as demais
+    tabelas** seguem sob RLS normalmente;
   - o teste de isolamento com 2 Users cobre essas tabelas explicitamente
     (não basta a RLS, que aqui não existe).
 - **Ferramentas da IA e endpoints de leitura nunca aceitam `userId` do

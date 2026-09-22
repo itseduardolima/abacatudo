@@ -19,7 +19,10 @@ Regra de marcação: só marque `[x]` quando bater a Definition of Done de
 ## Em andamento agora
 
 - **Sprint 0 concluída em 2026-09-21**, incluindo o **spike do Pluggy (0.6)**, fechado com dado real (spec 07).
-- Próximo: Sprint 1 (auth + isolamento por usuário).
+- **Sprint 1 concluída em 2026-09-22**: RLS (User/Session isentas, documentado), login por e-mail/senha,
+  sessão de 30 dias com revogação, seed do primeiro usuário. Testado contra Postgres e API reais, e o
+  fluxo de cookie testado num Chrome de verdade (não só curl). Gaps encontrados: ver seção da Sprint 1.
+- Próximo: Sprint 2 (contas, pessoas, categorias, import).
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -79,10 +82,27 @@ Regra de marcação: só marque `[x]` quando bater a Definition of Done de
 
 ## Sprint 1 — Auth + isolamento por usuário
 
-- [ ] 1.1 — RLS por `user_id` + teste com 2 Users
-- [ ] 1.2 — Login e-mail/senha (argon2id, rate limit, cookie `__Host-`)
-- [ ] 1.3 — Sessão com expiração e revogação
-- [ ] 1.9 — Seed do primeiro usuário
+- [x] 1.1 — RLS por `user_id` (User/Session isentas, documentado) + prova manual com psql (0 linhas sem contexto, INSERT de outro usuário recusado, `gastos` sem superuser/bypassrls). Ainda falta o teste automatizado com 2 Users — só existirá endpoint para provar isso via HTTP a partir da Sprint 2 (Person/Category ainda não têm Controller); a política em si já está ativa e será exercida pelos testes de isolamento dos módulos futuros.
+- [x] 1.2 — Login e-mail/senha (argon2id, rate limit por e-mail **e** IP a 5/15min, cookie `__Host-gastos_session`). Verificado num navegador real (Chrome): o cookie `Secure` é aceito em `http://localhost` (contexto seguro), `httpOnly` de fato invisível a `document.cookie`
+- [x] 1.3 — Sessão de 30 dias sem uso (janela deslizante, cookie renovado a cada request autenticado), logout revoga no servidor, listar/encerrar sessões (`GET /auth/sessions`, `DELETE /auth/sessions/:id`)
+- [x] 1.9 — Seed do primeiro usuário (idempotente, testado rodando 2x), cria `Person` self e as 13 categorias padrão
+
+### Decisões e gaps encontrados nesta sprint
+
+- **RLS não pode ser gerido pelo `AuthGuard`, só por uma Middleware.** Um `CanActivate` não consegue
+  envolver o `next.handle()`/handler no `AsyncLocalStorage.run()` — corrigido no spec 08 § 1. A
+  resolução da sessão (e o estabelecimento do contexto) ficou no novo `SessionMiddleware`; o `AuthGuard`
+  só confere se já foi resolvido.
+- **`prisma migrate dev` precisa de um banco-sombra**, que exige `CREATEDB` — o papel `gastos` não tem
+  (nem deveria, spec 08 § 1). Solução: `SHADOW_DATABASE_URL` aponta para o superusuário só em dev
+  (`.env.example` do `apps/api`); produção nunca usa `migrate dev`, só `migrate deploy`.
+- **Gap no backlog**: não existe HU dedicada para "trocar minha senha" logado (a 1.5 é só "esqueci a
+  senha"). `revokeSession`/listagem cobrem "posso encerrar sessões"; falta decidir onde entra a troca de
+  senha e se ela revoga as outras sessões, antes de Configurações (Sprint 8).
+- **Seed em produção**: `pnpm db:seed` usa `ts-node`, que não existe na imagem de produção (só
+  dependências de produção). Falta um caminho de seed para o primeiro deploy real — registrar como
+  item da Sprint 8 (checklist do primeiro deploy, 12.5).
+- **`argon2` faltava no `package.json`** (fiquei só na regra do spec) — adicionado.
 
 ## Sprint 2 — Contas, pessoas, categorias, import
 
