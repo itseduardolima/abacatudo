@@ -1,4 +1,8 @@
-import { transactionSchema, updateTransactionPersonInputSchema } from './transaction'
+import {
+  transactionSchema,
+  updateTransactionCategoryInputSchema,
+  updateTransactionPersonInputSchema,
+} from './transaction'
 
 const VALID = {
   id: '11111111-1111-1111-1111-111111111111',
@@ -43,5 +47,18 @@ describe('updateTransactionPersonInputSchema', () => {
   it('rejeita personId inválido e campo extra', () => {
     expect(updateTransactionPersonInputSchema.safeParse({ personId: 'não-é-uuid' }).success).toBe(false)
     expect(updateTransactionPersonInputSchema.safeParse({ personId: VALID.id, note: 'x' }).success).toBe(false)
+  })
+})
+
+describe('updateTransactionCategoryInputSchema', () => {
+  it('alwaysForMerchant é opcional, padrão false', () => {
+    const result = updateTransactionCategoryInputSchema.safeParse({ categoryId: VALID.id })
+    expect(result.success).toBe(true)
+    expect(result.success && result.data.alwaysForMerchant).toBe(false)
+  })
+
+  it('rejeita categoryId inválido e campo extra', () => {
+    expect(updateTransactionCategoryInputSchema.safeParse({ categoryId: 'não-é-uuid' }).success).toBe(false)
+    expect(updateTransactionCategoryInputSchema.safeParse({ categoryId: VALID.id, note: 'x' }).success).toBe(false)
   })
 })

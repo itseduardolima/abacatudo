@@ -39,3 +39,13 @@ export const updateTransactionPersonInputSchema = z
   })
   .strict()
 export type UpdateTransactionPersonInput = z.infer<typeof updateTransactionPersonInputSchema>
+
+// Corrigir a categoria de uma transação (03-regras-negocio § Categorias e regras). Mesma lógica de
+// alwaysForMerchant do endpoint de pessoa, na mesma Rule do estabelecimento.
+export const updateTransactionCategoryInputSchema = z
+  .object({
+    categoryId: idSchema,
+    alwaysForMerchant: z.boolean().default(false),
+  })
+  .strict()
+export type UpdateTransactionCategoryInput = z.infer<typeof updateTransactionCategoryInputSchema>
