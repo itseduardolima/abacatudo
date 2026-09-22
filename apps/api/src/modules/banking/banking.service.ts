@@ -97,8 +97,10 @@ export class BankingService {
         const page = await this.pluggy.listTransactions(pluggyAccount.id, cursor)
         for (const tx of page.results) {
           const mapped = mapTransaction(tx)
-          const personId = resolvePersonId(mapped.merchant ?? null, ruleByMerchant, selfPerson.id)
-          await this.sync.upsertTransaction(userId, account.id, personId, mapped)
+          const merchant = mapped.merchant ?? null
+          const personId = resolvePersonId(merchant, ruleByMerchant, selfPerson.id)
+          const categoryId = resolveCategoryId(merchant, ruleByMerchant)
+          await this.sync.upsertTransaction(userId, account.id, personId, categoryId, mapped)
           transactionsSynced++
         }
         cursor = page.next ?? undefined
@@ -115,6 +117,13 @@ export class BankingService {
 function resolvePersonId(merchant: string | null, ruleByMerchant: Map<string, Rule>, selfPersonId: string): string {
   if (!merchant) return selfPersonId
   return ruleByMerchant.get(normalizeMerchant(merchant))?.personId ?? selfPersonId
+}
+
+// Sem Rule pro estabelecimento, nasce sem categoria (03-regras-negocio § Categorias e regras) — nunca
+// inventa uma; quem decide isso além da Rule é o usuário ou, no futuro, a sugestão de IA (Sprint 7).
+function resolveCategoryId(merchant: string | null, ruleByMerchant: Map<string, Rule>): string | null {
+  if (!merchant) return null
+  return ruleByMerchant.get(normalizeMerchant(merchant))?.categoryId ?? null
 }
 
 function toConnectionDto(row: PluggyItemRow): BankConnection {

@@ -6,13 +6,19 @@ import type { MappedTransaction } from './banking.mapper'
 export class BankingSyncRepository {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaService) {}
 
-  // Upsert por [accountId, externalId] (idempotente: sincronizar de novo nunca duplica). personId só entra
-  // na criação (padrão "Meu" ou Rule, ver banking.service.ts); o update nunca toca
+  // Upsert por [accountId, externalId] (idempotente: sincronizar de novo nunca duplica). personId/
+  // categoryId só entram na criação (padrão "Meu"/Rule, ver banking.service.ts); o update nunca toca
   // categoryId/personId/note — são do usuário, o Pluggy não manda isso (03-regras-negocio).
-  async upsertTransaction(userId: string, accountId: string, personId: string, data: MappedTransaction): Promise<void> {
+  async upsertTransaction(
+    userId: string,
+    accountId: string,
+    personId: string,
+    categoryId: string | null,
+    data: MappedTransaction,
+  ): Promise<void> {
     await this.prisma.transaction.upsert({
       where: { accountId_externalId: { accountId, externalId: data.externalId } },
-      create: { ...data, accountId, userId, personId },
+      create: { ...data, accountId, userId, personId, categoryId },
       update: {
         kind: data.kind,
         status: data.status,

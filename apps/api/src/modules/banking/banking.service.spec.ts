@@ -126,6 +126,7 @@ function ruleRow(overrides: Partial<Rule> = {}): Rule {
     userId: 'user-1',
     merchant: 'loja da família',
     personId: 'person-2',
+    categoryId: null,
     createdAt: new Date('2026-09-01T00:00:00.000Z'),
     updatedAt: new Date('2026-09-01T00:00:00.000Z'),
     ...overrides,
@@ -282,6 +283,7 @@ describe('BankingService', () => {
       'user-1',
       'acc-1',
       'self-1',
+      null,
       expect.objectContaining({ externalId: 'tx-1' }),
     )
     expect(pluggy.listTransactions).toHaveBeenNthCalledWith(
@@ -360,10 +362,10 @@ describe('BankingService', () => {
 
     await service.manualSync('user-1', 'item-1')
 
-    expect(sync.upsertTransaction).toHaveBeenCalledWith('user-1', 'acc-1', 'self-42', expect.any(Object))
+    expect(sync.upsertTransaction).toHaveBeenCalledWith('user-1', 'acc-1', 'self-42', null, expect.any(Object))
   })
 
-  it('manualSync: com Rule pro estabelecimento (normalizado), atribui a pessoa da regra', async () => {
+  it('manualSync: com Rule pro estabelecimento (normalizado), atribui a pessoa e a categoria da regra', async () => {
     const items = itemsMock()
     items.findById.mockResolvedValue(itemRow())
     const accounts = accountsMock()
@@ -390,12 +392,59 @@ describe('BankingService', () => {
     })
     const sync = syncMock()
     const rules = rulesMock()
-    rules.findMany.mockResolvedValue([ruleRow({ merchant: 'loja da família', personId: 'person-2' })])
+    rules.findMany.mockResolvedValue([
+      ruleRow({ merchant: 'loja da família', personId: 'person-2', categoryId: 'cat-mercado' }),
+    ])
     const service = newService({ pluggy, items, accounts, sync, rules })
 
     await service.manualSync('user-1', 'item-1')
 
-    expect(sync.upsertTransaction).toHaveBeenCalledWith('user-1', 'acc-1', 'person-2', expect.any(Object))
+    expect(sync.upsertTransaction).toHaveBeenCalledWith(
+      'user-1',
+      'acc-1',
+      'person-2',
+      'cat-mercado',
+      expect.any(Object),
+    )
+  })
+
+  it('manualSync: Rule só de categoria (sem pessoa) deixa a pessoa cair no padrão "Meu"', async () => {
+    const items = itemsMock()
+    items.findById.mockResolvedValue(itemRow())
+    const accounts = accountsMock()
+    accounts.upsertFromSync.mockResolvedValue(accountRow())
+    const pluggy = pluggyMock()
+    pluggy.listAccounts.mockResolvedValue([{ id: 'ext-acc-1', type: 'CREDIT', name: 'Nubank', creditData: null }])
+    pluggy.listTransactions.mockResolvedValue({
+      results: [
+        {
+          id: 'tx-1',
+          amount: 50,
+          type: 'DEBIT',
+          operationType: null,
+          category: null,
+          categoryId: null,
+          status: 'POSTED',
+          date: '2026-09-21',
+          description: 'PAG*MERCADO',
+          merchant: { businessName: 'Mercado Central' },
+          creditCardMetadata: null,
+        },
+      ],
+      next: null,
+    })
+    const sync = syncMock()
+    const people = peopleMock()
+    people.findSelf.mockResolvedValue(personRow({ id: 'self-1' }))
+    const rules = rulesMock()
+    rules.findMany.mockResolvedValue([
+      ruleRow({ merchant: 'mercado central', personId: null, categoryId: 'cat-mercado' }),
+    ])
+    const service = newService({ pluggy, items, accounts, sync, people, rules })
+
+    await service.manualSync('user-1', 'item-1')
+
+    expect(sync.upsertTransaction).toHaveBeenCalledWith('user-1', 'acc-1', 'self-1', 'cat-mercado', expect.any(Object))
   })
 
   it('manualSync: sem Pessoa self cadastrada, falha alto (invariante quebrada)', async () => {
