@@ -48,7 +48,7 @@ Pluggy entra depois (Sprint 6) sobre um domínio que já funciona.
 | ------ | ----------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------- |
 | 0      | Fundação, spike Pluggy, protótipo               | 0.1–0.7                                                | Monorepo sobe local; catálogo Pluggy documentado; protótipo validado  |
 | 1      | Auth + isolamento por usuário                   | 1.1, 1.2, 1.3, 1.9                                     | Login por e-mail/senha; RLS provada com 2 Users; sessão revogável     |
-| 2      | Contas, pessoas, categorias, import, lançamento | 2.1, 2.2, 2.4, 3.1, 3.3, 3.4, 3.5, 5.1                 | Importo um OFX/CSV e vejo as compras do cartão (Pix já separado)      |
+| 2      | Contas, pessoas, categorias, import, lançamento | 2.1, 2.2, 2.4, 3.5, 3.1, 3.4, 5.1, 3.3 (por último)    | Importo um OFX/CSV e vejo as compras do cartão (Pix já separado)      |
 | 3      | Classificação (o coração do produto)            | 4.1, 4.2, 4.4, 4.5                                     | Caixa "a classificar" em 1 toque, regras, divisão de compra           |
 | 4      | Fatura só com a minha parte + Movimentações     | 5.2, 5.3, 6.1, 6.2                                     | Fatura mostra total, não é meu e "Meu"; extrato de Pix separado       |
 | 5      | Orçamento e relatórios                          | 7.1–7.3, 8.6, 9.1                                      | Teto do mês, envelopes, alertas, para onde vai o dinheiro             |

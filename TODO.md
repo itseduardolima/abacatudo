@@ -113,12 +113,14 @@ Regra de marcação: só marque `[x]` quando bater a Definition of Done de
 - [x] 2.2 — Pessoas (CRUD + arquivar; self nunca arquivável)
 - [x] 2.4 — Categorias (CRUD + renomear + arquivar; nome único por usuário, 409 em duplicata)
 - [x] 3.5 — Fuso `America/Manaus` (mudou de São Paulo pra Manaus a pedido do usuário; `common/date/timezone.ts`)
-- [ ] 3.1 — Import OFX/CSV com pré-visualização (não começado — é o item maior da sprint)
-- [ ] 3.3 — Lançamento manual (depende de existir o model `Transaction`)
-- [ ] 3.4 — Lista e filtros (idem)
+      **Ordem do que falta (a pedido do usuário, 2026-09-22): lançamento manual por último.**
+
+- [ ] 3.1 — Import OFX/CSV com pré-visualização (não começado — é o item maior da sprint; primeiro)
+- [ ] 3.4 — Lista e filtros (depende de existir o model `Transaction`, criado junto do import)
+- [ ] 3.3 — Lançamento manual (deixado por último de propósito)
 - [~] 5.1 — Separação por tipo de conta está pronta na modelagem (`Account.type` decide o escopo, sem
   campo de canal por lançamento); falta o par `TransactionRepository`/`MovementRepository` lendo a mesma
-  tabela, que só existe quando o model `Transaction` for criado (junto de 3.1/3.3/3.4)
+  tabela, que só existe quando o model `Transaction` for criado (junto de 3.1/3.4)
 
 **Por que parei aqui**: 2.1/2.2/2.4/3.5 formam a base que 3.1/3.3/3.4 precisam (conta pra lançar,
 categoria/pessoa pra classificar, fuso pra agrupar por mês). Import OFX/CSV é o item mais arriscado da
