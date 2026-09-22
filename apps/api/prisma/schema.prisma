@@ -30,6 +30,7 @@ model User {
   transactions Transaction[]
   pluggyItems  PluggyItem[]
   rules        Rule[]
+  splits       Split[]
 }
 
 /// Sem RLS: resolvida pelo hash do token do cookie, antes de existir userId no contexto (mesma exceção
@@ -61,6 +62,7 @@ model Person {
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   rules        Rule[]
+  splits       Split[]
 
   @@index([userId])
 }
@@ -168,7 +170,9 @@ enum TransactionStatus {
 /// RLS por userId. "Cartão" x "movimentação" nunca é um campo aqui — é Account.type que decide
 /// (03-regras-negocio § Escopo); esta é a mesma tabela que TransactionRepository e MovementRepository leem
 /// com filtros diferentes (04-padroes-codigo). categoryId/personId/note só fazem sentido quando a conta é
-/// CREDIT_CARD — a API rejeita fora disso.
+/// CREDIT_CARD — a API rejeita fora disso. personId nasce sempre preenchido (padrão "Meu"); só fica null
+/// quando a transação está dividida — aí quem manda é a soma dos Split (03-regras-negocio § Atribuição de
+/// pessoa e § Só a minha parte).
 model Transaction {
   id                String             @id @default(uuid())
   userId            String
@@ -194,6 +198,7 @@ model Transaction {
   account  Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
   category Category? @relation(fields: [categoryId], references: [id])
   person   Person?   @relation(fields: [personId], references: [id])
+  splits   Split[]
 
   @@unique([accountId, externalId])
   @@index([userId])
@@ -214,5 +219,25 @@ model Rule {
   person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
 
   @@unique([userId, merchant])
+  @@index([userId])
+}
+
+/// RLS por userId. Divisão de uma compra entre Persons (03-regras-negocio § Atribuição de pessoa): a soma
+/// dos splits de uma transação tem que fechar com o total, checado na API antes de gravar. Enquanto
+/// existem splits, Transaction.personId fica null — quem manda é essa tabela.
+model Split {
+  id            String   @id @default(uuid())
+  userId        String
+  transactionId String
+  personId      String
+  amountCents   Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  person      Person      @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([transactionId, personId])
   @@index([userId])
 }
