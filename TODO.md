@@ -37,7 +37,15 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
   pagamento de fatura) — ver "Bugs achados só ao rodar de verdade" da Sprint 6. Sprint 6 fecha 8.1/8.2/8.3
   de verdade agora; 5.1 e 3.4 (básico) também.
   Limpei o usuário/item de teste depois (no banco e no Pluggy) — banco de dev volta vazio.
-- Próximo: Sprint 3 (classificação), que já tem `Transaction`/`banking` provados contra dado real pra usar.
+- **Sprint 3 iniciada (2026-09-22) — Etapa 1 concluída**: model `Rule` + RLS, `PersonRepository.findSelf`,
+  e o pipeline de atribuição de pessoa ligado no sync (toda transação nasce "Meu", `Rule` decide antes
+  quando o estabelecimento bate). Achei e corrigi mais 1 bug ao testar: `merchant` nunca vinha preenchido
+  porque o schema esperava `name` e o campo real do Pluggy é `businessName`. Verificado ao vivo: 1670
+  transações sincronizadas sem nenhuma sem pessoa, e uma `Rule` de teste pra "Prime Video" roteou as 27
+  transações certas pra outra pessoa enquanto o resto ficou "Eu". Faltam as Etapas 2-4 (endpoint pra
+  corrigir pessoa + criar regra, `Split`, categorização automática).
+- Próximo: Sprint 3 Etapa 2 — endpoint pra trocar a pessoa de uma transação em 1 toque, com a opção
+  "sempre para este estabelecimento" criando/atualizando a `Rule`.
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -164,10 +172,21 @@ nunca com o superusuário.
 
 ## Sprint 3 — Classificação
 
-- [ ] 4.1 — Caixa "a classificar"
-- [ ] 4.2 — "Sempre para este estabelecimento" (regras)
+Escopo mudou a pedido do usuário (2026-09-22): toda transação nasce "Meu", sem fila de pendência — ver
+"Decisões já tomadas". 4.1 virou "corrigir pessoa em 1 toque".
+
+- [~] 4.1 — Corrigir pessoa em 1 toque: **pipeline de atribuição pronto** (model `Rule`, padrão "Meu",
+  testado ao vivo); falta o endpoint pra trocar a pessoa de uma transação já sincronizada
+- [~] 4.2 — "Sempre para este estabelecimento": `Rule` já decide no sync; falta o endpoint pra
+  criar/atualizar a regra a partir de uma correção
 - [ ] 4.4 — Dividir compra
 - [ ] 4.5 — Categorização automática por regras/histórico
+
+### Bugs achados só ao rodar de verdade (e corrigidos)
+
+- `merchant` nunca vinha preenchido: o schema esperava `merchant.name`, mas o campo real do Pluggy é
+  `merchant.businessName`. Achado ao testar a `Rule` contra dado real (sem merchant, "sempre para este
+  estabelecimento" não tinha o que casar).
 
 ## Sprint 4 — Fatura só com a minha parte + Movimentações
 
