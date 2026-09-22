@@ -44,8 +44,13 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
   transações sincronizadas sem nenhuma sem pessoa, e uma `Rule` de teste pra "Prime Video" roteou as 27
   transações certas pra outra pessoa enquanto o resto ficou "Eu". Faltam as Etapas 2-4 (endpoint pra
   corrigir pessoa + criar regra, `Split`, categorização automática).
-- Próximo: Sprint 3 Etapa 2 — endpoint pra trocar a pessoa de uma transação em 1 toque, com a opção
-  "sempre para este estabelecimento" criando/atualizando a `Rule`.
+- **Sprint 3 Etapa 2 concluída (2026-09-22)**: `PATCH /transactions/:id/person` corrige a pessoa de uma
+  transação (só cartão — 404 em conta de movimentação); `alwaysForMerchant` cria/atualiza a `Rule` do
+  estabelecimento normalizado, rejeita (`400 MERCHANT_REQUIRED_FOR_RULE`) se a transação não tiver
+  merchant. Verificado ao vivo contra Postgres real: troca de pessoa, criação da `Rule` (linha conferida
+  no banco), rejeição sem merchant, 404 em movimentação e em pessoa inexistente.
+- Próximo: Sprint 3 Etapa 3 — model `Split` e dividir uma compra entre pessoas (soma tem que fechar com o
+  total).
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -175,10 +180,8 @@ nunca com o superusuário.
 Escopo mudou a pedido do usuário (2026-09-22): toda transação nasce "Meu", sem fila de pendência — ver
 "Decisões já tomadas". 4.1 virou "corrigir pessoa em 1 toque".
 
-- [~] 4.1 — Corrigir pessoa em 1 toque: **pipeline de atribuição pronto** (model `Rule`, padrão "Meu",
-  testado ao vivo); falta o endpoint pra trocar a pessoa de uma transação já sincronizada
-- [~] 4.2 — "Sempre para este estabelecimento": `Rule` já decide no sync; falta o endpoint pra
-  criar/atualizar a regra a partir de uma correção
+- [x] 4.1 — Corrigir pessoa em 1 toque: `PATCH /transactions/:id/person`, testado ao vivo
+- [x] 4.2 — "Sempre para este estabelecimento": `alwaysForMerchant` no mesmo endpoint, testado ao vivo
 - [ ] 4.4 — Dividir compra
 - [ ] 4.5 — Categorização automática por regras/histórico
 
