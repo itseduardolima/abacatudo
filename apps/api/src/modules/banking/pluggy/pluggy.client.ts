@@ -61,9 +61,15 @@ export class PluggyClient {
     accountId: string,
     cursor?: string,
   ): Promise<{ results: PluggyTransaction[]; next: string | null }> {
-    const path = cursor ?? `/v2/transactions?accountId=${accountId}`
-    const page = await this.request('GET', path, pluggyTransactionsPageSchema)
+    const page = await this.request('GET', this.transactionsPath(accountId, cursor), pluggyTransactionsPageSchema)
     return { results: page.results, next: page.next ?? null }
+  }
+
+  // `next` na prática é só a querystring ("?accountId=...&after=..."), não uma URL absoluta — mas trata os
+  // dois formatos, caso o Pluggy mude isso um dia.
+  private transactionsPath(accountId: string, cursor?: string): string {
+    if (!cursor) return `/v2/transactions?accountId=${accountId}`
+    return cursor.startsWith('http') ? cursor : `/v2/transactions${cursor}`
   }
 
   private async waitForAuthorizeUrl(item: PluggyItem): Promise<string> {

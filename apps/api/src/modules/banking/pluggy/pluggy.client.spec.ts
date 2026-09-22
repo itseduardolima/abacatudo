@@ -152,22 +152,31 @@ describe('PluggyClient', () => {
     expect(fetchMock.mock.calls[1][0]).toBe('https://api.pluggy.ai/accounts?itemId=item-1')
   })
 
-  it('listTransactions sem cursor usa o endpoint v2; com cursor usa a URL do `next` diretamente', async () => {
+  it('listTransactions sem cursor usa o endpoint v2; `next` na prática é só querystring, não URL absoluta', async () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
-      .mockResolvedValueOnce(
-        jsonResponse(200, { results: [], next: 'https://api.pluggy.ai/v2/transactions?accountId=acc-1&cursor=abc' }),
-      )
+      .mockResolvedValueOnce(jsonResponse(200, { results: [], next: '?accountId=acc-1&after=cursor-abc' }))
     const client = new PluggyClient(configMock())
 
     const page = await client.listTransactions('acc-1')
 
     expect(fetchMock.mock.calls[1][0]).toBe('https://api.pluggy.ai/v2/transactions?accountId=acc-1')
-    expect(page.next).toBe('https://api.pluggy.ai/v2/transactions?accountId=acc-1&cursor=abc')
+    expect(page.next).toBe('?accountId=acc-1&after=cursor-abc')
 
     fetchMock.mockResolvedValueOnce(jsonResponse(200, { results: [], next: null }))
     await client.listTransactions('acc-1', page.next!)
-    expect(fetchMock.mock.calls[2][0]).toBe('https://api.pluggy.ai/v2/transactions?accountId=acc-1&cursor=abc')
+    expect(fetchMock.mock.calls[2][0]).toBe('https://api.pluggy.ai/v2/transactions?accountId=acc-1&after=cursor-abc')
+  })
+
+  it('listTransactions: se o `next` algum dia vier como URL absoluta, usa ela direto', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
+      .mockResolvedValueOnce(jsonResponse(200, { results: [], next: null }))
+    const client = new PluggyClient(configMock())
+
+    await client.listTransactions('acc-1', 'https://api.pluggy.ai/v2/transactions?accountId=acc-1&after=xyz')
+
+    expect(fetchMock.mock.calls[1][0]).toBe('https://api.pluggy.ai/v2/transactions?accountId=acc-1&after=xyz')
   })
 
   it('resposta que não bate com o schema esperado vira PluggyUnavailableError, nunca vaza o corpo cru', async () => {
