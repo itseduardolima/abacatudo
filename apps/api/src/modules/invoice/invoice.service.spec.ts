@@ -51,6 +51,14 @@ function personRow(overrides: Partial<PersonRow> = {}): PersonRow {
 
 describe('InvoiceService', () => {
   describe('getForAccount', () => {
+    it('400 sem accountId, antes de tocar no banco', async () => {
+      const accounts = accountsMock()
+      const service = new InvoiceService(repoMock(), accounts, peopleMock())
+
+      await expect(service.getForAccount('user-1', undefined, '2026-09')).rejects.toBeInstanceOf(DomainError)
+      expect(accounts.findById).not.toHaveBeenCalled()
+    })
+
     it('404 quando a conta não existe (ou não é do usuário)', async () => {
       const accounts = accountsMock()
       accounts.findById.mockResolvedValue(null)

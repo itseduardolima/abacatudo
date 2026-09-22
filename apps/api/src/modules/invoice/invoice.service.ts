@@ -15,7 +15,9 @@ export class InvoiceService {
     private readonly people: PersonRepository,
   ) {}
 
-  async getForAccount(userId: string, accountId: string, month?: string): Promise<Invoice> {
+  async getForAccount(userId: string, accountId: string | undefined, month?: string): Promise<Invoice> {
+    if (!accountId) throw new DomainError('ACCOUNT_ID_REQUIRED', 'Informe accountId.', 400)
+
     const account = await this.accounts.findById(userId, accountId)
     if (!account) throw new NotFoundError('ACCOUNT_NOT_FOUND', 'Conta não encontrada.')
     if (account.type !== 'CREDIT_CARD') {
