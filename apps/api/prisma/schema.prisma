@@ -26,6 +26,7 @@ model User {
   sessions   Session[]
   people     Person[]
   categories Category[]
+  accounts   Account[]
 }
 
 /// Sem RLS: resolvida pelo hash do token do cookie, antes de existir userId no contexto (mesma exceção
@@ -71,5 +72,40 @@ model Category {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, name])
+  @@index([userId])
+}
+
+enum AccountType {
+  CREDIT_CARD
+  CHECKING
+  CASH
+}
+
+enum AccountSource {
+  MANUAL
+  IMPORT
+  PLUGGY
+}
+
+/// RLS por userId. O `type` decide o escopo (03-regras-negocio § Escopo): só CREDIT_CARD é gerenciada
+/// (categoria, pessoa, orçamento); CHECKING/CASH são movimentação, só consulta (04-padroes-codigo:
+/// TransactionRepository só devolve CREDIT_CARD, MovementRepository só o resto — mesma tabela).
+model Account {
+  id               String        @id @default(uuid())
+  userId           String
+  name             String
+  type             AccountType
+  source           AccountSource @default(MANUAL)
+  // Só fazem sentido em CREDIT_CARD; a API rejeita se vierem para CHECKING/CASH (nunca uma checagem no
+  // banco — mass assignment é responsabilidade do schema Zod, ver packages/shared/src/schemas/account.ts).
+  closingDay       Int?
+  dueDay           Int?
+  creditLimitCents Int?
+  archivedAt       DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
