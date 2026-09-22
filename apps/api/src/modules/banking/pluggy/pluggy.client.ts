@@ -1,0 +1,148 @@
+import { Injectable } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import type { z } from 'zod'
+import { DomainError } from '../../../common/errors/domain.error'
+import {
+  pluggyAccountsPageSchema,
+  pluggyAuthResponseSchema,
+  pluggyItemSchema,
+  pluggyTransactionsPageSchema,
+  type PluggyAccount,
+  type PluggyItem,
+  type PluggyTransaction,
+} from './pluggy.schemas'
+
+const BASE_URL = 'https://api.pluggy.ai'
+const REQUEST_TIMEOUT_MS = 15_000
+const MAX_ATTEMPTS = 3
+// Único conector gratuito para uso pessoal (07-integracao-bancaria § Resultado do spike).
+const MEU_PLUGGY_CONNECTOR_ID = 200
+
+export class PluggyUnavailableError extends DomainError {
+  constructor() {
+    super('PLUGGY_UNAVAILABLE', 'Não foi possível falar com o Pluggy agora. Tente de novo em instantes.', 502)
+  }
+}
+
+export class PluggyNotConfiguredError extends DomainError {
+  constructor() {
+    super('PLUGGY_NOT_CONFIGURED', 'Integração bancária não configurada neste ambiente.', 501)
+  }
+}
+
+@Injectable()
+export class PluggyClient {
+  private cachedApiKey: { value: string; expiresAt: number } | null = null
+
+  constructor(private readonly config: ConfigService) {}
+
+  async createMeuPluggyItem(): Promise<{ pluggyItemId: string; authorizeUrl: string }> {
+    const item = await this.request('POST', '/items', pluggyItemSchema, {
+      connectorId: MEU_PLUGGY_CONNECTOR_ID,
+      parameters: {},
+    })
+    const authorizeUrl = item.parameter?.data
+    if (!authorizeUrl) throw new PluggyUnavailableError()
+    return { pluggyItemId: item.id, authorizeUrl }
+  }
+
+  getItem(pluggyItemId: string): Promise<PluggyItem> {
+    return this.request('GET', `/items/${pluggyItemId}`, pluggyItemSchema)
+  }
+
+  async listAccounts(pluggyItemId: string): Promise<PluggyAccount[]> {
+    const page = await this.request('GET', `/accounts?itemId=${pluggyItemId}`, pluggyAccountsPageSchema)
+    return page.results
+  }
+
+  async listTransactions(
+    accountId: string,
+    cursor?: string,
+  ): Promise<{ results: PluggyTransaction[]; next: string | null }> {
+    const path = cursor ?? `/v2/transactions?accountId=${accountId}`
+    const page = await this.request('GET', path, pluggyTransactionsPageSchema)
+    return { results: page.results, next: page.next ?? null }
+  }
+
+  private async apiKey(): Promise<string> {
+    if (this.cachedApiKey && this.cachedApiKey.expiresAt > Date.now()) return this.cachedApiKey.value
+
+    const clientId = this.config.get<string>('PLUGGY_CLIENT_ID')
+    const clientSecret = this.config.get<string>('PLUGGY_CLIENT_SECRET')
+    if (!clientId || !clientSecret) throw new PluggyNotConfiguredError()
+
+    const response = await this.fetchWithRetry(`${BASE_URL}/auth`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ clientId, clientSecret }),
+    })
+    const parsed = pluggyAuthResponseSchema.safeParse(await response.json().catch(() => null))
+    if (!parsed.success) throw new PluggyUnavailableError()
+
+    const expiresAt = decodeJwtExpiryMs(parsed.data.apiKey) ?? Date.now() + 60 * 60 * 1000
+    this.cachedApiKey = { value: parsed.data.apiKey, expiresAt: expiresAt - 60_000 }
+    return this.cachedApiKey.value
+  }
+
+  private async request<T>(
+    method: 'GET' | 'POST',
+    pathOrUrl: string,
+    schema: z.ZodType<T>,
+    body?: unknown,
+  ): Promise<T> {
+    const apiKey = await this.apiKey()
+    const url = pathOrUrl.startsWith('http') ? pathOrUrl : `${BASE_URL}${pathOrUrl}`
+    const response = await this.fetchWithRetry(url, {
+      method,
+      headers: { 'x-api-key': apiKey, 'content-type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    })
+    const parsed = schema.safeParse(await response.json().catch(() => null))
+    if (!parsed.success) throw new PluggyUnavailableError()
+    return parsed.data
+  }
+
+  private async fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+      try {
+        const response = await fetch(url, { ...init, signal: controller.signal })
+        clearTimeout(timer)
+
+        if (response.status === 429) {
+          await sleep((Number(response.headers.get('retry-after')) || 2) * 1000)
+          continue
+        }
+        if (response.status >= 500) {
+          if (attempt === MAX_ATTEMPTS) throw new PluggyUnavailableError()
+          await sleep(2 ** attempt * 200)
+          continue
+        }
+        if (!response.ok) throw new PluggyUnavailableError()
+        return response
+      } catch (error) {
+        clearTimeout(timer)
+        if (error instanceof DomainError) throw error
+        if (attempt === MAX_ATTEMPTS) throw new PluggyUnavailableError()
+        await sleep(2 ** attempt * 200)
+      }
+    }
+    throw new PluggyUnavailableError()
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function decodeJwtExpiryMs(token: string): number | null {
+  const [, payloadSegment] = token.split('.')
+  if (!payloadSegment) return null
+  try {
+    const payload = JSON.parse(Buffer.from(payloadSegment, 'base64url').toString('utf8')) as { exp?: number }
+    return typeof payload.exp === 'number' ? payload.exp * 1000 : null
+  } catch {
+    return null
+  }
+}

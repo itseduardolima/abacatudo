@@ -12,6 +12,9 @@ const baseSchema = z.object({
   SESSION_IDLE_DAYS: z.coerce.number().int().positive().default(30),
   DATA_ENCRYPTION_KEY: z.string().optional(),
   RATE_LIMIT_ENABLED: z.enum(['true', 'false']).default('true'),
+  // Opcionais: sem eles, o PluggyClient recusa chamadas com PLUGGY_NOT_CONFIGURED em vez de travar o boot.
+  PLUGGY_CLIENT_ID: z.string().optional(),
+  PLUGGY_CLIENT_SECRET: z.string().optional(),
 })
 
 export const envSchema = baseSchema.superRefine((env, ctx) => {

@@ -1,0 +1,186 @@
+import type { ConfigService } from '@nestjs/config'
+import { PluggyClient, PluggyNotConfiguredError, PluggyUnavailableError } from './pluggy.client'
+
+function configMock(overrides: Record<string, string | undefined> = {}) {
+  const values: Record<string, string | undefined> = {
+    PLUGGY_CLIENT_ID: 'client-id',
+    PLUGGY_CLIENT_SECRET: 'client-secret',
+    ...overrides,
+  }
+  return { get: jest.fn((key: string) => values[key]) } as unknown as ConfigService
+}
+
+function jsonResponse(status: number, body: unknown, headers: Record<string, string> = {}) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: new Headers(headers),
+    json: () => Promise.resolve(body),
+  } as unknown as Response
+}
+
+function fakeApiKeyJwt(expiresInSeconds: number): string {
+  const payload = Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + expiresInSeconds })).toString(
+    'base64url',
+  )
+  return `header.${payload}.signature`
+}
+
+describe('PluggyClient', () => {
+  let fetchMock: jest.Mock
+
+  beforeEach(() => {
+    fetchMock = jest.fn()
+    global.fetch = fetchMock as unknown as typeof fetch
+  })
+
+  afterEach(() => jest.restoreAllMocks())
+
+  it('sem PLUGGY_CLIENT_ID/SECRET, recusa com PLUGGY_NOT_CONFIGURED e nunca chama fetch', async () => {
+    const client = new PluggyClient(configMock({ PLUGGY_CLIENT_ID: undefined }))
+    await expect(client.getItem('item-1')).rejects.toBeInstanceOf(PluggyNotConfiguredError)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('createMeuPluggyItem: autentica, cria o item com o conector 200 e devolve a URL de autorização', async () => {
+    const apiKey = fakeApiKeyJwt(3600)
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { apiKey })).mockResolvedValueOnce(
+      jsonResponse(200, {
+        id: 'item-1',
+        status: 'WAITING_USER_INPUT',
+        connector: { id: 200, name: 'MeuPluggy' },
+        parameter: { name: 'oauthCode', data: 'https://my.pluggy.ai/oauth/authorize?x=1' },
+      }),
+    )
+    const client = new PluggyClient(configMock())
+
+    const result = await client.createMeuPluggyItem()
+
+    expect(result).toEqual({ pluggyItemId: 'item-1', authorizeUrl: 'https://my.pluggy.ai/oauth/authorize?x=1' })
+    const [authCall, itemCall] = fetchMock.mock.calls as [[string, RequestInit], [string, RequestInit]]
+    expect(authCall[0]).toBe('https://api.pluggy.ai/auth')
+    expect(itemCall[0]).toBe('https://api.pluggy.ai/items')
+    expect(JSON.parse(itemCall[1].body as string)).toEqual({ connectorId: 200, parameters: {} })
+    expect((itemCall[1].headers as Record<string, string>)['x-api-key']).toBe(apiKey)
+  })
+
+  it('createMeuPluggyItem: sem URL de autorização na resposta, falha', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
+      .mockResolvedValueOnce(
+        jsonResponse(200, { id: 'item-1', status: 'WAITING_USER_INPUT', connector: { id: 200, name: 'MeuPluggy' } }),
+      )
+    const client = new PluggyClient(configMock())
+
+    await expect(client.createMeuPluggyItem()).rejects.toBeInstanceOf(PluggyUnavailableError)
+  })
+
+  it('reaproveita a API key enquanto ela não expira (uma chamada a /auth só)', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
+      .mockResolvedValueOnce(
+        jsonResponse(200, { id: 'item-1', status: 'UPDATED', connector: { id: 200, name: 'MeuPluggy' } }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(200, { id: 'item-1', status: 'UPDATED', connector: { id: 200, name: 'MeuPluggy' } }),
+      )
+    const client = new PluggyClient(configMock())
+
+    await client.getItem('item-1')
+    await client.getItem('item-1')
+
+    const authCalls = fetchMock.mock.calls.filter((call) => call[0] === 'https://api.pluggy.ai/auth')
+    expect(authCalls).toHaveLength(1)
+  })
+
+  it('pede uma nova API key quando a anterior já expirou', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(-10) }))
+      .mockResolvedValueOnce(
+        jsonResponse(200, { id: 'item-1', status: 'UPDATED', connector: { id: 200, name: 'MeuPluggy' } }),
+      )
+      .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
+      .mockResolvedValueOnce(
+        jsonResponse(200, { id: 'item-1', status: 'UPDATED', connector: { id: 200, name: 'MeuPluggy' } }),
+      )
+    const client = new PluggyClient(configMock())
+
+    await client.getItem('item-1')
+    await client.getItem('item-1')
+
+    const authCalls = fetchMock.mock.calls.filter((call) => call[0] === 'https://api.pluggy.ai/auth')
+    expect(authCalls).toHaveLength(2)
+  })
+
+  it('listAccounts devolve a lista de contas do item', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
+      .mockResolvedValueOnce(jsonResponse(200, { results: [{ id: 'acc-1', type: 'CREDIT', name: 'Nubank' }] }))
+    const client = new PluggyClient(configMock())
+
+    await expect(client.listAccounts('item-1')).resolves.toEqual([{ id: 'acc-1', type: 'CREDIT', name: 'Nubank' }])
+    expect(fetchMock.mock.calls[1][0]).toBe('https://api.pluggy.ai/accounts?itemId=item-1')
+  })
+
+  it('listTransactions sem cursor usa o endpoint v2; com cursor usa a URL do `next` diretamente', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
+      .mockResolvedValueOnce(
+        jsonResponse(200, { results: [], next: 'https://api.pluggy.ai/v2/transactions?accountId=acc-1&cursor=abc' }),
+      )
+    const client = new PluggyClient(configMock())
+
+    const page = await client.listTransactions('acc-1')
+
+    expect(fetchMock.mock.calls[1][0]).toBe('https://api.pluggy.ai/v2/transactions?accountId=acc-1')
+    expect(page.next).toBe('https://api.pluggy.ai/v2/transactions?accountId=acc-1&cursor=abc')
+
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { results: [], next: null }))
+    await client.listTransactions('acc-1', page.next!)
+    expect(fetchMock.mock.calls[2][0]).toBe('https://api.pluggy.ai/v2/transactions?accountId=acc-1&cursor=abc')
+  })
+
+  it('resposta que não bate com o schema esperado vira PluggyUnavailableError, nunca vaza o corpo cru', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
+      .mockResolvedValueOnce(jsonResponse(200, { lixo: true }))
+    const client = new PluggyClient(configMock())
+
+    await expect(client.getItem('item-1')).rejects.toBeInstanceOf(PluggyUnavailableError)
+  })
+
+  it('429 respeita o Retry-After e tenta de novo', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
+      .mockResolvedValueOnce(jsonResponse(429, {}, { 'retry-after': '0' }))
+      .mockResolvedValueOnce(
+        jsonResponse(200, { id: 'item-1', status: 'UPDATED', connector: { id: 200, name: 'MeuPluggy' } }),
+      )
+    const client = new PluggyClient(configMock())
+
+    await expect(client.getItem('item-1')).resolves.toMatchObject({ id: 'item-1' })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('500 tenta de novo com backoff, e desiste depois de 3 tentativas', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
+      .mockResolvedValueOnce(jsonResponse(500, {}))
+      .mockResolvedValueOnce(jsonResponse(500, {}))
+      .mockResolvedValueOnce(jsonResponse(500, {}))
+    const client = new PluggyClient(configMock())
+
+    await expect(client.getItem('item-1')).rejects.toBeInstanceOf(PluggyUnavailableError)
+    expect(fetchMock).toHaveBeenCalledTimes(4) // 1 auth + 3 tentativas
+  })
+
+  it('400 falha na hora, sem tentar de novo (repetir não ajudaria)', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
+      .mockResolvedValueOnce(jsonResponse(400, {}))
+    const client = new PluggyClient(configMock())
+
+    await expect(client.getItem('item-1')).rejects.toBeInstanceOf(PluggyUnavailableError)
+    expect(fetchMock).toHaveBeenCalledTimes(2) // 1 auth + 1 tentativa só
+  })
+})
