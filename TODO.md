@@ -97,7 +97,25 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
   `month=9999-12`), agora só cria pro mês atual/seguinte, o resto devolve zero sem gravar; e o
   find-then-create tinha uma race no `@@unique([userId, month])` (2 GETs concorrentes pro mesmo mês novo
   podiam derrubar um deles com 500) — virou `createIfMissing`, um upsert atômico com update vazio.
-- Próximo: Sprint 5 Etapa 2 — envelopes por categoria (7.2).
+- **Sprint 5 Etapa 2 concluída (2026-09-22)**: model `Envelope` + RLS + CHECK
+  (`amountCents` xor `percent`, exatamente um dos dois), `GET/POST/PATCH/DELETE
+/budget/envelopes?month=` (7.2). `capCents` = valor fixo se tiver, senão
+  percentual sobre `variableCapCents`, arredondado; `freeCents` da lista =
+  teto variável − soma dos `capCents`. Verificado ao vivo: criar por valor
+  fixo e por percentual, listar com soma/livre corretos, 409 categoria
+  duplicada no mês, 400 os dois campos preenchidos, PATCH trocando de valor
+  fixo pra percentual recalcula certo, DELETE recalcula `freeCents`, 422 mês
+  sem orçamento configurado.
+- **Code review da Sprint 5 Etapa 2 (2026-09-22)**: 1 achado, corrigido e
+  verificado ao vivo — `create`/`update`/`remove` de envelope nunca
+  checavam se o `BudgetMonth` relacionado já tinha fechado (passado); um
+  envelope de um mês fechado continuava editável/removível/criável mesmo
+  com a regra "mês fechado é imutável" já valendo pra `PUT /budget/month`.
+  `BudgetMonthService` passou a exportar `assertMonthOpen`, reaproveitado
+  pelas três mutações do Envelope; `list` continua liberado (histórico é
+  só leitura).
+- Próximo: Sprint 5 Etapa 3 — alertas de orçamento (70/90/100%, 7.3) e
+  "última atualização" por conta (8.6).
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -258,7 +276,7 @@ Escopo mudou a pedido do usuário (2026-09-22): toda transação nasce "Meu", se
 ## Sprint 5 — Orçamento e relatórios
 
 - [x] 7.1 — Renda, fixos, poupança → teto variável: `GET`/`PUT /budget/month`, testado ao vivo
-- [ ] 7.2 — Envelopes
+- [x] 7.2 — Envelopes: `GET/POST/PATCH/DELETE /budget/envelopes`, testado ao vivo
 - [ ] 7.3 — Alertas 70/90/100
 - [ ] 8.6 — "Última atualização" por conta
 - [ ] 9.1 — Para onde vai o dinheiro
