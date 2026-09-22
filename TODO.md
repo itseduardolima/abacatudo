@@ -81,6 +81,11 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
   testada isoladamente (estorno reduz o total, split conta só a fatia do self, `CARD_PAYMENT` nunca entra).
   Verificado ao vivo contra os 1670 dados reais sincronizados: totais batendo com o banco, e a invariante
   `Fatura = Meu + Não é meu` conferida à mão depois de reatribuir uma transação e depois de dividir outra.
+- **Code review da Sprint 4 (2026-09-22)**: 2 achados, os dois corrigidos e verificados ao vivo — corrigir a
+  pessoa direto gravava e desfazia o split em 2 chamadas separadas (uma falha no meio deixava split velho
+  "escondido" que `computeInvoice` priorizava sobre a pessoa nova; virou 1 chamada atômica reaproveitando o
+  `$transaction` que `SplitRepository` já tinha, renomeado pra `setSinglePerson`); a checagem de
+  `accountId` obrigatório da fatura vivia solta no controller, sem teste — movida pro `InvoiceService`.
 - Próximo: Sprint 5 — Orçamento e relatórios (7.1–7.3, 8.6, 9.1), que consome `GET /invoice/summary` como o
   "Meu do mês".
 
