@@ -22,9 +22,19 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
   sessão de 30 dias com revogação, seed do primeiro usuário. Testado contra Postgres e API reais, e o
   fluxo de cookie testado num Chrome de verdade (não só curl). Gaps encontrados: ver seção da Sprint 1.
 - **Sprint 2 em andamento (2026-09-22)**: contas, pessoas e categorias no ar (RLS, CRUD, testado contra
-  API real e isolamento entre usuários). Faltam import OFX/CSV, lançamento manual e lista/filtro — ver
-  seção da Sprint 2.
-- Próximo: fechar o restante da Sprint 2 (import é o maior item), depois Sprint 3 (classificação).
+  API real e isolamento entre usuários). Import OFX/CSV (3.1) foi **pulado a pedido do usuário** — a fonte
+  de dado passou a ser a API do Pluggy direto (3.1 fica pra trás de tudo, só se algum dia fizer falta).
+  Lançamento manual (3.3) segue por último de propósito.
+- **Integração Pluggy construída em 3 etapas nesta sessão (2026-09-22)**, a pedido do usuário
+  ("faça etapa por etapa"): (1) models `Transaction`/`PluggyItem` + RLS, (2) `PluggyClient` (auth,
+  retry/timeout, schemas Zod), (3) módulo `banking` (conectar, checar status por polling, sincronizar) e o
+  par `TransactionRepository`/`MovementRepository` (5.1, 3.4 básico). Cobre 8.1/8.2/8.3 da Sprint 6, feitos
+  fora de ordem porque o usuário pediu Pluggy antes de import/lançamento manual. Typecheck, lint, testes
+  (136 no `api`) e build passam; **falta verificar ao vivo contra o Postgres real** (Docker não estava de
+  pé no fim desta sessão) e contra a API real do Pluggy (precisa de credencial nova, nunca colada no chat
+  — ver "Decisões em aberto").
+- Próximo: verificar Stage 3 contra Postgres real (subir o Docker), depois contra o Pluggy de verdade com
+  credencial nova; depois Sprint 3 (classificação), que agora já tem `Transaction` pra usar.
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -53,6 +63,14 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
 
 - [ ] **Girar o Client Secret do Pluggy**: ele foi colado numa conversa (fica no histórico dela). Gerar um
       novo no painel do Pluggy antes de usar em produção. A API Key colada expira sozinha em 2 horas.
+- [ ] **Colocar `PLUGGY_CLIENT_ID`/`PLUGGY_CLIENT_SECRET` novos direto em `apps/api/.env`** (nunca colar no
+      chat) pra testar o fluxo `connect` → autorizar → `checkStatus` → sync contra a API real.
+- [ ] **`RecentAuthGuard` (HU 1.7, reautenticação) não existe ainda** — deferido na Sprint 1. O endpoint
+      `POST /banking/items` (conectar banco) por enquanto só tem o `AuthGuard` normal, sem reautenticação
+      recente. Registrar como gap até decidir se entra antes do Sprint 6 "fechar" ou fica pra
+      Configurações (Sprint 8).
+- [ ] **Job diário de sync** (`@nestjs/schedule`) não existe — só o `POST /banking/items/:id/sync` manual e
+      o sync automático na primeira vez que o status vira `UPDATED`. Entra quando o Sprint 6 fechar.
 - [ ] **Retenção/uso de dados da API de IA contratada** (Sprint 7, HU 10.1):
       confirmar e registrar em spec 10 antes de ligar em produção.
 - [ ] **Estados de orçamento (OK/Atenção/Estourou)**: o estilo não define
@@ -114,17 +132,17 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
 - [x] 3.5 — Fuso `America/Manaus` (mudou de São Paulo pra Manaus a pedido do usuário; `common/date/timezone.ts`)
       **Ordem do que falta (a pedido do usuário, 2026-09-22): lançamento manual por último.**
 
-- [ ] 3.1 — Import OFX/CSV com pré-visualização (não começado — é o item maior da sprint; primeiro)
-- [ ] 3.4 — Lista e filtros (depende de existir o model `Transaction`, criado junto do import)
+- [x] ~~3.1 — Import OFX/CSV com pré-visualização~~ **pulado a pedido do usuário (2026-09-22)**: a fonte de
+      dado passou a ser a API do Pluggy direto, não arquivo. Ver Sprint 6.
+- [x] 3.4 — Lista e filtros: básico pronto (`GET /transactions?month=`, `GET /movements?month=`, filtro por
+      mês em America/Manaus); filtro por categoria/pessoa/texto fica pra quando existir UI pra isso
 - [ ] 3.3 — Lançamento manual (deixado por último de propósito)
-- [~] 5.1 — Separação por tipo de conta está pronta na modelagem (`Account.type` decide o escopo, sem
-  campo de canal por lançamento); falta o par `TransactionRepository`/`MovementRepository` lendo a mesma
-  tabela, que só existe quando o model `Transaction` for criado (junto de 3.1/3.4)
+- [x] 5.1 — `Account.type` decide o escopo (sem campo de canal por lançamento); `TransactionRepository`
+      (só `CREDIT_CARD`) e `MovementRepository` (o resto), mesma tabela `Transaction`, filtros diferentes
 
-**Por que parei aqui**: 2.1/2.2/2.4/3.5 formam a base que 3.1/3.3/3.4 precisam (conta pra lançar,
-categoria/pessoa pra classificar, fuso pra agrupar por mês). Import OFX/CSV é o item mais arriscado da
-sprint (parser com limites de segurança, idempotência, pré-visualização) — não dava pra encaixar com o
-mesmo rigor no mesmo lote sem cortar canto em algo. Continua na Sprint 2, só que numa próxima etapa.
+**Por que parei aqui**: o usuário pediu pra inverter a ordem — Pluggy (Sprint 6) antes de import/lançamento
+manual, porque puxar dado de verdade é melhor teste do que simular. 3.1 saiu do escopo; 3.4 e 5.1 saíram
+prontos como efeito colateral de construir `Transaction`/`banking` pro Pluggy. Falta só 3.3.
 
 Lição desta etapa: ao provar isolamento entre 2 usuários pela API, testei sem querer com `psql -U
 postgres` (superusuário, que ignora RLS) e o resultado pareceu vazar dado do usuário 1 pro 2 — susto à
@@ -156,10 +174,18 @@ nunca com o superusuário.
 
 ## Sprint 6 — Integração Pluggy
 
-- [ ] 8.1 — Conectar banco (widget + connect token)
-- [ ] 8.2 — Sync idempotente
-- [ ] 8.3 — Sync diário/manual (sem webhook)
-- [ ] 8.4 — Aviso de consentimento
+Construída fora de ordem (2026-09-22), a pedido do usuário, em 3 etapas: model → `PluggyClient` → módulo
+`banking`. Falta verificação ao vivo (Postgres real de pé + credencial Pluggy nova) antes de dar por
+fechado — ver "Decisões em aberto".
+
+- [x] 8.1 — Conectar banco: `POST /banking/items` cria o item Meu Pluggy (único conector gratuito, spike já
+      provou isso) e devolve `authorizeUrl`; sem webhook, então o front faz _polling_ em
+      `GET /banking/items/:id` (`checkStatus`) até sair de `WAITING_USER_INPUT`
+- [x] 8.2 — Sync idempotente: upsert por `[accountId, externalId]` (`banking-sync.repository.ts`), nunca
+      duplica; nunca sobrescreve `categoryId`/`personId`/`note` (são do usuário, não do Pluggy)
+- [x] 8.3 — Sync diário/manual (sem webhook): `POST /banking/items/:id/sync` (manual) + primeira vez que o
+      `checkStatus` vê o status virar `UPDATED` (automático). **Falta o job diário agendado** — ver gap acima
+- [ ] 8.4 — Aviso de consentimento (`consentExpiresAt` já é lido e salvo; falta a UI de aviso)
 - [ ] 8.5 — Desconectar
 - [ ] 2.3 — Cartão adicional → pessoa
 
