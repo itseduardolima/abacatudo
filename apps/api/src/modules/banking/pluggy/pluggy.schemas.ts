@@ -45,6 +45,10 @@ export const pluggyTransactionSchema = z.object({
   amount: z.number(),
   type: z.enum(['DEBIT', 'CREDIT']),
   operationType: z.string().nullable().optional(),
+  // category/categoryId: o único jeito confiável de saber se é pagamento de fatura (visto na prática —
+  // operationType vem "PAGAMENTO" tanto numa compra parcelada quanto no pagamento da fatura).
+  category: z.string().nullable().optional(),
+  categoryId: z.string().nullable().optional(),
   // Sem .default(): o Pluggy sempre manda status; usar default aqui deixaria o campo opcional no tipo
   // inferido (peculiaridade do Zod com objectOutputType), o que não bate com a realidade dos dados.
   status: z.enum(['POSTED', 'PENDING']),

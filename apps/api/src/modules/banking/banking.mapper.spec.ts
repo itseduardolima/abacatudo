@@ -7,6 +7,8 @@ function tx(overrides: Partial<PluggyTransaction> = {}): PluggyTransaction {
     amount: 150.5,
     type: 'DEBIT',
     operationType: null,
+    category: null,
+    categoryId: null,
     status: 'POSTED',
     date: '2026-09-21',
     description: 'PAG*LOJA',
@@ -21,12 +23,20 @@ describe('resolveKind', () => {
     expect(resolveKind(tx({ type: 'DEBIT' }))).toBe('EXPENSE')
   })
 
-  it('CREDIT sem rótulo de pagamento é estorno (REFUND)', () => {
+  it('CREDIT sem categoria de pagamento é estorno (REFUND)', () => {
     expect(resolveKind(tx({ type: 'CREDIT' }))).toBe('REFUND')
   })
 
-  it('operationType com "payment" é pagamento de fatura (CARD_PAYMENT), nunca gasto', () => {
-    expect(resolveKind(tx({ type: 'CREDIT', operationType: 'credit_card_payment' }))).toBe('CARD_PAYMENT')
+  it('operationType "PAGAMENTO" sozinho não basta (o Pluggy usa o mesmo valor pra compra parcelada)', () => {
+    expect(resolveKind(tx({ type: 'DEBIT', operationType: 'PAGAMENTO' }))).toBe('EXPENSE')
+  })
+
+  it('categoryId de pagamento de fatura é CARD_PAYMENT, nunca gasto', () => {
+    expect(resolveKind(tx({ type: 'CREDIT', categoryId: '05100000' }))).toBe('CARD_PAYMENT')
+  })
+
+  it('category "Credit card payment" também é CARD_PAYMENT (fallback sem categoryId)', () => {
+    expect(resolveKind(tx({ type: 'CREDIT', category: 'Credit card payment' }))).toBe('CARD_PAYMENT')
   })
 })
 

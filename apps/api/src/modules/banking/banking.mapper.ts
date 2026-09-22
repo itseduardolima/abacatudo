@@ -7,14 +7,17 @@ export type MappedTransaction = Omit<Prisma.TransactionUncheckedCreateInput, 'us
   status: TransactionStatus
 }
 
-// O Pluggy não diz "isso é pagamento de fatura" direto: operationType costuma trazer algo como
-// "credit_card_payment" para isso. type CREDIT sem esse rótulo é estorno (03-regras-negocio §
-// Movimentações: pagamento de fatura nunca é gasto).
+// operationType não serve pra achar pagamento de fatura: o Pluggy manda "PAGAMENTO" tanto numa compra
+// parcelada quanto no pagamento em si. O sinal confiável é a categoria que o Pluggy já classifica
+// (categoryId "05100000" / category "Credit card payment") — 03-regras-negocio § Movimentações: pagamento
+// de fatura nunca é gasto.
+const CARD_PAYMENT_CATEGORY_ID = '05100000'
+
 export function resolveKind(tx: PluggyTransaction): TransactionKind {
-  const operation = tx.operationType?.toUpperCase() ?? ''
-  if (operation.includes('PAYMENT')) return 'CARD_PAYMENT'
-  if (tx.type === 'CREDIT') return 'REFUND'
-  return 'EXPENSE'
+  if (tx.categoryId === CARD_PAYMENT_CATEGORY_ID || tx.category?.toLowerCase() === 'credit card payment') {
+    return 'CARD_PAYMENT'
+  }
+  return tx.type === 'CREDIT' ? 'REFUND' : 'EXPENSE'
 }
 
 // Pluggy manda data pura ("2026-09-21") às vezes; meio-dia UTC evita cruzar dia ao converter para
