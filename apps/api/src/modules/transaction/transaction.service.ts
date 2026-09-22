@@ -5,6 +5,7 @@ import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { PersonRepository } from '../person/person.repository'
 import { normalizeMerchant } from '../rule/normalize-merchant'
 import { RuleRepository } from '../rule/rule.repository'
+import { SplitRepository } from '../split/split.repository'
 import { toTransactionDto } from './transaction.mapper'
 import { TransactionRepository } from './transaction.repository'
 
@@ -16,6 +17,7 @@ export class TransactionService {
     private readonly repo: TransactionRepository,
     private readonly people: PersonRepository,
     private readonly rules: RuleRepository,
+    private readonly splits: SplitRepository,
   ) {}
 
   async listByMonth(userId: string, month?: string): Promise<Transaction[]> {
@@ -46,6 +48,8 @@ export class TransactionService {
 
     const result = await this.repo.updatePerson(userId, id, input.personId)
     if (result.count === 0) throw NOT_FOUND()
+    // Corrigir a pessoa direto é uma forma de desfazer uma divisão — a transação volta a ter um dono só.
+    await this.splits.deleteAll(userId, id)
 
     const updated = await this.repo.findById(userId, id)
     if (!updated) throw NOT_FOUND()
