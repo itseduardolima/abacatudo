@@ -2,7 +2,7 @@
 
 Fonte da verdade de comportamento. Toda feature nova precisa ser consistente
 com este arquivo ou atualizá-lo junto. Todo valor em **centavos inteiros**;
-todo "mês" e "dia" em `America/Sao_Paulo`.
+todo "mês" e "dia" em `America/Manaus`.
 
 ## Escopo: o que o sistema gerencia (leia primeiro)
 

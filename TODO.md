@@ -22,7 +22,10 @@ Regra de marcação: só marque `[x]` quando bater a Definition of Done de
 - **Sprint 1 concluída em 2026-09-22**: RLS (User/Session isentas, documentado), login por e-mail/senha,
   sessão de 30 dias com revogação, seed do primeiro usuário. Testado contra Postgres e API reais, e o
   fluxo de cookie testado num Chrome de verdade (não só curl). Gaps encontrados: ver seção da Sprint 1.
-- Próximo: Sprint 2 (contas, pessoas, categorias, import).
+- **Sprint 2 em andamento (2026-09-22)**: contas, pessoas e categorias no ar (RLS, CRUD, testado contra
+  API real e isolamento entre usuários). Faltam import OFX/CSV, lançamento manual e lista/filtro — ver
+  seção da Sprint 2.
+- Próximo: fechar o restante da Sprint 2 (import é o maior item), depois Sprint 3 (classificação).
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -106,14 +109,27 @@ Regra de marcação: só marque `[x]` quando bater a Definition of Done de
 
 ## Sprint 2 — Contas, pessoas, categorias, import
 
-- [ ] 2.1 — Contas
-- [ ] 2.2 — Pessoas
-- [ ] 2.4 — Categorias
-- [ ] 3.1 — Import OFX/CSV com pré-visualização
-- [ ] 3.3 — Lançamento manual
-- [ ] 3.4 — Lista e filtros
-- [ ] 3.5 — Fuso `America/Sao_Paulo`
-- [ ] 5.1 — Separar cartão de crédito de movimentações (por tipo de conta)
+- [x] 2.1 — Contas (`Account`: CREDIT_CARD/CHECKING/CASH, RLS, closingDay/dueDay/creditLimitCents só em cartão)
+- [x] 2.2 — Pessoas (CRUD + arquivar; self nunca arquivável)
+- [x] 2.4 — Categorias (CRUD + renomear + arquivar; nome único por usuário, 409 em duplicata)
+- [x] 3.5 — Fuso `America/Manaus` (mudou de São Paulo pra Manaus a pedido do usuário; `common/date/timezone.ts`)
+- [ ] 3.1 — Import OFX/CSV com pré-visualização (não começado — é o item maior da sprint)
+- [ ] 3.3 — Lançamento manual (depende de existir o model `Transaction`)
+- [ ] 3.4 — Lista e filtros (idem)
+- [~] 5.1 — Separação por tipo de conta está pronta na modelagem (`Account.type` decide o escopo, sem
+  campo de canal por lançamento); falta o par `TransactionRepository`/`MovementRepository` lendo a mesma
+  tabela, que só existe quando o model `Transaction` for criado (junto de 3.1/3.3/3.4)
+
+**Por que parei aqui**: 2.1/2.2/2.4/3.5 formam a base que 3.1/3.3/3.4 precisam (conta pra lançar,
+categoria/pessoa pra classificar, fuso pra agrupar por mês). Import OFX/CSV é o item mais arriscado da
+sprint (parser com limites de segurança, idempotência, pré-visualização) — não dava pra encaixar com o
+mesmo rigor no mesmo lote sem cortar canto em algo. Continua na Sprint 2, só que numa próxima etapa.
+
+Lição desta etapa: ao provar isolamento entre 2 usuários pela API, testei sem querer com `psql -U
+postgres` (superusuário, que ignora RLS) e o resultado pareceu vazar dado do usuário 1 pro 2 — susto à
+toa, era erro do meu teste, não do sistema. Refeito com `-U gastos` (o papel restrito de verdade) confirma
+0 linhas para quem não tem nada. Lembrete pra mim mesmo: prova de RLS **sempre** com o papel da aplicação,
+nunca com o superusuário.
 
 ## Sprint 3 — Classificação
 

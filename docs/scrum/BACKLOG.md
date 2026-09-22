@@ -62,7 +62,7 @@ Prioridade: **P0** bloqueia o MVP (importar extrato, classificar, ver o mês),
 | 3.2 | Como Dono, quero **mapa de colunas** salvo por conta para CSV.         | Primeiro import mapeia; próximos são 1 toque                                                                                                 | 3   | P1  |
 | 3.3 | Como Dono, quero lançar gasto/renda **manualmente**.                   | Valor, data, conta, descrição, categoria, pessoa; só em contas `MANUAL`/`IMPORT`                                                             | 3   | P0  |
 | 3.4 | Como Dono, quero listar e filtrar as **compras no cartão de crédito**. | Só contas `CREDIT_CARD`; filtros cartão/pessoa/categoria/mês/busca; paginação; ordenação por allowlist                                       | 3   | P0  |
-| 3.5 | Como sistema, quero calcular "mês" e "dia" em `America/Sao_Paulo`.     | Teste: compra 23h30 do dia 31 fica no mês certo                                                                                              | 2   | P0  |
+| 3.5 | Como sistema, quero calcular "mês" e "dia" em `America/Manaus`.        | Teste: compra 23h30 do dia 31 fica no mês certo                                                                                              | 2   | P0  |
 
 ## Épico 4 — Classificação (meu x não é meu) — só compras no cartão
 

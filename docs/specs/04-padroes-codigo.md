@@ -142,7 +142,8 @@ Vocabulário fixo de domínio:
 | Consentimento               | `consent` (`consentExpiresAt`)                                                                 |
 | Assinatura / recorrência    | `recurring`                                                                                    |
 
-Comentários: poucos, em português, só para o **porquê**.
+Comentários: mínimos, em português, no máximo 1 linha, só quando o código não explica sozinho um porquê
+não óbvio (uma invariante, uma pegadinha). Nunca parafrasear o que a linha já diz.
 
 ## Commits
 
