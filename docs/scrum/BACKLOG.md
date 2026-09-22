@@ -95,10 +95,10 @@ Decisão de produto: **sem** valor a receber, abatimento ou cobrança. O gasto
 de terceiros é subtraído. Regra em `03-regras-negocio.md` § "Só a minha
 parte".
 
-| #   | HU                                                                                             | Critérios de aceite                                                                                                                            | Pts | P   |
-| --- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | --- | --- |
-| 6.1 | Como Dono, quero ver a **fatura com o desconto do que não é meu** e o valor "Meu" em destaque. | Total − Não é meu − A classificar = Meu; invariante testada centavo a centavo; "a classificar" aparece à parte; split conta só a fatia do self | 5   | P0  |
-| 6.2 | Como Dono, quero o **"Meu" do mês** (todos os cartões) alimentando o orçamento.                | Só compra no cartão de self/fatia self; terceiros e Pix fora de totais e relatórios                                                            | 3   | P0  |
+| #   | HU                                                                                             | Critérios de aceite                                                                           | Pts | P   |
+| --- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --- | --- |
+| 6.1 | Como Dono, quero ver a **fatura com o desconto do que não é meu** e o valor "Meu" em destaque. | Total − Não é meu = Meu; invariante testada centavo a centavo; split conta só a fatia do self | 5   | P0  |
+| 6.2 | Como Dono, quero o **"Meu" do mês** (todos os cartões) alimentando o orçamento.                | Só compra no cartão de self/fatia self; terceiros e Pix fora de totais e relatórios           | 3   | P0  |
 
 ## Épico 7 — Orçamento mensal
 

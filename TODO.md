@@ -71,7 +71,18 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
   pessoa/categoria arquivada podia ser atribuída via `PATCH .../person`, `.../category` e o split
   (`findById` não filtrava `archivedAt` — criado `findActiveById`, usado só nesses endpoints de
   atribuição; `findById` puro continua igual pra não quebrar o fluxo de arquivar).
-- Próximo: Sprint 4 — Fatura só com a minha parte + Movimentações (5.2, 5.3, 6.1, 6.2).
+- **Sprint 4 concluída (2026-09-22)**: 2 bugs reais achados antes de construir — `resolveKind` mapeava todo
+  `CREDIT` do Pluggy pra `REFUND`, mas numa conta de movimentação `CREDIT` é dinheiro entrando de verdade
+  (agora `INCOME`, `REFUND` só em cartão); e o sync atribuía pessoa/categoria (via `Rule`) até em
+  transação de movimentação, quando o spec diz que isso não existe lá (agora sempre `null` fora de
+  cartão). `GET /movements` ganhou filtro de conta/direção/busca (5.2) e `GET /movements/totals` (5.3).
+  Módulo `invoice` novo: `GET /invoice?accountId=&month=` (fatura por cartão, 6.1) e
+  `GET /invoice/summary?month=` (Meu somado em todos os cartões, 6.2) — `computeInvoice` é função pura,
+  testada isoladamente (estorno reduz o total, split conta só a fatia do self, `CARD_PAYMENT` nunca entra).
+  Verificado ao vivo contra os 1670 dados reais sincronizados: totais batendo com o banco, e a invariante
+  `Fatura = Meu + Não é meu` conferida à mão depois de reatribuir uma transação e depois de dividir outra.
+- Próximo: Sprint 5 — Orçamento e relatórios (7.1–7.3, 8.6, 9.1), que consome `GET /invoice/summary` como o
+  "Meu do mês".
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -215,10 +226,19 @@ Escopo mudou a pedido do usuário (2026-09-22): toda transação nasce "Meu", se
 
 ## Sprint 4 — Fatura só com a minha parte + Movimentações
 
-- [ ] 6.1 — Fatura: total − não é meu − a classificar = meu
-- [ ] 6.2 — "Meu" do mês alimenta o orçamento
-- [ ] 5.2 — Extrato de Pix e contas (área separada)
-- [ ] 5.3 — Totais de entrada/saída (informativos)
+- [x] 6.1 — Fatura: `GET /invoice?accountId=&month=`, total − não é meu = meu, testado ao vivo
+- [x] 6.2 — "Meu" do mês (todos os cartões): `GET /invoice/summary?month=`, testado ao vivo
+- [x] 5.2 — Extrato de movimentação: `GET /movements` com filtro de conta/direção/mês/busca, testado ao vivo
+- [x] 5.3 — Totais de entrada/saída: `GET /movements/totals?month=`, testado ao vivo
+
+### Bugs achados só ao rodar de verdade (e corrigidos)
+
+- `resolveKind` mapeava todo `CREDIT` do Pluggy pra `REFUND` (correto só em cartão) — numa conta de
+  movimentação isso fazia um Pix recebido virar "estorno". Agora `CREDIT` em conta não-cartão vira
+  `INCOME`.
+- O sync atribuía pessoa (padrão "Meu"/`Rule`) e categoria (via `Rule`) até em transação de movimentação,
+  quando 03-regras-negocio diz que isso só existe em cartão. Agora `personId`/`categoryId` são sempre
+  `null` fora de `CREDIT_CARD`, mesmo com uma `Rule` pro merchant.
 
 ## Sprint 5 — Orçamento e relatórios
 
