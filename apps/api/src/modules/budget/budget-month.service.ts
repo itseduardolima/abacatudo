@@ -12,19 +12,21 @@ const ZERO = { incomeCents: 0, benefitCents: 0, fixedExpensesCents: 0, savingsGo
 export class BudgetMonthService {
   constructor(private readonly repo: BudgetMonthRepository) {}
 
-  // Mês atual/futuro sem configuração ainda: cria copiando o mês configurado mais recente (virada de
-  // mês). Mês passado sem configuração: nunca existiu, mostra zero sem gravar nada (03-regras-negocio).
+  // Mês atual ou o próximo sem configuração ainda: cria copiando o mês configurado mais recente (virada
+  // de mês, e dá pra planejar 1 mês à frente). Fora dessa janela — passado, ou muito no futuro — nunca
+  // existiu de verdade: mostra zero sem gravar nada (03-regras-negocio). GET nunca cria linha pra um mês
+  // arbitrariamente distante só porque alguém perguntou.
   async getOrCreate(userId: string, month?: string): Promise<BudgetMonth> {
     const key = resolveKey(month)
     const existing = await this.repo.findByMonth(userId, key)
     if (existing) return toBudgetMonthDto(existing)
 
-    if (isPast(key)) {
+    if (!isCurrentOrNextMonth(key)) {
       return { month: key, ...ZERO, variableCapCents: 0 }
     }
 
     const previous = await this.repo.findMostRecentBefore(userId, key)
-    const created = await this.repo.create(userId, key, {
+    const created = await this.repo.createIfMissing(userId, key, {
       incomeCents: previous?.incomeCents ?? 0,
       benefitCents: previous?.benefitCents ?? 0,
       fixedExpensesCents: previous?.fixedExpensesCents ?? 0,
@@ -54,4 +56,21 @@ function resolveKey(month?: string): string {
 
 function isPast(month: string): boolean {
   return month < monthKey(new Date())
+}
+
+// Janela em que o auto-create do GET vale: o mês atual, ou o seguinte (pra planejar com antecedência).
+// Sempre a partir da string AAAA-MM (já em America/Manaus via monthKey) — nunca de Date local, que
+// dependeria do fuso do servidor.
+function isCurrentOrNextMonth(month: string): boolean {
+  const current = monthKey(new Date())
+  return month === current || month === nextMonthKey(current)
+}
+
+function nextMonthKey(key: string): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(key)
+  if (!match) throw new Error(`monthKey inválido: "${key}"`)
+  const [, yearStr, monthStr] = match
+  const year = Number(yearStr)
+  const month = Number(monthStr)
+  return month === 12 ? `${year + 1}-01` : `${year}-${String(month + 1).padStart(2, '0')}`
 }

@@ -26,8 +26,15 @@ export class BudgetMonthRepository {
     })
   }
 
-  create(userId: string, month: string, values: BudgetMonthValues): Promise<BudgetMonth> {
-    return this.prisma.budgetMonth.create({ data: { ...values, userId, month } })
+  // Upsert com update vazio: cria se não existir, ou devolve a linha existente sem tocar nela — atômico,
+  // sem o TOCTOU de um create() depois de um findByMonth() que não achou nada (duas leituras concorrentes
+  // do mesmo mês novo não colidem no @@unique([userId, month])).
+  createIfMissing(userId: string, month: string, values: BudgetMonthValues): Promise<BudgetMonth> {
+    return this.prisma.budgetMonth.upsert({
+      where: { userId_month: { userId, month } },
+      create: { ...values, userId, month },
+      update: {},
+    })
   }
 
   upsert(userId: string, month: string, values: BudgetMonthValues): Promise<BudgetMonth> {
