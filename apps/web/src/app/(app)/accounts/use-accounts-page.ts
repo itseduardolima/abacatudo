@@ -1,9 +1,12 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import type { AccountType, CreateAccountInput } from '@gastos/shared'
 import { useAccounts } from '@/hooks/queries/use-accounts'
+import { useArchiveAccount } from '@/hooks/queries/use-archive-account'
+import { useConnectBank } from '@/hooks/queries/use-connect-bank'
 import { useCreateAccount } from '@/hooks/queries/use-create-account'
 import { useUpdateAccount } from '@/hooks/queries/use-update-account'
 import { ApiClientError } from '@/lib/api-client'
@@ -11,11 +14,15 @@ import { ApiClientError } from '@/lib/api-client'
 // Hook de página: só orquestração (04-padroes-codigo). Campos de cartão (fechamento, vencimento, limite)
 // ficam pra uma próxima etapa — aqui só nome e tipo, o mínimo pra existir a conta.
 export function useAccountsPage() {
+  const router = useRouter()
   const accounts = useAccounts()
   const createAccount = useCreateAccount()
   const updateAccount = useUpdateAccount()
+  const archiveAccount = useArchiveAccount()
+  const connectBank = useConnectBank()
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [ruleError, setRuleError] = useState<string | null>(null)
+  const [connectError, setConnectError] = useState<string | null>(null)
   const {
     register,
     handleSubmit,
@@ -54,6 +61,21 @@ export function useAccountsPage() {
     }
   })
 
+  // Conectar outro banco (InfinitePay, um segundo cartão...) — antes só existia na Home, e só enquanto
+  // não houvesse nenhum cartão ainda (ConnectBankCard some depois do primeiro). "Meu Pluggy" aceita várias
+  // conexões, então a tela de contas precisa oferecer isso sempre, não só na primeira vez.
+  const onConnectBank = async () => {
+    setConnectError(null)
+    try {
+      const { id, authorizeUrl } = await connectBank.mutateAsync()
+      window.open(authorizeUrl, '_blank', 'noopener')
+      router.push(`/connect-bank/${id}`)
+    } catch (error) {
+      if (!(error instanceof ApiClientError)) throw error
+      setConnectError(error.error.message)
+    }
+  }
+
   return {
     accounts: accounts.data ?? [],
     isLoadingAccounts: accounts.isPending,
@@ -77,5 +99,11 @@ export function useAccountsPage() {
       updateAccount.mutate({ id, input: { isBenefitAccount } }),
     isTogglingBenefitAccount: updateAccount.isPending,
     togglingBenefitAccountId: updateAccount.variables?.id ?? null,
+    onConnectBank: () => void onConnectBank(),
+    isConnectingBank: connectBank.isPending,
+    connectError,
+    archive: (id: string) => archiveAccount.mutate(id),
+    isArchiving: archiveAccount.isPending,
+    archivingId: archiveAccount.variables ?? null,
   }
 }
