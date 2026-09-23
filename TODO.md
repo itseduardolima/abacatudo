@@ -354,6 +354,23 @@ type="date">`.
   conta não-cartão, rejeição numa conta Pluggy, separação certa entre
   `/transactions` e `/movements`, isolamento entre 2 usuários (404 na conta
   alheia).
+- **Code review (2026-09-23)** — pessoas/categorias/lançamento manual: 2
+  achados, os dois corrigidos e reverificados ao vivo. (1) Em Categorias, a
+  lista de "Renomear"/"Arquivar" continua clicável com o formulário aberto
+  (não são exclusivos na tela) — se um erro de regra aparecia numa tentativa
+  (ex.: nome duplicado) e o usuário clicava "Renomear" numa outra categoria
+  em vez de cancelar, o formulário trocava de contexto certinho mas o alerta
+  antigo ficava colado, parecendo erro da ação nova. Corrigido limpando
+  `ruleError` (e invalidando a submissão em andamento) em `openCreateForm`/
+  `openEditForm`, não só no `closeForm`. (2) `occurredAt` do lançamento
+  manual só validava o formato `AAAA-MM-DD`, nunca se a data existia de
+  verdade — `"2026-02-30"` virava silenciosamente 2 de março (sem erro
+  nenhum) e `"2026-13-01"` virava `Invalid Date`, que só quebrava na hora de
+  gravar no Postgres (`500` genérico em vez do `400` que o schema prometia).
+  Corrigido com uma validação de calendário de verdade (`Date.UTC` +
+  round-trip). Reverificado ao vivo: as duas datas inválidas agora voltam
+  `400 "Informe uma data válida."`, data válida continua funcionando, e o
+  fluxo de renomear/criar categoria não vaza mais erro entre contextos.
 - Próximo: continuar no backend (Sprint 7 Insights e IA, ou pendências:
   5.4/5.5 rótulos de movimentação, 8.4's job/e-mail), ou seguir o front pra
   Sprint 3 (classificação: corrigir pessoa/categoria, dividir, regras — e
