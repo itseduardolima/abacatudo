@@ -185,6 +185,23 @@ DISCONNECTED` localmente **depois** da revogação ter dado certo; se o
   rejeitaram com `422`, `DELETE` de novo foi idempotente (200, mesmo
   status), e isolamento confirmado com um segundo usuário (404 no item
   alheio, lista de contas vazia).
+- **Code review de 8.5 (2026-09-23)**: 2 achados, os dois corrigidos e
+  reverificados ao vivo. (1) `disconnect()` não tinha caminho de volta se a
+  revogação no Pluggy desse certo mas a escrita local falhasse logo depois
+  (queda de conexão, etc.): o item ficava com Pluggy já revogado mas status
+  local antigo, e toda tentativa seguinte batia um 404 no Pluggy (item que
+  já não existe lá) que virava `502` pra sempre, sem nunca conseguir marcar
+  `DISCONNECTED`. Corrigido tratando 404 como sucesso em
+  `PluggyClient.deleteItem` (`fetchWithRetry` ganhou um parâmetro
+  `treatAsSuccess`) — item que já não existe lá **é** o resultado desejado,
+  então a próxima tentativa se autocorrige em vez de travar. Reverificado ao
+  vivo com um `pluggyItemId` real (UUID v4) que nunca existiu: confirmei
+  primeiro com curl direto no Pluggy que a API devolve `404 ITEM_NOT_FOUND`
+  pra esse caso (não `400`, que é o que um UUID mal formado dá), e só então
+  chamei `DELETE /banking/items/:id` — marcou `DISCONNECTED` de primeira, em
+  vez do `502` de antes da correção. (2) Faltava teste unitário travando a
+  garantia "falha na revogação nunca chama a escrita local" (só tinha sido
+  provada ao vivo) — adicionado em `banking.service.spec.ts`.
 - Próximo: Sprint 6 fica só com 8.4 (aviso de reconectar) e 2.3 (cartão
   adicional → pessoa) — ou, se preferir, Sprint 7 (Insights e IA) usando o
   `insight` que nasceu na Etapa 4 da Sprint 5.
