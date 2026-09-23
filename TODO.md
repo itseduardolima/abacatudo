@@ -654,6 +654,21 @@ type="date">`.
   Token novo: `--color-scrim` (véu do bottom sheet) — mudança de
   `tailwind.config.ts` exigiu restart do dev server pra pegar (gotcha já
   conhecido, não é hot-reload).
+- **Telas de "Configurar" alinhadas ao protótipo (mobile).** Pedido do
+  usuário: seguir o padrão do protótipo nas 5 telas do menu Configurar,
+  criando as que faltassem lá. Decisão (perguntada, não assumida): criar
+  artboard novo dentro do canvas do Claude.ai é arriscado por fora do
+  editor dele (só leitura/publicação genérica, sem o editor de verdade) —
+  optou por seguir os protótipos que já existem (Contas = `20-contas`,
+  Pessoas = `06-pessoas`) e aplicar os mesmos tokens/padrão de linha nas
+  telas sem protótipo dedicado (Categorias, Gastos fixos; Renda já tinha
+  campo `.fld` parecido, mantida). Mudança visual em comum: linha sem card
+  (ícone circular + texto + divisória fina de 1px), ações por ícone
+  (lápis/X) em vez de link de texto "Renomear"/"Remover"/"Arquivar".
+  Contas ganhou seções "Conectadas pelo banco" / "Manuais" + status de
+  sincronização inline ("Atualizado hoje às HH:mm", reusa `formatSyncedAt`
+  da Fase 4). Pessoas: campo de adicionar sempre visível (sem alternar
+  formulário), igual ao protótipo. Verificado ao vivo nas 4 telas.
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), UI de
   divisão de transação entre pessoas (`split`), ou seguir no backend
   (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de movimentação,
