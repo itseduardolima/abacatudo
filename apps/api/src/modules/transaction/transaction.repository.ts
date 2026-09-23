@@ -14,12 +14,22 @@ export class TransactionRepository {
     return this.prisma.transaction.create({ data: { ...data, userId } })
   }
 
-  // keepCurrentInstallmentsOnly: uma compra parcelada compartilha a mesma occurredAt (data da compra) em
-  // todas as parcelas, então todas caem no mesmo mês aqui — sem o filtro, uma compra em 3x aparecia
-  // inteira na lista (achado ao vivo testando contra um Nubank real).
+  // Mês calendário (occurredAt) OU parcela ainda sem billId de conta PLUGGY — não só o primeiro: uma
+  // parcela que vence agora pode ter sido comprada meses atrás (a data da linha é a da compra, não a do
+  // vencimento), então "mês calendário" sozinho a deixava de fora da fatura aberta pra sempre (achado ao
+  // vivo comparando com o OFX de um Nubank real: Centauro e Mercado Livre comprados em agosto, parcela
+  // vencendo agora em setembro, nunca apareciam). keepCurrentInstallmentsOnly: uma compra parcelada
+  // compartilha a mesma occurredAt em todas as parcelas — sem o filtro, uma compra em 3x aparecia inteira.
   async findMany(userId: string, range: { start: Date; end: Date }): Promise<Transaction[]> {
     const rows = await this.prisma.transaction.findMany({
-      where: { userId, occurredAt: { gte: range.start, lt: range.end }, account: { type: 'CREDIT_CARD' } },
+      where: {
+        userId,
+        account: { type: 'CREDIT_CARD' },
+        OR: [
+          { occurredAt: { gte: range.start, lt: range.end } },
+          { billId: null, account: { type: 'CREDIT_CARD', source: 'PLUGGY' } },
+        ],
+      },
       orderBy: { occurredAt: 'desc' },
     })
     return keepCurrentInstallmentsOnly(rows)
