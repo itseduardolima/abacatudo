@@ -43,6 +43,23 @@ describe('resolveKind', () => {
   it('category "Credit card payment" também é CARD_PAYMENT (fallback sem categoryId)', () => {
     expect(resolveKind(tx({ type: 'CREDIT', category: 'Credit card payment' }), true)).toBe('CARD_PAYMENT')
   })
+
+  it('Banco do Brasil não manda categoryId de pagamento — operationType "PAGAMENTO_FATURA" também é CARD_PAYMENT (visto na prática, categorias variam por canal: Cash, Internal, PIX)', () => {
+    expect(resolveKind(tx({ type: 'CREDIT', categoryId: '05020000', operationType: 'PAGAMENTO_FATURA' }), true)).toBe(
+      'CARD_PAYMENT',
+    )
+    expect(resolveKind(tx({ type: 'CREDIT', categoryId: '05060000', operationType: 'PAGAMENTO_FATURA' }), true)).toBe(
+      'CARD_PAYMENT',
+    )
+  })
+
+  it('operationType "PAGAMENTO" genérico (sem "_FATURA") não basta — é o mesmo valor de uma parcela comum', () => {
+    expect(resolveKind(tx({ type: 'CREDIT', operationType: 'PAGAMENTO' }), true)).toBe('REFUND')
+  })
+
+  it('"PAGAMENTO_FATURA" só conta em cartão — em movimentação CREDIT já é INCOME de qualquer jeito', () => {
+    expect(resolveKind(tx({ type: 'CREDIT', operationType: 'PAGAMENTO_FATURA' }), false)).toBe('INCOME')
+  })
 })
 
 describe('mapTransaction', () => {

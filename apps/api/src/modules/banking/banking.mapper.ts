@@ -10,16 +10,24 @@ export type MappedTransaction = Omit<Prisma.TransactionUncheckedCreateInput, 'us
   status: TransactionStatus
 }
 
-// operationType não serve pra achar pagamento de fatura: o Pluggy manda "PAGAMENTO" tanto numa compra
-// parcelada quanto no pagamento em si. O sinal confiável é a categoria que o Pluggy já classifica
-// (categoryId "05100000" / category "Credit card payment") — 03-regras-negocio § Movimentações: pagamento
-// de fatura nunca é gasto.
+// A categoria sozinha não serve de sinal universal: só o Nubank manda categoryId "05100000"/category
+// "Credit card payment" pro pagamento de fatura — o Banco do Brasil manda categorias completamente
+// diferentes pra cada canal de pagamento ("05020000 Transfer - Cash", "05060000 Transfer - Internal",
+// "05090004 Third party transfer - PIX", vistas na prática), nenhuma delas exclusiva de pagamento de
+// fatura. O sinal universal de verdade é `operationType === "PAGAMENTO_FATURA"` (visto em ambos os bancos,
+// inclusive nas linhas "Pagamento recebido" do Nubank) — diferente do "PAGAMENTO" genérico que o Pluggy
+// também manda numa compra parcelada comum (esse não serve, é ambíguo).
 const CARD_PAYMENT_CATEGORY_ID = '05100000'
+const CARD_PAYMENT_OPERATION_TYPE = 'PAGAMENTO_FATURA'
 
 // CREDIT vira REFUND só em cartão de crédito (estorno de compra). Em conta de movimentação (corrente,
 // benefício), CREDIT é dinheiro entrando de verdade (Pix recebido, depósito) — vira INCOME, não estorno.
 export function resolveKind(tx: PluggyTransaction, isCreditCard: boolean): TransactionKind {
-  if (tx.categoryId === CARD_PAYMENT_CATEGORY_ID || tx.category?.toLowerCase() === 'credit card payment') {
+  if (
+    tx.categoryId === CARD_PAYMENT_CATEGORY_ID ||
+    tx.category?.toLowerCase() === 'credit card payment' ||
+    (isCreditCard && tx.type === 'CREDIT' && tx.operationType === CARD_PAYMENT_OPERATION_TYPE)
+  ) {
     return 'CARD_PAYMENT'
   }
   if (tx.type !== 'CREDIT') return 'EXPENSE'
