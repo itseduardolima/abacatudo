@@ -19,6 +19,9 @@ export default function HomePage() {
         <Link href="/accounts" className="mt-4 inline-block text-text underline underline-offset-4">
           Contas
         </Link>
+        <Link href="/settings/people" className="mt-2 block text-text underline underline-offset-4">
+          Pessoas
+        </Link>
       </section>
       <Button variant="outline" state={isLoggingOut ? 'loading' : 'idle'} onClick={() => void onLogout()}>
         Sair
