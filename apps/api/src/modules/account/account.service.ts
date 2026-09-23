@@ -41,12 +41,19 @@ export class AccountService {
       throw new DomainError('NOT_A_CHECKING_ACCOUNT', 'Só uma conta corrente pode ser a conta de benefício.', 422)
     }
 
-    if (isBenefitAccount) await this.repo.clearBenefitAccountFlag(userId)
-    await this.repo.update(userId, id, { isBenefitAccount })
+    if (isBenefitAccount) await this.repo.setBenefitAccount(userId, id)
+    else await this.repo.update(userId, id, { isBenefitAccount: false })
 
     const refreshed = await this.repo.findById(userId, id)
     if (!refreshed) throw new NotFoundError('ACCOUNT_NOT_FOUND', 'Conta não encontrada.')
     return toDto(refreshed)
+  }
+
+  // Mesmo padrão do FixedExpenseService.archive — soft-delete, nunca apaga Transaction/histórico por
+  // trás (findMany/invoice/pace já ignoram conta arquivada por padrão).
+  async archive(userId: string, id: string): Promise<void> {
+    const result = await this.repo.archive(userId, id)
+    if (result.count === 0) throw new NotFoundError('ACCOUNT_NOT_FOUND', 'Conta não encontrada.')
   }
 }
 

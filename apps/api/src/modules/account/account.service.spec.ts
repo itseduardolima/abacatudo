@@ -9,7 +9,8 @@ function repoMock() {
     findMany: jest.fn(),
     findById: jest.fn(),
     update: jest.fn(),
-    clearBenefitAccountFlag: jest.fn(),
+    setBenefitAccount: jest.fn(),
+    archive: jest.fn(),
   } as unknown as jest.Mocked<AccountRepository>
 }
 
@@ -191,7 +192,7 @@ describe('AccountService', () => {
       expect(repo.update).not.toHaveBeenCalled()
     })
 
-    it('marcar: desmarca qualquer outra conta de benefício antes de marcar esta', async () => {
+    it('marcar: desmarca qualquer outra conta de benefício antes de marcar esta, num transaction só', async () => {
       const repo = repoMock()
       repo.findById
         .mockResolvedValueOnce(row({ type: 'CHECKING' }))
@@ -200,13 +201,13 @@ describe('AccountService', () => {
 
       const result = await service.setBenefitAccount('user-1', 'acc-1', true)
 
-      expect(repo.clearBenefitAccountFlag).toHaveBeenCalledWith('user-1')
-      expect(repo.update).toHaveBeenCalledWith('user-1', 'acc-1', { isBenefitAccount: true })
+      expect(repo.setBenefitAccount).toHaveBeenCalledWith('user-1', 'acc-1')
+      expect(repo.update).not.toHaveBeenCalled()
       expect(result.isBenefitAccount).toBe(true)
       expect(result.balanceCents).toBe(15000)
     })
 
-    it('desmarcar: não mexe nas outras contas', async () => {
+    it('desmarcar: não mexe nas outras contas, nunca chama o método atômico de marcar', async () => {
       const repo = repoMock()
       repo.findById
         .mockResolvedValueOnce(row({ type: 'CHECKING', isBenefitAccount: true }))
@@ -215,8 +216,36 @@ describe('AccountService', () => {
 
       await service.setBenefitAccount('user-1', 'acc-1', false)
 
-      expect(repo.clearBenefitAccountFlag).not.toHaveBeenCalled()
+      expect(repo.setBenefitAccount).not.toHaveBeenCalled()
       expect(repo.update).toHaveBeenCalledWith('user-1', 'acc-1', { isBenefitAccount: false })
+    })
+
+    it('nunca marca conta de outro usuário (userId sempre explícito pro repo)', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValue(null)
+      const service = new AccountService(repo)
+
+      await expect(service.setBenefitAccount('user-2', 'acc-de-outro-user', true)).rejects.toBeInstanceOf(NotFoundError)
+      expect(repo.findById).toHaveBeenCalledWith('user-2', 'acc-de-outro-user')
+      expect(repo.setBenefitAccount).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('archive', () => {
+    it('404 quando não existe (ou é de outro usuário)', async () => {
+      const repo = repoMock()
+      repo.archive.mockResolvedValue({ count: 0 })
+      const service = new AccountService(repo)
+
+      await expect(service.archive('user-1', 'acc-1')).rejects.toBeInstanceOf(NotFoundError)
+    })
+
+    it('sucesso não lança', async () => {
+      const repo = repoMock()
+      repo.archive.mockResolvedValue({ count: 1 })
+      const service = new AccountService(repo)
+
+      await expect(service.archive('user-1', 'acc-1')).resolves.toBeUndefined()
     })
   })
 })

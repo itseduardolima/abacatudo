@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common'
+import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common'
 import type { Account } from '@gastos/shared'
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import { AccountService } from './account.service'
@@ -31,5 +31,11 @@ export class AccountController {
     @Body() body: UpdateAccountDto,
   ): Promise<Account> {
     return this.accounts.setBenefitAccount(userId, id, body.isBenefitAccount)
+  }
+
+  @Patch(':id/archive')
+  @HttpCode(204)
+  archive(@CurrentUser() userId: string, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    return this.accounts.archive(userId, id)
   }
 }
