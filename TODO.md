@@ -202,9 +202,46 @@ DISCONNECTED` localmente **depois** da revogação ter dado certo; se o
   vez do `502` de antes da correção. (2) Faltava teste unitário travando a
   garantia "falha na revogação nunca chama a escrita local" (só tinha sido
   provada ao vivo) — adicionado em `banking.service.spec.ts`.
-- Próximo: Sprint 6 fica só com 8.4 (aviso de reconectar) e 2.3 (cartão
-  adicional → pessoa) — ou, se preferir, Sprint 7 (Insights e IA) usando o
-  `insight` que nasceu na Etapa 4 da Sprint 5.
+- **8.4 concluída (2026-09-23), versão simples (sem job nem e-mail, a pedido
+  do usuário)**: aviso de reconectar 30/7 dias e reconectar em si.
+  - **`reconnectWarningDays`**: 7 | 30 | null, calculado na hora a partir de
+    `consentExpiresAt` (sem job, sem estado — mesmo espírito do
+    `disconnected` de 8.5). Já vencido continua no limiar mais urgente (7),
+    nunca vira null: sem sync não dá pra saber que venceu de verdade.
+  - **Reconectar**: o plano original era `PATCH` no mesmo Item (é o que
+    07-integracao-bancaria assumia). **Testado ao vivo direto contra a API
+    do Pluggy, não funciona**: o conector Meu Pluggy devolve
+    `400 "MeuPluggy item cant be updated"`. Corrigido o desenho: reconectar
+    agora cria um Item novo (igual `connect()`) e revoga o antigo (melhor
+    esforço, reaproveitando o `deleteItem`/8.5, inclusive o auto-recuperação
+    de 404). `PATCH /banking/items/:id/reconnect` devolve um **id novo** —
+    o front precisa trocar de id pro próximo `checkStatus`.
+  - **Bug real achado testando isso ao vivo** (não existia antes desta
+    etapa): `AccountRepository.upsertFromSync` nunca atualizava
+    `pluggyItemId` numa conta já existente — só valia na criação. Sem
+    reconectar isso nunca aparecia (cada conta só via 1 Item na vida toda);
+    com reconectar, a conta ficava presa apontando pro Item antigo revogado,
+    e `disconnected`/`lastSyncAt` (8.5/8.6) mentiam mesmo com o Item novo em
+    dia. Corrigido incluindo `pluggyItemId` no `update` do upsert também.
+  - **Verificado ao vivo com 2 autorizações reais do Nubank** (2 Items pro
+    mesmo banco, sem desconectar o primeiro entre eles): a mesma conta
+    (`externalAccountId` do Pluggy é estável entre Items) nunca duplicou —
+    2 contas, 1674 transações, nada dobrado. Depois, `manualSync` no Item
+    mais novo confirmou o `pluggyItemId` repontando certo, e desconectar o
+    Item antigo não afetou mais a conta (`disconnected: false`, porque ela
+    já apontava pro Item novo). `reconnectWarningDays` também testado ao
+    vivo com os 3 casos (30, 7, sem data).
+  - **Gap consciente (a pedido do usuário)**: sem job diário nem e-mail —
+    o aviso só existe quando alguém chama a API (não dispara notificação
+    sozinho). Fica pra quando decidirmos provedor de e-mail e agendamento.
+  - **Gap consciente (fora do escopo desta etapa)**: a detecção "item que
+    tinha movimento e virou vazio de repente = precisa reconectar" (a outra
+    metade da regra de 03-regras-negocio § Consentimento) não foi
+    construída — hoje só os status que o próprio Pluggy manda
+    (`LOGIN_ERROR`/`OUTDATED`/`ERROR`) sinalizam problema.
+- Próximo: Sprint 6 fica só com 2.3 (cartão adicional → pessoa) — ou, se
+  preferir, Sprint 7 (Insights e IA) usando o `insight` que nasceu na Etapa
+  4 da Sprint 5.
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -387,7 +424,7 @@ fatura) e `/movements` só com o resto — como o desenho previa.
       duplica; nunca sobrescreve `categoryId`/`personId`/`note` (são do usuário, não do Pluggy)
 - [x] 8.3 — Sync diário/manual (sem webhook): `POST /banking/items/:id/sync` (manual) + primeira vez que o
       `checkStatus` vê o status virar `UPDATED` (automático). **Falta o job diário agendado** — ver gap acima
-- [ ] 8.4 — Aviso de consentimento (`consentExpiresAt` já é lido e salvo; falta a UI de aviso)
+- [x] 8.4 — Aviso de reconectar + reconectar, testado ao vivo (falta job diário + e-mail, gap consciente)
 - [x] 8.5 — Desconectar, testado ao vivo
 - [ ] 2.3 — Cartão adicional → pessoa
 
