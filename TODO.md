@@ -307,6 +307,23 @@ account-type.ts` traduz o enum pro rótulo em português.
   Verificado ao vivo: criar 2 contas (cartão e carteira), lista atualiza sem
   reload, nome vazio rejeitado com a mensagem exata da API, sobrevive a um
   reload completo da página.
+- **Code review do front (2026-09-23)** — login + home + Contas: 1 achado,
+  corrigido e reverificado ao vivo. `use-accounts-page.ts`: "Cancelar" não
+  travava enquanto a request de criar conta estava no ar (rede lenta é
+  comum, mobile-first); cancelar nesse meio tempo limpava `ruleError` na
+  hora, mas a resposta (que só chegava depois) escrevia um erro nesse mesmo
+  estado — e como reabrir o formulário nunca limpava `ruleError`, a próxima
+  vez que o usuário abria "Nova conta" via um erro de uma tentativa que já
+  tinha cancelado. Corrigido com um contador de submissão: cancelar
+  incrementa, e a resposta (sucesso ou erro) só atualiza o estado se ainda
+  for a submissão atual. Reproduzido de propósito interceptando o `fetch`
+  no Chrome pra forçar uma resposta de erro com 3s de atraso, cancelando
+  antes dela chegar, e confirmando que o formulário reaberto vinha limpo
+  (sem a correção, o alerta forçado reaparecia).
+  Também investiguei e descartei uma hipótese mais séria (cache do
+  TanStack Query servindo `/auth/me` velho logo após logout e fazendo o
+  `/login` ricochetear pra home) — testado ao vivo com screenshots quadro a
+  quadro, não reproduz.
 - Próximo: seguir telas sprint a sprint (Pessoas/Categorias, provavelmente
   dentro de Configurações — a spec 04-padroes-codigo só reserva rota própria
   pra `accounts/`; `people/[id]` é só a visão informativa de gasto por
