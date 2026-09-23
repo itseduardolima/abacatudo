@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
+import { useAccounts } from '@/hooks/queries/use-accounts'
 import { useBudgetMonth } from '@/hooks/queries/use-budget-month'
 import { useUpdateBudgetMonth } from '@/hooks/queries/use-update-budget-month'
 import { ApiClientError } from '@/lib/api-client'
@@ -12,12 +13,14 @@ interface FormValues {
   benefit: string
 }
 
-// Hook de página: só orquestração (04-padroes-codigo). Renda é o teto do ritmo (HU 7.4); benefício ainda
-// é digitado à mão até o saldo vir de verdade do InfinitePay (gap consciente, TODO.md). fixedExpensesCents/
-// savingsGoalCents do PUT (a API exige os 4 juntos) vão zerados — a lista de gastos fixos nova já não usa
-// mais aquele campo único.
+// Hook de página: só orquestração (04-padroes-codigo). Renda é o teto do ritmo (HU 7.4). Benefício: se
+// existir uma conta marcada como benefício (accounts/page.tsx) com saldo sincronizado pelo Pluggy, usa esse
+// saldo automaticamente e o campo vira só leitura (Fase 4, TODO.md); sem conta conectada, continua digitado
+// à mão como antes. fixedExpensesCents/savingsGoalCents do PUT (a API exige os 4 juntos) vão zerados — a
+// lista de gastos fixos nova já não usa mais aquele campo único.
 export function useIncomePage() {
   const budgetMonth = useBudgetMonth()
+  const accounts = useAccounts()
   const updateBudgetMonth = useUpdateBudgetMonth()
   const {
     register,
@@ -27,22 +30,25 @@ export function useIncomePage() {
     formState: { errors, isDirty },
   } = useForm<FormValues>({ defaultValues: { income: '', benefit: '' } })
 
+  const benefitAccount = accounts.data?.find((account) => account.isBenefitAccount) ?? null
+  const benefitFromAccountCents = benefitAccount?.balanceCents ?? null
+
   useEffect(() => {
-    if (budgetMonth.data) {
-      reset({
-        income: formatMoney(budgetMonth.data.incomeCents).replace('R$ ', ''),
-        benefit: formatMoney(budgetMonth.data.benefitCents).replace('R$ ', ''),
-      })
-    }
-  }, [budgetMonth.data, reset])
+    if (!budgetMonth.data) return
+    reset({
+      income: formatMoney(budgetMonth.data.incomeCents).replace('R$ ', ''),
+      benefit: formatMoney(benefitFromAccountCents ?? budgetMonth.data.benefitCents).replace('R$ ', ''),
+    })
+  }, [budgetMonth.data, benefitFromAccountCents, reset])
 
   const onSubmit = handleSubmit(async (values) => {
     const incomeCents = parseMoneyInput(values.income)
-    const benefitCents = parseMoneyInput(values.benefit)
     if (Number.isNaN(incomeCents)) {
       setError('income', { message: 'Informe um valor válido.' })
       return
     }
+
+    const benefitCents = benefitFromAccountCents ?? parseMoneyInput(values.benefit)
     if (Number.isNaN(benefitCents)) {
       setError('benefit', { message: 'Informe um valor válido.' })
       return
@@ -59,12 +65,13 @@ export function useIncomePage() {
   })
 
   return {
-    isLoading: budgetMonth.isPending,
+    isLoading: budgetMonth.isPending || accounts.isPending,
     register,
     errors,
     onSubmit,
     isSaving: updateBudgetMonth.isPending,
     isDirty,
     saved: updateBudgetMonth.isSuccess && !isDirty,
+    benefitAccountName: benefitFromAccountCents != null ? (benefitAccount?.name ?? null) : null,
   }
 }
