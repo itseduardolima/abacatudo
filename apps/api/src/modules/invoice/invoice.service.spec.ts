@@ -6,7 +6,7 @@ import { InvoiceService } from './invoice.service'
 import type { InvoiceRepository } from './invoice.repository'
 
 function accountsMock() {
-  return { findById: jest.fn() } as unknown as jest.Mocked<AccountRepository>
+  return { findById: jest.fn(), findMany: jest.fn() } as unknown as jest.Mocked<AccountRepository>
 }
 
 function peopleMock() {
@@ -14,7 +14,7 @@ function peopleMock() {
 }
 
 function repoMock() {
-  return { findRows: jest.fn() } as unknown as jest.Mocked<InvoiceRepository>
+  return { findRows: jest.fn(), findOpenRows: jest.fn() } as unknown as jest.Mocked<InvoiceRepository>
 }
 
 function accountRow(overrides: Partial<AccountRow> = {}): AccountWithPluggyItem {
@@ -76,9 +76,9 @@ describe('InvoiceService', () => {
       await expect(service.getForAccount('user-1', 'acc-1', '2026-09')).rejects.toBeInstanceOf(DomainError)
     })
 
-    it('calcula a fatura da conta no mês', async () => {
+    it('conta MANUAL: calcula a fatura pelo mês calendário (sem billId de banco)', async () => {
       const accounts = accountsMock()
-      accounts.findById.mockResolvedValue(accountRow())
+      accounts.findById.mockResolvedValue(accountRow({ source: 'MANUAL' }))
       const people = peopleMock()
       people.findSelf.mockResolvedValue(personRow())
       const repo = repoMock()
@@ -91,22 +91,58 @@ describe('InvoiceService', () => {
       const result = await service.getForAccount('user-1', 'acc-1', '2026-09')
 
       expect(repo.findRows).toHaveBeenCalledWith('user-1', { start: expect.any(Date), end: expect.any(Date) }, 'acc-1')
+      expect(repo.findOpenRows).not.toHaveBeenCalled()
       expect(result).toEqual({ totalCents: 1700, mineCents: 1000, notMineCents: 700 })
+    })
+
+    it('conta PLUGGY: calcula pela fatura aberta de verdade (billId), ignora month', async () => {
+      const accounts = accountsMock()
+      accounts.findById.mockResolvedValue(accountRow({ source: 'PLUGGY' }))
+      const people = peopleMock()
+      people.findSelf.mockResolvedValue(personRow())
+      const repo = repoMock()
+      repo.findOpenRows.mockResolvedValue([{ kind: 'EXPENSE', amountCents: 58989, personId: 'self-1', splits: [] }])
+      const service = new InvoiceService(repo, accounts, people)
+
+      const result = await service.getForAccount('user-1', 'acc-1', '2026-09')
+
+      expect(repo.findOpenRows).toHaveBeenCalledWith('user-1', 'acc-1')
+      expect(repo.findRows).not.toHaveBeenCalled()
+      expect(result).toEqual({ totalCents: 58989, mineCents: 58989, notMineCents: 0 })
     })
   })
 
   describe('getSummary', () => {
-    it('soma todos os cartões, sem accountId', async () => {
+    it('soma a fatura aberta de todos os cartões, cada um com o critério certo pra sua fonte', async () => {
       const people = peopleMock()
       people.findSelf.mockResolvedValue(personRow())
+      const accounts = accountsMock()
+      accounts.findMany.mockResolvedValue([
+        accountRow({ id: 'acc-pluggy', source: 'PLUGGY' }),
+        accountRow({ id: 'acc-manual', source: 'MANUAL' }),
+        accountRow({ id: 'acc-checking', type: 'CHECKING', source: 'MANUAL' }),
+      ])
       const repo = repoMock()
+      repo.findOpenRows.mockResolvedValue([{ kind: 'EXPENSE', amountCents: 58989, personId: 'self-1', splits: [] }])
       repo.findRows.mockResolvedValue([{ kind: 'EXPENSE', amountCents: 500, personId: 'self-1', splits: [] }])
-      const service = new InvoiceService(repo, accountsMock(), people)
+      const service = new InvoiceService(repo, accounts, people)
 
-      const result = await service.getSummary('user-1', '2026-09')
+      const result = await service.getSummary('user-1')
 
-      expect(repo.findRows).toHaveBeenCalledWith('user-1', { start: expect.any(Date), end: expect.any(Date) })
-      expect(result).toEqual({ totalCents: 500, mineCents: 500, notMineCents: 0 })
+      expect(accounts.findMany).toHaveBeenCalledWith('user-1', false)
+      expect(repo.findOpenRows).toHaveBeenCalledWith('user-1', 'acc-pluggy')
+      expect(repo.findRows).toHaveBeenCalledWith(
+        'user-1',
+        { start: expect.any(Date), end: expect.any(Date) },
+        'acc-manual',
+      )
+      // conta CHECKING (não é cartão) nunca entra na fatura.
+      expect(repo.findRows).not.toHaveBeenCalledWith(
+        'user-1',
+        { start: expect.any(Date), end: expect.any(Date) },
+        'acc-checking',
+      )
+      expect(result).toEqual({ totalCents: 59489, mineCents: 59489, notMineCents: 0 })
     })
 
     it('sem Pessoa self, falha alto (invariante quebrada)', async () => {
@@ -114,7 +150,7 @@ describe('InvoiceService', () => {
       people.findSelf.mockResolvedValue(null)
       const service = new InvoiceService(repoMock(), accountsMock(), people)
 
-      await expect(service.getSummary('user-1', '2026-09')).rejects.toBeInstanceOf(DomainError)
+      await expect(service.getSummary('user-1')).rejects.toBeInstanceOf(DomainError)
     })
   })
 })

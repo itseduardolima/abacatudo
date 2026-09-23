@@ -7,7 +7,8 @@ export class InvoiceRepository {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaService) {}
 
   // EXPENSE/REFUND só de conta CREDIT_CARD — CARD_PAYMENT nunca entra na fatura (03-regras-negocio §
-  // Movimentações: a linha de pagamento é excluída do gasto).
+  // Movimentações: a linha de pagamento é excluída do gasto). Usado só pra conta MANUAL/IMPORT, que não
+  // tem billId de banco de verdade — mês calendário é a aproximação possível.
   async findRows(userId: string, range: { start: Date; end: Date }, accountId?: string): Promise<InvoiceRow[]> {
     const rows = await this.prisma.transaction.findMany({
       where: {
@@ -18,11 +19,36 @@ export class InvoiceRepository {
       },
       include: { splits: { select: { personId: true, amountCents: true } } },
     })
-    return rows.map((row) => ({
-      kind: row.kind as 'EXPENSE' | 'REFUND',
-      amountCents: row.amountCents,
-      personId: row.personId,
-      splits: row.splits,
-    }))
+    return rows.map(toInvoiceRow)
+  }
+
+  // Fatura de verdade (03-regras-negocio § Movimentações: "agrupa por billId; as pendentes (sem billId)
+  // pertencem à fatura aberta") — usado pra conta PLUGGY, cujo billId vem do banco real no sync. Nunca
+  // filtra por `occurredAt`: o fechamento do cartão quase nunca bate com o mês calendário.
+  async findOpenRows(userId: string, accountId?: string): Promise<InvoiceRow[]> {
+    const rows = await this.prisma.transaction.findMany({
+      where: {
+        userId,
+        billId: null,
+        kind: { in: ['EXPENSE', 'REFUND'] },
+        account: { type: 'CREDIT_CARD', source: 'PLUGGY', ...(accountId ? { id: accountId } : {}) },
+      },
+      include: { splits: { select: { personId: true, amountCents: true } } },
+    })
+    return rows.map(toInvoiceRow)
+  }
+}
+
+function toInvoiceRow(row: {
+  kind: string
+  amountCents: number
+  personId: string | null
+  splits: { personId: string; amountCents: number }[]
+}): InvoiceRow {
+  return {
+    kind: row.kind as 'EXPENSE' | 'REFUND',
+    amountCents: row.amountCents,
+    personId: row.personId,
+    splits: row.splits,
   }
 }

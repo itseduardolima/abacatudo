@@ -31,3 +31,16 @@ export function computeInvoice(rows: InvoiceRow[], selfPersonId: string): Invoic
 
   return { totalCents, mineCents, notMineCents: totalCents - mineCents }
 }
+
+// Soma a fatura de vários cartões numa só (getSummary): cada `Invoice` já respeita sua própria invariante,
+// e a soma delas continua respeitando (soma de somas).
+export function mergeInvoices(invoices: Invoice[]): Invoice {
+  return invoices.reduce(
+    (acc, invoice) => ({
+      totalCents: acc.totalCents + invoice.totalCents,
+      mineCents: acc.mineCents + invoice.mineCents,
+      notMineCents: acc.notMineCents + invoice.notMineCents,
+    }),
+    { totalCents: 0, mineCents: 0, notMineCents: 0 },
+  )
+}

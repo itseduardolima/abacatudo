@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common'
 import type { Invoice } from '@gastos/shared'
 import { resolveMonthRange } from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
-import { AccountRepository } from '../account/account.repository'
+import { AccountRepository, type AccountWithPluggyItem } from '../account/account.repository'
 import { PersonRepository } from '../person/person.repository'
-import { computeInvoice } from './invoice.mapper'
+import { computeInvoice, mergeInvoices, type InvoiceRow } from './invoice.mapper'
 import { InvoiceRepository } from './invoice.repository'
 
 @Injectable()
@@ -25,16 +25,29 @@ export class InvoiceService {
     }
 
     const selfId = await this.selfPersonId(userId)
-    const rows = await this.repo.findRows(userId, resolveMonthRange(month), accountId)
+    const rows = await this.rowsForAccount(userId, account, month)
     return computeInvoice(rows, selfId)
   }
 
-  // "Meu" do mês somado em todos os cartões (03-regras-negocio § Só a minha parte) — é o número que
-  // alimenta o orçamento (Sprint 5).
-  async getSummary(userId: string, month?: string): Promise<Invoice> {
+  // "Meu" da fatura aberta, somado em todos os cartões (03-regras-negocio § Só a minha parte) — é o
+  // número que alimenta o ritmo (HU 7.4). Sempre a fatura de agora; não existe "mês passado" aqui (ver
+  // findOpenRows/findRows sobre por que cada tipo de conta usa um critério diferente de "aberta").
+  async getSummary(userId: string): Promise<Invoice> {
     const selfId = await this.selfPersonId(userId)
-    const rows = await this.repo.findRows(userId, resolveMonthRange(month))
-    return computeInvoice(rows, selfId)
+    const cardAccounts = (await this.accounts.findMany(userId, false)).filter((a) => a.type === 'CREDIT_CARD')
+
+    const invoices = await Promise.all(
+      cardAccounts.map(async (account) => computeInvoice(await this.rowsForAccount(userId, account), selfId)),
+    )
+    return mergeInvoices(invoices)
+  }
+
+  // PLUGGY: billId de verdade do banco (findOpenRows, ignora `month`). MANUAL/IMPORT: nunca tem billId
+  // (não existe banco por trás), mês calendário é a aproximação possível — aí `month` ainda vale.
+  private rowsForAccount(userId: string, account: AccountWithPluggyItem, month?: string): Promise<InvoiceRow[]> {
+    return account.source === 'PLUGGY'
+      ? this.repo.findOpenRows(userId, account.id)
+      : this.repo.findRows(userId, resolveMonthRange(month), account.id)
   }
 
   private async selfPersonId(userId: string): Promise<string> {

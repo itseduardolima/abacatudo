@@ -1,4 +1,4 @@
-import { computeInvoice, type InvoiceRow } from './invoice.mapper'
+import { computeInvoice, mergeInvoices, type InvoiceRow } from './invoice.mapper'
 
 const SELF = 'self-1'
 const FAMILY = 'family-1'
@@ -69,5 +69,19 @@ describe('computeInvoice', () => {
 
   it('sem linhas, tudo zero', () => {
     expect(computeInvoice([], SELF)).toEqual({ totalCents: 0, mineCents: 0, notMineCents: 0 })
+  })
+})
+
+describe('mergeInvoices', () => {
+  it('soma cada campo de várias faturas', () => {
+    const result = mergeInvoices([
+      { totalCents: 1000, mineCents: 700, notMineCents: 300 },
+      { totalCents: 500, mineCents: 500, notMineCents: 0 },
+    ])
+    expect(result).toEqual({ totalCents: 1500, mineCents: 1200, notMineCents: 300 })
+  })
+
+  it('sem faturas, tudo zero', () => {
+    expect(mergeInvoices([])).toEqual({ totalCents: 0, mineCents: 0, notMineCents: 0 })
   })
 })

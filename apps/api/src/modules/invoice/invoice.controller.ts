@@ -17,7 +17,7 @@ export class InvoiceController {
   }
 
   @Get('summary')
-  getSummary(@CurrentUser() userId: string, @Query('month') month?: string): Promise<Invoice> {
-    return this.invoices.getSummary(userId, month)
+  getSummary(@CurrentUser() userId: string): Promise<Invoice> {
+    return this.invoices.getSummary(userId)
   }
 }
