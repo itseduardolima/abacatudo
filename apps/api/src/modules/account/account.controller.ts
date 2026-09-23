@@ -30,7 +30,7 @@ export class AccountController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateAccountDto,
   ): Promise<Account> {
-    return this.accounts.setBenefitAccount(userId, id, body.isBenefitAccount)
+    return this.accounts.update(userId, id, body)
   }
 
   @Patch(':id/archive')

@@ -29,6 +29,7 @@ function row(
     creditLimitCents: 500000,
     balanceCents: null,
     isBenefitAccount: false,
+    bankLogo: null,
     pluggyItemId: null,
     externalAccountId: null,
     archivedAt: null,
@@ -174,13 +175,13 @@ describe('AccountService', () => {
     expect(result.disconnected).toBe(false)
   })
 
-  describe('setBenefitAccount', () => {
+  describe('update — isBenefitAccount', () => {
     it('404 quando a conta não existe (ou não é do usuário)', async () => {
       const repo = repoMock()
       repo.findById.mockResolvedValue(null)
       const service = new AccountService(repo)
 
-      await expect(service.setBenefitAccount('user-1', 'acc-1', true)).rejects.toBeInstanceOf(NotFoundError)
+      await expect(service.update('user-1', 'acc-1', { isBenefitAccount: true })).rejects.toBeInstanceOf(NotFoundError)
     })
 
     it('422 quando a conta não é CHECKING', async () => {
@@ -188,7 +189,7 @@ describe('AccountService', () => {
       repo.findById.mockResolvedValue(row({ type: 'CREDIT_CARD' }))
       const service = new AccountService(repo)
 
-      await expect(service.setBenefitAccount('user-1', 'acc-1', true)).rejects.toBeInstanceOf(DomainError)
+      await expect(service.update('user-1', 'acc-1', { isBenefitAccount: true })).rejects.toBeInstanceOf(DomainError)
       expect(repo.update).not.toHaveBeenCalled()
     })
 
@@ -199,7 +200,7 @@ describe('AccountService', () => {
         .mockResolvedValueOnce(row({ type: 'CHECKING', isBenefitAccount: true, balanceCents: 15000 }))
       const service = new AccountService(repo)
 
-      const result = await service.setBenefitAccount('user-1', 'acc-1', true)
+      const result = await service.update('user-1', 'acc-1', { isBenefitAccount: true })
 
       expect(repo.setBenefitAccount).toHaveBeenCalledWith('user-1', 'acc-1')
       expect(repo.update).not.toHaveBeenCalled()
@@ -214,7 +215,7 @@ describe('AccountService', () => {
         .mockResolvedValueOnce(row({ type: 'CHECKING', isBenefitAccount: false }))
       const service = new AccountService(repo)
 
-      await service.setBenefitAccount('user-1', 'acc-1', false)
+      await service.update('user-1', 'acc-1', { isBenefitAccount: false })
 
       expect(repo.setBenefitAccount).not.toHaveBeenCalled()
       expect(repo.update).toHaveBeenCalledWith('user-1', 'acc-1', { isBenefitAccount: false })
@@ -225,9 +226,48 @@ describe('AccountService', () => {
       repo.findById.mockResolvedValue(null)
       const service = new AccountService(repo)
 
-      await expect(service.setBenefitAccount('user-2', 'acc-de-outro-user', true)).rejects.toBeInstanceOf(NotFoundError)
+      await expect(service.update('user-2', 'acc-de-outro-user', { isBenefitAccount: true })).rejects.toBeInstanceOf(
+        NotFoundError,
+      )
       expect(repo.findById).toHaveBeenCalledWith('user-2', 'acc-de-outro-user')
       expect(repo.setBenefitAccount).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('update — bankLogo', () => {
+    it('grava o logo escolhido', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValueOnce(row()).mockResolvedValueOnce(row({ bankLogo: 'nubank' }))
+      const service = new AccountService(repo)
+
+      const result = await service.update('user-1', 'acc-1', { bankLogo: 'nubank' })
+
+      expect(repo.update).toHaveBeenCalledWith('user-1', 'acc-1', { bankLogo: 'nubank' })
+      expect(result.bankLogo).toBe('nubank')
+    })
+
+    it('null remove o logo (volta pro monograma)', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValueOnce(row({ bankLogo: 'nubank' })).mockResolvedValueOnce(row({ bankLogo: null }))
+      const service = new AccountService(repo)
+
+      await service.update('user-1', 'acc-1', { bankLogo: null })
+
+      expect(repo.update).toHaveBeenCalledWith('user-1', 'acc-1', { bankLogo: null })
+    })
+
+    it('sem bankLogo no input, não mexe no campo', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValueOnce(row()).mockResolvedValueOnce(row())
+      const service = new AccountService(repo)
+
+      await service.update('user-1', 'acc-1', { isBenefitAccount: false })
+
+      expect(repo.update).not.toHaveBeenCalledWith(
+        'user-1',
+        'acc-1',
+        expect.objectContaining({ bankLogo: expect.anything() }),
+      )
     })
   })
 

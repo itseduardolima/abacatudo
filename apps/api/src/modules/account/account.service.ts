@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import type { Account, CreateAccountInput } from '@gastos/shared'
+import type { Account, CreateAccountInput, UpdateAccountInput } from '@gastos/shared'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository, type AccountWithPluggyItem } from './account.repository'
 
@@ -32,17 +32,23 @@ export class AccountService {
     return toDto(row)
   }
 
-  // Marca/desmarca a conta de benefício (Fase 4) — "renda de benefícios" usa o saldo dela em vez do
-  // valor digitado à mão. Só CHECKING faz sentido (cartão tem fatura, não saldo; CASH nunca sincroniza).
-  async setBenefitAccount(userId: string, id: string, isBenefitAccount: boolean): Promise<Account> {
+  // PATCH único pros dois campos editáveis (benefício, logo do banco) — só mexe no que veio no body, nunca
+  // sobrescreve o outro campo com o valor atual (teria corrida se dois PATCH parciais chegassem juntos).
+  async update(userId: string, id: string, input: UpdateAccountInput): Promise<Account> {
     const existing = await this.repo.findById(userId, id)
     if (!existing) throw new NotFoundError('ACCOUNT_NOT_FOUND', 'Conta não encontrada.')
-    if (isBenefitAccount && existing.type !== 'CHECKING') {
-      throw new DomainError('NOT_A_CHECKING_ACCOUNT', 'Só uma conta corrente pode ser a conta de benefício.', 422)
+
+    if (input.isBenefitAccount !== undefined) {
+      if (input.isBenefitAccount && existing.type !== 'CHECKING') {
+        throw new DomainError('NOT_A_CHECKING_ACCOUNT', 'Só uma conta corrente pode ser a conta de benefício.', 422)
+      }
+      if (input.isBenefitAccount) await this.repo.setBenefitAccount(userId, id)
+      else await this.repo.update(userId, id, { isBenefitAccount: false })
     }
 
-    if (isBenefitAccount) await this.repo.setBenefitAccount(userId, id)
-    else await this.repo.update(userId, id, { isBenefitAccount: false })
+    if (input.bankLogo !== undefined) {
+      await this.repo.update(userId, id, { bankLogo: input.bankLogo })
+    }
 
     const refreshed = await this.repo.findById(userId, id)
     if (!refreshed) throw new NotFoundError('ACCOUNT_NOT_FOUND', 'Conta não encontrada.')
@@ -73,6 +79,7 @@ function toDto(row: AccountWithPluggyItem): Account {
     creditLimitCents: row.creditLimitCents,
     balanceCents: row.balanceCents,
     isBenefitAccount: row.isBenefitAccount,
+    bankLogo: row.bankLogo as Account['bankLogo'],
     archivedAt: row.archivedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     lastSyncAt: row.pluggyItem?.lastSyncAt?.toISOString() ?? null,
