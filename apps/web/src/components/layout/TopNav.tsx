@@ -2,17 +2,18 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { SettingsMenu } from './SettingsMenu'
 import { Logo } from '@/components/ui/Logo'
 
 // Shell de desktop (docs/specs/05-componentizacao.md: "um único código, muda só o shell" — barra
-// superior, sem sidebar). Espelha os mesmos 4 destinos da `BottomNav` do celular (protótipo `d03-fatura`
+// superior, sem sidebar). Espelha os mesmos destinos da `BottomNav` do celular (protótipo `d03-fatura`
 // .dnav), só que sempre com o rótulo visível (tem espaço de sobra). Visível só a partir de `md`;
 // `BottomNav` cobre o `md:hidden`.
 const LINKS = [
   { href: '/', label: 'Início' },
-  { href: '/transactions', label: 'Classificar' },
+  { href: '/transactions', label: 'Fatura' },
 ] as const
-const SOON = ['Orçamento', 'Relatórios'] as const
+const SOON = ['Relatórios'] as const
 
 export function TopNav() {
   const pathname = usePathname()
@@ -41,7 +42,7 @@ export function TopNav() {
           </span>
         ))}
       </div>
-      <div className="w-7" aria-hidden="true" />
+      <SettingsMenu triggerClassName="flex h-9 w-9 items-center justify-center rounded-full text-text" />
     </nav>
   )
 }

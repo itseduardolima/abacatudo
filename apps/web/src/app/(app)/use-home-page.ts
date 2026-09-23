@@ -5,14 +5,12 @@ import { useEffect, useState } from 'react'
 import { useAccounts } from '@/hooks/queries/use-accounts'
 import { useBudgetPace } from '@/hooks/queries/use-budget-pace'
 import { useConnectBank } from '@/hooks/queries/use-connect-bank'
-import { useLogout } from '@/hooks/queries/use-logout'
 import { useMe } from '@/hooks/queries/use-me'
 import { ApiClientError } from '@/lib/api-client'
 
 export function useHomePage() {
   const router = useRouter()
   const me = useMe()
-  const logout = useLogout()
   const pace = useBudgetPace()
   const accounts = useAccounts()
   const connectBank = useConnectBank()
@@ -24,12 +22,6 @@ export function useHomePage() {
   useEffect(() => {
     if (me.isError) router.replace('/login')
   }, [me.isError, router])
-
-  const onLogout = async () => {
-    await logout.mutateAsync()
-    router.push('/login')
-    router.refresh()
-  }
 
   const cardAccounts = (accounts.data ?? []).filter((account) => account.type === 'CREDIT_CARD' && !account.archivedAt)
 
@@ -53,10 +45,7 @@ export function useHomePage() {
   }
 
   return {
-    email: me.data?.email,
     isLoadingMe: me.isPending || me.isError,
-    onLogout,
-    isLoggingOut: logout.isPending,
     pace: pace.data,
     isLoadingPace: pace.isPending,
     cardAccounts,

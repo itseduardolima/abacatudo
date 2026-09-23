@@ -1,13 +1,11 @@
 'use client'
 
-import Link from 'next/link'
 import { BenefitBalanceCard } from './benefit-balance-card'
 import { CardInvoiceRow } from './card-invoice-row'
 import { ConnectBankCard } from './connect-bank-card'
 import { HeroCarousel } from './hero-carousel'
 import { PaceHeroCard } from './pace-hero-card'
 import { useHomePage } from './use-home-page'
-import { Button } from '@/components/ui/Button'
 import { Logo } from '@/components/ui/Logo'
 import { formatMonthName } from '@/lib/utils/format-month'
 
@@ -17,10 +15,7 @@ import { formatMonthName } from '@/lib/utils/format-month'
 // UI própria, em vez de link morto.
 export default function HomePage() {
   const {
-    email,
     isLoadingMe,
-    onLogout,
-    isLoggingOut,
     pace,
     isLoadingPace,
     cardAccounts,
@@ -84,30 +79,6 @@ export default function HomePage() {
           </div>
         </section>
       )}
-
-      <section className="flex flex-col gap-2 border-t border-surface pt-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted">Configurar</p>
-        <Link href="/accounts" className="text-text underline underline-offset-4">
-          Contas
-        </Link>
-        <Link href="/settings/people" className="text-text underline underline-offset-4">
-          Pessoas
-        </Link>
-        <Link href="/settings/categories" className="text-text underline underline-offset-4">
-          Categorias
-        </Link>
-        <Link href="/settings/fixed-expenses" className="text-text underline underline-offset-4">
-          Gastos fixos
-        </Link>
-        <Link href="/settings/income" className="text-text underline underline-offset-4">
-          Renda
-        </Link>
-      </section>
-
-      <p className="text-sm text-muted">{email}</p>
-      <Button variant="outline" state={isLoggingOut ? 'loading' : 'idle'} onClick={() => void onLogout()}>
-        Sair
-      </Button>
     </main>
   )
 }
