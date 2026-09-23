@@ -3,16 +3,28 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAccounts } from '@/hooks/queries/use-accounts'
 import { useCategories } from '@/hooks/queries/use-categories'
+import { useClearSplit } from '@/hooks/queries/use-clear-split'
 import { useInvoice } from '@/hooks/queries/use-invoice'
 import { usePeople } from '@/hooks/queries/use-people'
+import { usePreviewSplit } from '@/hooks/queries/use-preview-split'
+import { useReplaceSplit } from '@/hooks/queries/use-replace-split'
 import { useTransactions } from '@/hooks/queries/use-transactions'
 import { useUpdateTransactionCategory } from '@/hooks/queries/use-update-transaction-category'
 import { useUpdateTransactionPerson } from '@/hooks/queries/use-update-transaction-person'
 import { ApiClientError } from '@/lib/api-client'
 import { dayGroupLabel } from '@/lib/utils/format-day-group'
+import { formatMoney, parseMoneyInput } from '@/lib/utils/format-money'
+
+// "R$ X,XX" -> "X,XX", pra pré-preencher o campo com o mesmo formato que parseMoneyInput espera de
+// volta (vírgula decimal) — nunca o "X.XX" de um `String(centavos / 100)` cru, que parseMoneyInput leria
+// errado (trataria o ponto como separador de milhar).
+function centsToInputValue(cents: number): string {
+  return formatMoney(cents).replace('R$ ', '')
+}
 
 export type Segment = 'all' | 'mine' | 'notMine'
-export type SheetView = 'detail' | 'category' | 'person'
+export type SheetView = 'detail' | 'category' | 'person' | 'split'
+export type SplitMode = 'equal' | 'byValue'
 
 // Hook de página: só orquestração (04-padroes-codigo). Fatura é por cartão (protótipo 08-fatura) — a
 // API de transações não filtra por conta, então o filtro por `accountId` é feito aqui; a de convite
@@ -25,6 +37,9 @@ export function useTransactionsPage() {
   const transactions = useTransactions()
   const updateCategory = useUpdateTransactionCategory()
   const updatePerson = useUpdateTransactionPerson()
+  const previewSplit = usePreviewSplit()
+  const replaceSplit = useReplaceSplit()
+  const clearSplit = useClearSplit()
 
   const cardAccounts = (accounts.data ?? []).filter((a) => a.type === 'CREDIT_CARD' && !a.archivedAt)
   const [selectedAccountId, setSelectedAccountId] = useState<string | undefined>(undefined)
@@ -40,6 +55,14 @@ export function useTransactionsPage() {
   const [alwaysForMerchant, setAlwaysForMerchant] = useState(false)
   const [ruleError, setRuleError] = useState<string | null>(null)
   const submissionRef = useRef(0)
+
+  // Estado da divisão (11-dividir): "Igualmente" recalcula sempre que a lista de pessoas muda (preview,
+  // nunca grava sozinho); "Por valor" deixa o usuário digitar, o preview só serve pra chutar o ponto de
+  // partida. Dinheiro nunca é calculado aqui de verdade (04-padroes-codigo) — a soma "igual" vem sempre do
+  // preview da API; o replace final é sempre validado pelo backend (a soma tem que fechar).
+  const [splitPersonIds, setSplitPersonIds] = useState<string[]>([])
+  const [splitMode, setSplitMode] = useState<SplitMode>('equal')
+  const [splitAmounts, setSplitAmounts] = useState<Record<string, string>>({})
 
   const categoryNameById = new Map((categories.data ?? []).map((category) => [category.id, category.name]))
   const selfPersonId = (people.data ?? []).find((person) => person.isSelf)?.id
@@ -117,6 +140,79 @@ export function useTransactionsPage() {
 
   const editingTx = editingId ? (rows.find((row) => row.id === editingId) ?? null) : null
 
+  // Abre a divisão já com quem já estava dividido (ou só "Eu" + a pessoa atual, pra começar de algo)
+  // marcado — nunca começa vazio.
+  const openSplit = () => {
+    if (!editingTx) return
+    const existingIds = editingTx.splits.map((split) => split.personId)
+    const startIds =
+      existingIds.length >= 2
+        ? existingIds
+        : [...new Set([selfPersonId, editingTx.personId ?? selfPersonId].filter((id): id is string => Boolean(id)))]
+    setSplitPersonIds(startIds)
+    setSplitAmounts(
+      Object.fromEntries(editingTx.splits.map((split) => [split.personId, centsToInputValue(split.amountCents)])),
+    )
+    setSplitMode('equal')
+    setRuleError(null)
+    setSheetView('split')
+  }
+
+  const toggleSplitPerson = (personId: string) => {
+    setSplitPersonIds((current) =>
+      current.includes(personId) ? current.filter((id) => id !== personId) : [...current, personId],
+    )
+  }
+
+  // Recalcula "Igualmente" toda vez que a lista de pessoas muda — nunca inventa o valor aqui, só pede pra
+  // API (splitEqually é sempre backend).
+  useEffect(() => {
+    if (sheetView !== 'split' || splitMode !== 'equal' || !editingId || splitPersonIds.length < 2) return
+    previewSplit.mutate(
+      { id: editingId, personIds: splitPersonIds },
+      {
+        onSuccess: (preview) => {
+          setSplitAmounts(Object.fromEntries(preview.splits.map((s) => [s.personId, centsToInputValue(s.amountCents)])))
+        },
+      },
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- previewSplit é estável o bastante (mutate), incluir quebraria o loop
+  }, [sheetView, splitMode, editingId, splitPersonIds.join(',')])
+
+  const saveSplit = async () => {
+    if (!editingId) return
+    const submission = ++submissionRef.current
+    setRuleError(null)
+    try {
+      const splits = splitPersonIds.map((personId) => ({
+        personId,
+        amountCents: parseMoneyInput(splitAmounts[personId] ?? '0'),
+      }))
+      await replaceSplit.mutateAsync({ id: editingId, input: { splits } })
+      if (submission !== submissionRef.current) return
+      setSheetView('detail')
+    } catch (error) {
+      if (!(error instanceof ApiClientError)) throw error
+      if (submission !== submissionRef.current) return
+      setRuleError(error.error.message)
+    }
+  }
+
+  const removeSplit = async () => {
+    if (!editingId) return
+    const submission = ++submissionRef.current
+    setRuleError(null)
+    try {
+      await clearSplit.mutateAsync(editingId)
+      if (submission !== submissionRef.current) return
+      setSheetView('detail')
+    } catch (error) {
+      if (!(error instanceof ApiClientError)) throw error
+      if (submission !== submissionRef.current) return
+      setRuleError(error.error.message)
+    }
+  }
+
   return {
     isLoading: accounts.isPending || categories.isPending || people.isPending || transactions.isPending,
     cardAccounts,
@@ -140,5 +236,17 @@ export function useTransactionsPage() {
     selectPerson,
     isSaving: updateCategory.isPending || updatePerson.isPending,
     ruleError,
+    openSplit,
+    splitPersonIds,
+    toggleSplitPerson,
+    splitMode,
+    setSplitMode,
+    splitAmounts,
+    setSplitAmount: (personId: string, value: string) =>
+      setSplitAmounts((current) => ({ ...current, [personId]: value })),
+    saveSplit,
+    removeSplit,
+    isSavingSplit: replaceSplit.isPending || clearSplit.isPending,
+    isPreviewingSplit: previewSplit.isPending,
   }
 }

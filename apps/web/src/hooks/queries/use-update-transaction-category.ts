@@ -8,6 +8,8 @@ export function useUpdateTransactionCategory() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateTransactionCategoryInput }) =>
       apiRequest(`/transactions/${id}/category`, { method: 'PATCH', body: input, schema: transactionSchema }),
+    // Categoria não muda quem é "meu"/"não é meu" (só pessoa/split mudam), mas a lista de transações e o
+    // que aparece nela sim — invalida só o necessário aqui.
     onSuccess: () => queryClient.invalidateQueries({ queryKey: TRANSACTIONS_QUERY_KEY }),
   })
 }

@@ -1,15 +1,15 @@
 'use client'
 
 import type { Category, Person, TransactionKind } from '@gastos/shared'
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { InlineAlert } from '@/components/ui/InlineAlert'
 import { MoneyText } from '@/components/finance/MoneyText'
 import { formatDateTimeLong } from '@/lib/utils/format-date'
-import { formatMoney } from '@/lib/utils/format-money'
+import { formatMoney, maskMoneyInput, parseMoneyInput } from '@/lib/utils/format-money'
 import { personAvatarClass, personInitial } from '@/lib/utils/person-avatar'
-import type { SheetView } from './use-transactions-page'
+import type { SheetView, SplitMode } from './use-transactions-page'
 
 export interface SheetTransaction {
   id: string
@@ -27,6 +27,7 @@ export interface SheetTransaction {
   personName: string | null
   personIsSelf: boolean
   personOthersIndex: number
+  splits: { personId: string; amountCents: number }[]
 }
 
 interface TransactionSheetProps {
@@ -43,12 +44,23 @@ interface TransactionSheetProps {
   selectCategory: (transactionId: string, categoryId: string) => void
   selectPerson: (transactionId: string, personId: string) => void
   onClose: () => void
+  openSplit: () => void
+  splitPersonIds: string[]
+  toggleSplitPerson: (personId: string) => void
+  splitMode: SplitMode
+  setSplitMode: (mode: SplitMode) => void
+  splitAmounts: Record<string, string>
+  setSplitAmount: (personId: string, value: string) => void
+  saveSplit: () => void
+  removeSplit: () => void
+  isSavingSplit: boolean
+  isPreviewingSplit: boolean
 }
 
 // Mesmo padrão de bottom sheet do protótipo (12-detalhe: véu escuro + folha com puxador) — trocado pelo
 // acordeão inline que existia antes (a pedido do usuário: "tem que aparecer uma tela igual a do
-// protótipo"). `view` alterna entre o detalhe e os dois seletores (10-classificar-escolha), sempre dentro
-// da mesma folha — escolher não fecha, volta pro detalhe (protótipo faz o mesmo).
+// protótipo"). `view` alterna entre o detalhe e os seletores (10-classificar-escolha, 11-dividir), sempre
+// dentro da mesma folha — escolher não fecha, volta pro detalhe (protótipo faz o mesmo).
 export function TransactionSheet({
   tx,
   accountName,
@@ -63,6 +75,17 @@ export function TransactionSheet({
   selectCategory,
   selectPerson,
   onClose,
+  openSplit,
+  splitPersonIds,
+  toggleSplitPerson,
+  splitMode,
+  setSplitMode,
+  splitAmounts,
+  setSplitAmount,
+  saveSplit,
+  removeSplit,
+  isSavingSplit,
+  isPreviewingSplit,
 }: TransactionSheetProps) {
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -78,6 +101,14 @@ export function TransactionSheet({
 
   const remainingInstallments =
     tx.installmentNumber != null && tx.installmentTotal != null ? tx.installmentTotal - tx.installmentNumber : 0
+  const isSplit = tx.splits.length > 0
+  const canSplit = tx.kind === 'EXPENSE' || tx.kind === 'REFUND'
+
+  const splitSumCents = splitPersonIds.reduce(
+    (total, personId) => total + (parseMoneyInput(splitAmounts[personId] ?? '0') || 0),
+    0,
+  )
+  const splitMissingCents = tx.amountCents - splitSumCents
 
   return (
     <div className="fixed inset-0 z-40">
@@ -148,7 +179,9 @@ export function TransactionSheet({
                     className="flex w-full items-center justify-between border-b border-surface py-3 text-sm"
                   >
                     <span className="text-muted">Quem gastou</span>
-                    {tx.personName ? (
+                    {isSplit ? (
+                      <span className="font-medium text-ink">Dividido entre {tx.splits.length}</span>
+                    ) : tx.personName ? (
                       <span className="flex items-center gap-1.5">
                         <span
                           className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${personAvatarClass(
@@ -189,7 +222,16 @@ export function TransactionSheet({
               </div>
             )}
 
-            <Button onClick={onClose}>Concluído</Button>
+            <div className="flex items-center gap-4">
+              <Button onClick={onClose} className="flex-1">
+                Concluído
+              </Button>
+              {canSplit && (
+                <Button type="button" variant="link" onClick={openSplit}>
+                  {isSplit ? 'Editar divisão' : 'Dividir compra'}
+                </Button>
+              )}
+            </div>
           </div>
         )}
 
@@ -226,7 +268,7 @@ export function TransactionSheet({
                     <Button
                       key={person.id}
                       size="sm"
-                      variant={tx.personId === person.id ? 'primary' : 'outline'}
+                      variant={tx.personId === person.id && !isSplit ? 'primary' : 'outline'}
                       state={isSaving ? 'loading' : 'idle'}
                       onClick={() => selectPerson(tx.id, person.id)}
                     >
@@ -244,6 +286,117 @@ export function TransactionSheet({
                 />
                 Sempre que for &quot;{tx.merchant}&quot;
               </label>
+            )}
+          </div>
+        )}
+
+        {view === 'split' && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-lg font-bold text-ink">Dividir compra</p>
+                <p className="text-sm text-muted">
+                  {tx.merchant ?? tx.description}, {formatMoney(tx.amountCents)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setView('detail')}
+                aria-label="Voltar"
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface text-ink"
+              >
+                <X size={18} strokeWidth={1.8} />
+              </button>
+            </div>
+
+            {ruleError && <InlineAlert>{ruleError}</InlineAlert>}
+
+            <div className="inline-flex gap-1 self-start rounded-pill bg-surface p-1">
+              {(['equal', 'byValue'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setSplitMode(mode)}
+                  className={`rounded-pill px-4 py-1.5 text-sm font-medium ${
+                    splitMode === mode ? 'bg-primary text-primary-ink' : 'text-text'
+                  }`}
+                >
+                  {mode === 'equal' ? 'Igualmente' : 'Por valor'}
+                </button>
+              ))}
+            </div>
+
+            <p className="text-sm font-medium text-text">Quem entra</p>
+            <div className="flex flex-wrap gap-2">
+              {people.map((person) => (
+                <Button
+                  key={person.id}
+                  type="button"
+                  size="sm"
+                  variant={splitPersonIds.includes(person.id) ? 'primary' : 'outline'}
+                  onClick={() => toggleSplitPerson(person.id)}
+                >
+                  {person.name}
+                </Button>
+              ))}
+            </div>
+
+            {splitPersonIds.length > 0 && (
+              <div className="flex flex-col gap-3">
+                {splitPersonIds.map((personId) => {
+                  const person = people.find((p) => p.id === personId)
+                  if (!person) return null
+                  return (
+                    <div key={personId} className="flex items-center gap-3">
+                      <span
+                        className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${personAvatarClass(
+                          person.isSelf,
+                          people.filter((p) => !p.isSelf).findIndex((p) => p.id === personId),
+                        )}`}
+                      >
+                        {personInitial(person.name)}
+                      </span>
+                      <span className="flex-1 font-semibold text-ink">{person.name}</span>
+                      <input
+                        aria-label={`Valor de ${person.name}`}
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        readOnly={splitMode === 'equal'}
+                        value={splitAmounts[personId] ?? ''}
+                        onChange={(event) => setSplitAmount(personId, maskMoneyInput(event.target.value))}
+                        className="h-11 w-28 rounded-card border border-border bg-canvas px-3 text-right text-base tabular-nums text-ink focus:border-border-strong focus:outline-none read-only:bg-surface"
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {splitPersonIds.length >= 2 && (
+              <div
+                className={`flex items-start gap-2.5 rounded-card px-3.5 py-3 text-sm ${
+                  splitMissingCents === 0 ? 'bg-tint text-primary-ink' : 'bg-surface text-text'
+                }`}
+              >
+                {splitMissingCents === 0 && <Check size={18} strokeWidth={2.4} className="mt-0.5 flex-shrink-0" />}
+                <span>
+                  A soma fecha em {formatMoney(splitSumCents)}. Falta {formatMoney(Math.abs(splitMissingCents))}.
+                </span>
+              </div>
+            )}
+
+            <Button
+              onClick={saveSplit}
+              state={isSavingSplit || isPreviewingSplit ? 'loading' : 'idle'}
+              disabled={splitPersonIds.length < 2 || splitMissingCents !== 0}
+            >
+              Salvar divisão
+            </Button>
+
+            {isSplit && (
+              <Button type="button" variant="link" onClick={removeSplit} state={isSavingSplit ? 'loading' : 'idle'}>
+                Remover divisão
+              </Button>
             )}
           </div>
         )}

@@ -45,6 +45,17 @@ export default function TransactionsPage() {
     selectPerson,
     isSaving,
     ruleError,
+    openSplit,
+    splitPersonIds,
+    toggleSplitPerson,
+    splitMode,
+    setSplitMode,
+    splitAmounts,
+    setSplitAmount,
+    saveSplit,
+    removeSplit,
+    isSavingSplit,
+    isPreviewingSplit,
   } = useTransactionsPage()
 
   const selectedAccount = cardAccounts.find((account) => account.id === selectedAccountId)
@@ -222,6 +233,17 @@ export default function TransactionsPage() {
           selectCategory={(id, categoryId) => void selectCategory(id, categoryId)}
           selectPerson={(id, personId) => void selectPerson(id, personId)}
           onClose={closeEdit}
+          openSplit={openSplit}
+          splitPersonIds={splitPersonIds}
+          toggleSplitPerson={toggleSplitPerson}
+          splitMode={splitMode}
+          setSplitMode={setSplitMode}
+          splitAmounts={splitAmounts}
+          setSplitAmount={setSplitAmount}
+          saveSplit={() => void saveSplit()}
+          removeSplit={() => void removeSplit()}
+          isSavingSplit={isSavingSplit}
+          isPreviewingSplit={isPreviewingSplit}
         />
       )}
     </main>
