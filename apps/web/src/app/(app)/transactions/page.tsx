@@ -1,11 +1,13 @@
 'use client'
 
+import { Landmark } from 'lucide-react'
 import type { Segment } from './use-transactions-page'
 import { Button } from '@/components/ui/Button'
 import { BackIcon, IconButton } from '@/components/ui/IconButton'
 import { InlineAlert } from '@/components/ui/InlineAlert'
 import { MoneyText } from '@/components/finance/MoneyText'
-import { formatShortDate } from '@/lib/utils/format-date'
+import { formatAccountType } from '@/lib/utils/format-account-type'
+import { currentMonthKey, formatMonthName } from '@/lib/utils/format-month'
 import { personAvatarClass, personInitial } from '@/lib/utils/person-avatar'
 import { useTransactionsPage } from './use-transactions-page'
 
@@ -15,6 +17,10 @@ const SEGMENTS: { value: Segment; label: string }[] = [
   { value: 'notMine', label: 'Não é meu' },
 ]
 
+// Layout segue o protótipo (08-fatura): card escuro com o número grande, barra de progresso e a
+// quebra "Fatura do banco / − Não é meu / = Meu". Sem a terceira faixa "A classificar" do protótipo nem
+// o chip "Sem dono" como estado pendente — decisão já tomada (TODO.md "Toda transação nasce Meu"): não
+// existe fila de classificação, só Meu e Não é meu (Fatura = Meu + Não é meu).
 export default function TransactionsPage() {
   const {
     isLoading,
@@ -46,7 +52,19 @@ export default function TransactionsPage() {
         <IconButton href="/">
           <BackIcon />
         </IconButton>
-        <h1 className="display-number text-[2rem] text-ink">Fatura</h1>
+        {selectedAccount ? (
+          <>
+            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-surface text-ink">
+              <Landmark size={20} strokeWidth={1.8} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xl font-bold text-ink">{selectedAccount.name}</p>
+              <p className="text-sm text-muted">{formatAccountType(selectedAccount.type)}</p>
+            </div>
+          </>
+        ) : (
+          <h1 className="display-number text-[2rem] text-ink">Fatura</h1>
+        )}
       </div>
 
       {isLoading && <p className="text-text">Carregando…</p>}
@@ -71,32 +89,47 @@ export default function TransactionsPage() {
       )}
 
       {selectedAccount && invoice && (
-        <div className="rounded-card-lg bg-inverse px-5 py-6 text-on-inverse">
-          <p className="text-xs text-on-inverse-muted">Meu nesta fatura — {selectedAccount.name}</p>
-          <p className="display-number mt-2 text-[2.5rem] text-on-inverse-accent">
-            <MoneyText cents={invoice.mineCents} className="!text-on-inverse-accent" />
-          </p>
-          <div className="mt-4 h-3.5 overflow-hidden rounded-pill bg-on-inverse-hairline">
-            <div
-              className="h-full rounded-pill bg-on-inverse-accent"
-              style={{ width: `${invoice.totalCents > 0 ? (invoice.mineCents / invoice.totalCents) * 100 : 0}%` }}
-            />
+        <>
+          <div className="flex items-center justify-between gap-2">
+            <span className="rounded-pill bg-tint px-3 py-1 text-xs font-medium text-primary-ink">
+              Fatura aberta de {formatMonthName(currentMonthKey())}
+            </span>
+            {(selectedAccount.closingDay || selectedAccount.dueDay) && (
+              <span className="text-xs text-muted">
+                {selectedAccount.closingDay && `Fecha dia ${selectedAccount.closingDay}`}
+                {selectedAccount.closingDay && selectedAccount.dueDay && ', '}
+                {selectedAccount.dueDay && `vence dia ${selectedAccount.dueDay}`}
+              </span>
+            )}
           </div>
-          <div className="mt-4 flex flex-col gap-2 rounded-card bg-on-inverse-hairline px-4 py-3 text-sm">
-            <div className="flex justify-between">
-              <span>Fatura do banco</span>
-              <MoneyText cents={invoice.totalCents} className="!text-on-inverse" />
-            </div>
-            <div className="flex justify-between text-on-inverse-muted">
-              <span>− Não é meu</span>
-              <MoneyText cents={invoice.notMineCents} className="!text-on-inverse" />
-            </div>
-            <div className="flex justify-between border-t border-on-inverse-hairline pt-2 font-semibold text-on-inverse-accent">
-              <span>= Meu</span>
+
+          <div className="rounded-card-lg bg-inverse px-5 py-6 text-on-inverse">
+            <p className="text-xs text-on-inverse-muted">Meu nesta fatura</p>
+            <p className="display-number mt-2.5 text-[3.25rem] text-on-inverse-accent">
               <MoneyText cents={invoice.mineCents} className="!text-on-inverse-accent" />
+            </p>
+            <div className="mt-5 h-3.5 overflow-hidden rounded-pill bg-on-inverse-hairline">
+              <div
+                className="h-full rounded-pill bg-on-inverse-accent"
+                style={{ width: `${invoice.totalCents > 0 ? (invoice.mineCents / invoice.totalCents) * 100 : 0}%` }}
+              />
+            </div>
+            <div className="mt-4 overflow-hidden rounded-card bg-canvas text-text">
+              <div className="flex items-center justify-between px-4 py-2.5 text-sm">
+                <span>Fatura do banco</span>
+                <MoneyText cents={invoice.totalCents} />
+              </div>
+              <div className="flex items-center justify-between border-t border-surface px-4 py-2.5 text-sm text-muted">
+                <span>− Não é meu</span>
+                <MoneyText cents={invoice.notMineCents} />
+              </div>
+              <div className="flex items-center justify-between bg-tint px-4 py-2.5 text-sm font-bold text-primary-ink">
+                <span>= Meu</span>
+                <MoneyText cents={invoice.mineCents} />
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {selectedAccount && (
@@ -121,96 +154,92 @@ export default function TransactionsPage() {
       )}
 
       {groups.map((group) => (
-        <div key={group.label} className="flex flex-col gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">{group.label}</p>
-          <ul className="flex flex-col gap-3">
-            {group.items.map((tx) => (
-              <li key={tx.id} className="rounded-card border border-border">
-                <button
-                  type="button"
-                  onClick={() => (editingId === tx.id ? closeEdit() : openEdit(tx.id))}
-                  className="flex w-full items-center justify-between gap-3 p-4 text-left"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-ink">{tx.merchant ?? tx.description}</p>
-                    <p className="mt-0.5 text-xs text-muted">
-                      {tx.categoryName ?? 'Sem categoria'} · {formatShortDate(tx.occurredAt)}
-                    </p>
-                  </div>
-                  <div className="flex flex-shrink-0 items-center gap-2">
-                    <MoneyText cents={tx.kind === 'REFUND' ? -tx.amountCents : tx.amountCents} />
-                    {tx.personName ? (
-                      <span
-                        className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${personAvatarClass(
-                          tx.personIsSelf,
-                          tx.personOthersIndex,
-                        )}`}
-                      >
-                        {personInitial(tx.personName)}
-                      </span>
-                    ) : (
-                      <span className="rounded-pill px-2.5 py-1 text-xs text-muted shadow-hair">Sem dono</span>
-                    )}
-                  </div>
-                </button>
+        <div key={group.label}>
+          <p className="pb-0.5 pt-3.5 text-sm font-semibold text-muted">{group.label}</p>
+          {group.items.map((tx) => (
+            <div key={tx.id} className="border-b border-surface last:border-b-0">
+              <button
+                type="button"
+                onClick={() => (editingId === tx.id ? closeEdit() : openEdit(tx.id))}
+                className="flex w-full items-center justify-between gap-3 py-3 text-left"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-ink">{tx.merchant ?? tx.description}</p>
+                  <p className="mt-0.5 text-sm text-muted">{tx.categoryName ?? 'Sem categoria'}</p>
+                </div>
+                <div className="flex flex-shrink-0 items-center gap-2">
+                  <MoneyText cents={tx.kind === 'REFUND' ? -tx.amountCents : tx.amountCents} />
+                  {tx.personName ? (
+                    <span
+                      className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${personAvatarClass(
+                        tx.personIsSelf,
+                        tx.personOthersIndex,
+                      )}`}
+                    >
+                      {personInitial(tx.personName)}
+                    </span>
+                  ) : (
+                    <span className="rounded-pill px-2.5 py-1 text-xs text-muted shadow-hair">Sem dono</span>
+                  )}
+                </div>
+              </button>
 
-                {editingId === tx.id && (
-                  <div className="flex flex-col gap-4 border-t border-border p-4">
-                    {ruleError && <InlineAlert>{ruleError}</InlineAlert>}
+              {editingId === tx.id && (
+                <div className="flex flex-col gap-4 pb-4">
+                  {ruleError && <InlineAlert>{ruleError}</InlineAlert>}
 
-                    <div className="flex flex-col gap-1.5">
-                      <span className="text-sm font-medium text-text">Categoria</span>
-                      <div className="flex flex-wrap gap-2">
-                        {categories.map((category) => (
-                          <Button
-                            key={category.id}
-                            size="sm"
-                            variant={tx.categoryId === category.id ? 'primary' : 'outline'}
-                            state={isSaving ? 'loading' : 'idle'}
-                            onClick={() => void selectCategory(tx.id, category.id)}
-                          >
-                            {category.name}
-                          </Button>
-                        ))}
-                      </div>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-sm font-medium text-text">Categoria</span>
+                    <div className="flex flex-wrap gap-2">
+                      {categories.map((category) => (
+                        <Button
+                          key={category.id}
+                          size="sm"
+                          variant={tx.categoryId === category.id ? 'primary' : 'outline'}
+                          state={isSaving ? 'loading' : 'idle'}
+                          onClick={() => void selectCategory(tx.id, category.id)}
+                        >
+                          {category.name}
+                        </Button>
+                      ))}
                     </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <span className="text-sm font-medium text-text">Pessoa</span>
-                      <div className="flex flex-wrap gap-2">
-                        {people.map((person) => (
-                          <Button
-                            key={person.id}
-                            size="sm"
-                            variant={tx.personId === person.id ? 'primary' : 'outline'}
-                            state={isSaving ? 'loading' : 'idle'}
-                            onClick={() => void selectPerson(tx.id, person.id)}
-                          >
-                            {person.name}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {tx.merchant && (
-                      <label className="flex items-center gap-2 text-sm text-text">
-                        <input
-                          type="checkbox"
-                          checked={alwaysForMerchant}
-                          onChange={(event) => setAlwaysForMerchant(event.target.checked)}
-                        />
-                        Sempre que for &quot;{tx.merchant}&quot;
-                      </label>
-                    )}
-
-                    <Button variant="link" onClick={closeEdit}>
-                      Cancelar
-                    </Button>
                   </div>
-                )}
-              </li>
-            ))}
-          </ul>
+
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-sm font-medium text-text">Pessoa</span>
+                    <div className="flex flex-wrap gap-2">
+                      {people.map((person) => (
+                        <Button
+                          key={person.id}
+                          size="sm"
+                          variant={tx.personId === person.id ? 'primary' : 'outline'}
+                          state={isSaving ? 'loading' : 'idle'}
+                          onClick={() => void selectPerson(tx.id, person.id)}
+                        >
+                          {person.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {tx.merchant && (
+                    <label className="flex items-center gap-2 text-sm text-text">
+                      <input
+                        type="checkbox"
+                        checked={alwaysForMerchant}
+                        onChange={(event) => setAlwaysForMerchant(event.target.checked)}
+                      />
+                      Sempre que for &quot;{tx.merchant}&quot;
+                    </label>
+                  )}
+
+                  <Button variant="link" onClick={closeEdit}>
+                    Cancelar
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       ))}
     </main>

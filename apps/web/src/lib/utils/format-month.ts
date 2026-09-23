@@ -13,6 +13,18 @@ export function formatMonthName(monthKeyValue: string): string {
   return MONTH_NAME_FORMATTER.format(new Date(Date.UTC(year, month - 1, 15, 12)))
 }
 
+// "AAAA-MM" de agora em America/Manaus — nunca `toISOString().slice(0,7)`, que pega o mês em UTC e vira
+// errado perto da virada (23h30 em Manaus já pode ser dia seguinte em UTC).
+const MONTH_KEY_FORMATTER = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Manaus',
+  year: 'numeric',
+  month: '2-digit',
+})
+
+export function currentMonthKey(): string {
+  return MONTH_KEY_FORMATTER.format(new Date())
+}
+
 // Último dia do mês (AAAA-MM) formatado como "30 set" (protótipo: "Por dia, até 30 set").
 const DAY_MONTH_FORMATTER = new Intl.DateTimeFormat('pt-BR', {
   timeZone: 'America/Manaus',
