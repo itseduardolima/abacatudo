@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import type { AccountType, CreateAccountInput } from '@gastos/shared'
+import type { AccountType, BankLogo, CreateAccountInput } from '@gastos/shared'
 import { useAccounts } from '@/hooks/queries/use-accounts'
 import { useArchiveAccount } from '@/hooks/queries/use-archive-account'
 import { useConnectBank } from '@/hooks/queries/use-connect-bank'
@@ -23,6 +23,7 @@ export function useAccountsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [ruleError, setRuleError] = useState<string | null>(null)
   const [connectError, setConnectError] = useState<string | null>(null)
+  const [pickingLogoForId, setPickingLogoForId] = useState<string | null>(null)
   const {
     register,
     handleSubmit,
@@ -105,5 +106,13 @@ export function useAccountsPage() {
     archive: (id: string) => archiveAccount.mutate(id),
     isArchiving: archiveAccount.isPending,
     archivingId: archiveAccount.variables ?? null,
+    // Bandeira do banco (DESIGN_SYSTEM § Logos de bancos) — marca manual, nunca por heurística de nome.
+    pickingLogoForId,
+    openLogoPicker: (id: string) => setPickingLogoForId(id),
+    closeLogoPicker: () => setPickingLogoForId(null),
+    selectBankLogo: (id: string, bankLogo: BankLogo | null) => {
+      updateAccount.mutate({ id, input: { bankLogo } })
+      setPickingLogoForId(null)
+    },
   }
 }

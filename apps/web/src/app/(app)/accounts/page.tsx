@@ -1,11 +1,13 @@
 'use client'
 
 import type { Account, AccountType } from '@gastos/shared'
-import { AlertTriangle, Check, Landmark, Wallet, X } from 'lucide-react'
+import { AlertTriangle, Check, Wallet, X } from 'lucide-react'
+import { BankLogoPicker } from './bank-logo-picker'
 import { Button } from '@/components/ui/Button'
 import { BackIcon, IconButton } from '@/components/ui/IconButton'
 import { InlineAlert } from '@/components/ui/InlineAlert'
 import { Input } from '@/components/ui/Input'
+import { BankAvatar } from '@/components/finance/BankAvatar'
 import { formatAccountType } from '@/lib/utils/format-account-type'
 import { formatSyncedAt } from '@/lib/utils/format-date'
 import { formatMoney } from '@/lib/utils/format-money'
@@ -36,6 +38,10 @@ export default function AccountsPage() {
     archive,
     isArchiving,
     archivingId,
+    pickingLogoForId,
+    openLogoPicker,
+    closeLogoPicker,
+    selectBankLogo,
   } = useAccountsPage()
 
   const connectedAccounts = accounts.filter((account) => account.source === 'PLUGGY')
@@ -95,9 +101,13 @@ export default function AccountsPage() {
             {connectedAccounts.map((account) => (
               <li key={account.id} className="flex flex-col gap-2 border-b border-surface py-3.5 last:border-b-0">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-surface text-ink shadow-hair">
-                    <Landmark size={22} strokeWidth={1.8} />
-                  </span>
+                  <button type="button" onClick={() => openLogoPicker(account.id)} aria-label="Escolher bandeira">
+                    <BankAvatar
+                      bankLogo={account.bankLogo}
+                      fallbackInitial={account.name.charAt(0).toUpperCase()}
+                      size={44}
+                    />
+                  </button>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-ink" title={account.name}>
                       {account.name}
@@ -138,9 +148,13 @@ export default function AccountsPage() {
           <ul className="mt-1 flex flex-col">
             {manualAccounts.map((account) => (
               <li key={account.id} className="flex items-center gap-3 border-b border-surface py-3.5 last:border-b-0">
-                <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-surface text-ink shadow-hair">
-                  <Wallet size={20} strokeWidth={1.8} />
-                </span>
+                <button type="button" onClick={() => openLogoPicker(account.id)} aria-label="Escolher bandeira">
+                  <BankAvatar
+                    bankLogo={account.bankLogo}
+                    fallbackInitial={account.name.charAt(0).toUpperCase()}
+                    size={44}
+                  />
+                </button>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-ink" title={account.name}>
                     {account.name}
@@ -199,6 +213,20 @@ export default function AccountsPage() {
           </div>
         </form>
       )}
+
+      {pickingLogoForId &&
+        (() => {
+          const account = accounts.find((item) => item.id === pickingLogoForId)
+          if (!account) return null
+          return (
+            <BankLogoPicker
+              accountName={account.name}
+              current={account.bankLogo}
+              onSelect={(logo) => selectBankLogo(account.id, logo)}
+              onClose={closeLogoPicker}
+            />
+          )
+        })()}
     </main>
   )
 }
