@@ -26,6 +26,7 @@ const config: Config = {
         'border-strong': 'var(--color-border-strong)',
         accent: 'var(--color-accent)',
         danger: 'var(--color-danger)',
+        scrim: 'var(--color-scrim)',
       },
       borderRadius: {
         pill: 'var(--radius-pill)',

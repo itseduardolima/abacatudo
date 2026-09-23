@@ -38,6 +38,9 @@
   --color-border-strong: var(--color-forest-ink);
   --color-accent: var(--color-signal-blue);
   --color-danger: var(--color-alarm-red);
+  /* Véu atrás de bottom sheet (protótipo .dim) — token dedicado, não opacidade do Tailwind sobre
+     --color-obsidian (não resolve com CSS custom property, ver nota de Tailwind opacity acima). */
+  --color-scrim: rgba(14, 15, 12, 0.52);
 
   --radius-pill: 9999px;
   --radius-card: 10px;
