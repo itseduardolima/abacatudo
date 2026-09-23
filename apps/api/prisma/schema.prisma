@@ -35,6 +35,7 @@ model User {
   envelopes         Envelope[]
   envelopeAlerts    EnvelopeAlert[]
   budgetMonthAlerts BudgetMonthAlert[]
+  cardHolderHints   CardHolderHint[]
 }
 
 /// Sem RLS: resolvida pelo hash do token do cookie, antes de existir userId no contexto (mesma exceção
@@ -63,10 +64,11 @@ model Person {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
-  rules        Rule[]
-  splits       Split[]
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions    Transaction[]
+  rules           Rule[]
+  splits          Split[]
+  cardHolderHints CardHolderHint[]
 
   @@index([userId])
 }
@@ -121,9 +123,10 @@ model Account {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pluggyItem   PluggyItem?   @relation(fields: [pluggyItemId], references: [id])
-  transactions Transaction[]
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pluggyItem      PluggyItem?      @relation(fields: [pluggyItemId], references: [id])
+  transactions    Transaction[]
+  cardHolderHints CardHolderHint[]
 
   // NULL não colide com NULL no Postgres, então isso só trava duplicata de conta sincronizada pelo Pluggy
   // (externalAccountId preenchido) — conta manual continua livre. Fecha a race do upsert em runSync.
@@ -232,6 +235,26 @@ model Rule {
   category Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@unique([userId, merchant])
+  @@index([userId])
+}
+
+/// RLS por userId. "Cartão adicional/virtual" (2.3, 03-regras-negocio § Atribuição de pessoa): final do
+/// cartão (4 dígitos) → pessoa, por conta (o mesmo final pode existir em cartões de contas diferentes).
+/// Decide antes da Rule por estabelecimento e do padrão self — só depois de "já confirmada pelo User".
+model CardHolderHint {
+  id         String   @id @default(uuid())
+  userId     String
+  accountId  String
+  cardLast4  String
+  personId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  person  Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, cardLast4])
   @@index([userId])
 }
 
