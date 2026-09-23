@@ -30,12 +30,21 @@ export class AuthRepository {
     })
   }
 
+  // Sem `userId` no where (auditoria de segurança 2026-09-23, achado de baixa severidade): seguro só porque
+  // NENHUM dos dois chamadores aceita um id vindo do cliente. `touchSession` só recebe o id que
+  // `findValidSession` acabou de devolver (mesma chamada de `resolveSession`, nunca um id solto — testado em
+  // `auth.service.spec.ts` § resolveSession, `touchSession` sempre chamado com o id da sessão validada).
   touchSession(id: string): Promise<Prisma.BatchPayload> {
     // updateMany (não update): se a sessão tiver sido revogada por outra aba entre o find e o touch, não
     // deve reviver nem lançar "record not found" — vira um no-op silencioso.
     return this.prisma.session.updateMany({ where: { id, revokedAt: null }, data: { lastUsedAt: new Date() } })
   }
 
+  // `revokeSession` só é chamado por `AuthService.logout(request.sessionId)`, e `request.sessionId` é
+  // escrito só pelo `SessionMiddleware` depois de validar o cookie — o controller não tem `@Body()`/`@Param()`
+  // pra sessionId, então não existe caminho pra um cliente forjar outra sessão aqui (testado em
+  // `auth.controller.spec.ts`). Revogar a sessão de outra pessoa por id passa sempre por
+  // `revokeSessionForUser`, que filtra por `userId`.
   revokeSession(id: string): Promise<Prisma.BatchPayload> {
     return this.prisma.session.updateMany({ where: { id, revokedAt: null }, data: { revokedAt: new Date() } })
   }
