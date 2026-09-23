@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common'
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common'
 import type { Account } from '@gastos/shared'
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import { AccountService } from './account.service'
 import { CreateAccountDto } from './dto/create-account.dto'
+import { UpdateAccountDto } from './dto/update-account.dto'
 
 @Controller('accounts')
 export class AccountController {
@@ -21,5 +22,14 @@ export class AccountController {
   @Get(':id')
   getById(@CurrentUser() userId: string, @Param('id', ParseUUIDPipe) id: string): Promise<Account> {
     return this.accounts.getById(userId, id)
+  }
+
+  @Patch(':id')
+  update(
+    @CurrentUser() userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateAccountDto,
+  ): Promise<Account> {
+    return this.accounts.setBenefitAccount(userId, id, body.isBenefitAccount)
   }
 }

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import type { Account, CreateAccountInput } from '@gastos/shared'
-import { NotFoundError } from '../../common/errors/domain.error'
+import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository, type AccountWithPluggyItem } from './account.repository'
 
 @Injectable()
@@ -31,6 +31,23 @@ export class AccountService {
     if (!row) throw new NotFoundError('ACCOUNT_NOT_FOUND', 'Conta não encontrada.')
     return toDto(row)
   }
+
+  // Marca/desmarca a conta de benefício (Fase 4) — "renda de benefícios" usa o saldo dela em vez do
+  // valor digitado à mão. Só CHECKING faz sentido (cartão tem fatura, não saldo; CASH nunca sincroniza).
+  async setBenefitAccount(userId: string, id: string, isBenefitAccount: boolean): Promise<Account> {
+    const existing = await this.repo.findById(userId, id)
+    if (!existing) throw new NotFoundError('ACCOUNT_NOT_FOUND', 'Conta não encontrada.')
+    if (isBenefitAccount && existing.type !== 'CHECKING') {
+      throw new DomainError('NOT_A_CHECKING_ACCOUNT', 'Só uma conta corrente pode ser a conta de benefício.', 422)
+    }
+
+    if (isBenefitAccount) await this.repo.clearBenefitAccountFlag(userId)
+    await this.repo.update(userId, id, { isBenefitAccount })
+
+    const refreshed = await this.repo.findById(userId, id)
+    if (!refreshed) throw new NotFoundError('ACCOUNT_NOT_FOUND', 'Conta não encontrada.')
+    return toDto(refreshed)
+  }
 }
 
 // lastSyncAt: "última atualização" (8.6) é a do PluggyItem por trás da conta — dado velho nunca parece
@@ -47,6 +64,8 @@ function toDto(row: AccountWithPluggyItem): Account {
     closingDay: row.closingDay,
     dueDay: row.dueDay,
     creditLimitCents: row.creditLimitCents,
+    balanceCents: row.balanceCents,
+    isBenefitAccount: row.isBenefitAccount,
     archivedAt: row.archivedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     lastSyncAt: row.pluggyItem?.lastSyncAt?.toISOString() ?? null,

@@ -1,10 +1,16 @@
 import type { Account as AccountRow, PluggyItemStatus } from '@prisma/client'
-import { NotFoundError } from '../../common/errors/domain.error'
+import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountService } from './account.service'
 import type { AccountRepository, AccountWithPluggyItem } from './account.repository'
 
 function repoMock() {
-  return { create: jest.fn(), findMany: jest.fn(), findById: jest.fn() } as unknown as jest.Mocked<AccountRepository>
+  return {
+    create: jest.fn(),
+    findMany: jest.fn(),
+    findById: jest.fn(),
+    update: jest.fn(),
+    clearBenefitAccountFlag: jest.fn(),
+  } as unknown as jest.Mocked<AccountRepository>
 }
 
 function row(
@@ -20,6 +26,8 @@ function row(
     closingDay: 20,
     dueDay: 27,
     creditLimitCents: 500000,
+    balanceCents: null,
+    isBenefitAccount: false,
     pluggyItemId: null,
     externalAccountId: null,
     archivedAt: null,
@@ -163,5 +171,52 @@ describe('AccountService', () => {
     const result = await service.create('user-1', { name: 'Nubank', type: 'CREDIT_CARD', source: 'MANUAL' })
 
     expect(result.disconnected).toBe(false)
+  })
+
+  describe('setBenefitAccount', () => {
+    it('404 quando a conta não existe (ou não é do usuário)', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValue(null)
+      const service = new AccountService(repo)
+
+      await expect(service.setBenefitAccount('user-1', 'acc-1', true)).rejects.toBeInstanceOf(NotFoundError)
+    })
+
+    it('422 quando a conta não é CHECKING', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValue(row({ type: 'CREDIT_CARD' }))
+      const service = new AccountService(repo)
+
+      await expect(service.setBenefitAccount('user-1', 'acc-1', true)).rejects.toBeInstanceOf(DomainError)
+      expect(repo.update).not.toHaveBeenCalled()
+    })
+
+    it('marcar: desmarca qualquer outra conta de benefício antes de marcar esta', async () => {
+      const repo = repoMock()
+      repo.findById
+        .mockResolvedValueOnce(row({ type: 'CHECKING' }))
+        .mockResolvedValueOnce(row({ type: 'CHECKING', isBenefitAccount: true, balanceCents: 15000 }))
+      const service = new AccountService(repo)
+
+      const result = await service.setBenefitAccount('user-1', 'acc-1', true)
+
+      expect(repo.clearBenefitAccountFlag).toHaveBeenCalledWith('user-1')
+      expect(repo.update).toHaveBeenCalledWith('user-1', 'acc-1', { isBenefitAccount: true })
+      expect(result.isBenefitAccount).toBe(true)
+      expect(result.balanceCents).toBe(15000)
+    })
+
+    it('desmarcar: não mexe nas outras contas', async () => {
+      const repo = repoMock()
+      repo.findById
+        .mockResolvedValueOnce(row({ type: 'CHECKING', isBenefitAccount: true }))
+        .mockResolvedValueOnce(row({ type: 'CHECKING', isBenefitAccount: false }))
+      const service = new AccountService(repo)
+
+      await service.setBenefitAccount('user-1', 'acc-1', false)
+
+      expect(repo.clearBenefitAccountFlag).not.toHaveBeenCalled()
+      expect(repo.update).toHaveBeenCalledWith('user-1', 'acc-1', { isBenefitAccount: false })
+    })
   })
 })

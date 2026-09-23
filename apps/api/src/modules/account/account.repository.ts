@@ -31,6 +31,20 @@ export class AccountRepository {
     })
   }
 
+  // updateMany (não update) por userId+id: mesmo padrão do PluggyItemRepository — nunca confia só no `id`
+  // ser único globalmente pra isolar por dono.
+  async update(userId: string, id: string, data: Prisma.AccountUncheckedUpdateInput): Promise<void> {
+    await this.prisma.account.updateMany({ where: { userId, id }, data })
+  }
+
+  // Só uma conta de benefício por vez (Fase 4) — desmarca qualquer outra antes de marcar a nova.
+  async clearBenefitAccountFlag(userId: string): Promise<void> {
+    await this.prisma.account.updateMany({
+      where: { userId, isBenefitAccount: true },
+      data: { isBenefitAccount: false },
+    })
+  }
+
   // Upsert atômico por [userId, externalAccountId] (unique no schema) — sem isso, duas sincronizações
   // simultâneas do mesmo item podiam criar duas contas pra mesma conta real (find + create não é atômico).
   upsertFromSync(
