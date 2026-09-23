@@ -607,6 +607,38 @@ type="date">`.
   `balanceCents`, o toggle na tela de contas reflete na tela de renda,
   desmarcar volta a ser editável. Deixei a conta do usuário desmarcada ao
   final (era só teste — ele marca se quiser usar de verdade).
+- **Fase 4, code review + gaps achados testando ao vivo.** `/code-review`
+  achou 3 problemas reais, todos corrigidos: (1) marcar/desmarcar conta de
+  benefício em duas chamadas separadas tinha janela de corrida — agora é um
+  `$transaction` só (`AccountRepository.setBenefitAccount`, mesmo padrão do
+  `SplitRepository`); (2) sync do Pluggy sobrescrevia `balanceCents` com
+  `null` quando o Pluggy omitia o saldo por um sync (transiente) — agora só
+  atualiza o campo quando o valor realmente veio; (3) reset do formulário de
+  renda podia descartar edição não salva se o saldo da conta de benefício
+  mudasse em segundo plano — guardado com `isDirty` num ref.
+  Testando ao vivo, o usuário achou um gap real: **conectar banco só
+  existia na Home, e só enquanto não houvesse nenhum cartão ainda**
+  (`ConnectBankCard` some depois do primeiro) — sem jeito de conectar um
+  segundo banco (o caso real: InfinitePay, depois do Nubank). Corrigido:
+  tela de Contas ganhou botão "Conectar banco" (sempre visível) e "Remover"
+  (arquiva, mesmo padrão do `FixedExpenseService.archive`, `PATCH
+/accounts/:id/archive`). O botão de marcar conta de benefício também
+  virou ícone (carteira, deliberadamente diferente de estrela/coração de
+  favorito) — texto longo tipo "Marcar como benefício" espremia o badge ao
+  lado quando o nome da conta era grande (ex. "Nu Pagamentos S.A. -
+  Instituição de Pagamento"); nome da conta também ganhou truncamento.
+  Verificado ao vivo: usuário conectou o InfinitePay de verdade via Pluggy,
+  marcou como benefício, saldo real (R$31,10) apareceu certo em
+  `/settings/income`.
+  Pedido extra do usuário: mostrar esse saldo também na Início, como um
+  segundo card arrastável ao lado do card de ritmo (carrossel via scroll
+  nativo com snap, sem lib de drag — `HeroCarousel`, `PaceHeroCard`,
+  `BenefitBalanceCard`). Sem data de validade no card (perguntei — o
+  Pluggy não manda isso pra conta corrente, e o app nunca inventa número);
+  mostra a hora do último sync em vez disso. Os dois cards têm a mesma
+  altura porque o card de benefício usa `h-full` dentro do item do
+  carrossel (que já estica pra bater com o mais alto, o de ritmo) — não um
+  `min-height` chutado.
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), UI de
   divisão de transação entre pessoas (`split`), ou seguir no backend
   (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de movimentação,
