@@ -1,28 +1,17 @@
 'use client'
 
-import type { AccountType } from '@gastos/shared'
-import { Badge } from '@/components/ui/Badge'
+import type { Account, AccountType } from '@gastos/shared'
+import { AlertTriangle, Check, Landmark, Wallet, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { BackIcon, IconButton } from '@/components/ui/IconButton'
 import { InlineAlert } from '@/components/ui/InlineAlert'
 import { Input } from '@/components/ui/Input'
 import { formatAccountType } from '@/lib/utils/format-account-type'
+import { formatSyncedAt } from '@/lib/utils/format-date'
 import { formatMoney } from '@/lib/utils/format-money'
 import { useAccountsPage } from './use-accounts-page'
 
 const TYPE_OPTIONS: AccountType[] = ['CREDIT_CARD', 'CHECKING', 'CASH']
-
-// Ícone de carteira (Fase 4) — deliberadamente diferente de estrela/coração (favorito): "conta de
-// benefício" não é uma preferência, é qual conta alimenta a renda de benefícios em /settings/income.
-function WalletIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M4 8V6.5A1.5 1.5 0 0 1 5.5 5h11A2.5 2.5 0 0 1 19 7.5V8" strokeLinecap="round" strokeLinejoin="round" />
-      <rect x="3" y="8" width="18" height="11" rx="2.5" />
-      <circle cx="16" cy="13.5" r="1.2" fill="currentColor" stroke="none" />
-    </svg>
-  )
-}
 
 export default function AccountsPage() {
   const {
@@ -49,6 +38,39 @@ export default function AccountsPage() {
     archivingId,
   } = useAccountsPage()
 
+  const connectedAccounts = accounts.filter((account) => account.source === 'PLUGGY')
+  const manualAccounts = accounts.filter((account) => account.source !== 'PLUGGY')
+
+  const benefitToggle = (account: Account) =>
+    account.type === 'CHECKING' ? (
+      <Button
+        type="button"
+        variant={account.isBenefitAccount ? 'primary' : 'outline'}
+        size="sm"
+        className="w-[34px] !px-0"
+        state={isTogglingBenefitAccount && togglingBenefitAccountId === account.id ? 'loading' : 'idle'}
+        onClick={() => toggleBenefitAccount(account.id, !account.isBenefitAccount)}
+        aria-label={account.isBenefitAccount ? 'Desmarcar como conta de benefício' : 'Marcar como conta de benefício'}
+        title={account.isBenefitAccount ? 'Conta de benefício' : 'Marcar como conta de benefício'}
+      >
+        <Wallet size={16} strokeWidth={1.8} />
+      </Button>
+    ) : null
+
+  const removeButton = (account: Account) => (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="w-[34px] !px-0"
+      state={isArchiving && archivingId === account.id ? 'loading' : 'idle'}
+      onClick={() => archive(account.id)}
+      aria-label={`Remover ${account.name}`}
+    >
+      <X size={18} strokeWidth={1.8} />
+    </Button>
+  )
+
   return (
     <main className="mx-auto flex min-h-screen max-w-[420px] flex-col gap-6 px-4 pb-28 md:pb-10 pt-8">
       <div className="flex items-center gap-3">
@@ -66,56 +88,71 @@ export default function AccountsPage() {
         <p className="text-text">Nenhuma conta ainda. Conecte um banco ou crie a primeira abaixo.</p>
       )}
 
-      {accounts.length > 0 && (
-        <ul className="flex flex-col gap-3">
-          {accounts.map((account) => (
-            <li key={account.id} className="flex flex-col gap-3 rounded-card border border-border p-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className="min-w-0 flex-1 truncate font-medium text-ink" title={account.name}>
-                  {account.name}
-                </span>
-                <div className="flex flex-shrink-0 items-center gap-2">
-                  <Badge>{formatAccountType(account.type)}</Badge>
-                  {account.type === 'CHECKING' && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={account.isBenefitAccount ? 'primary' : 'outline'}
-                      className="w-[34px] !px-0"
-                      state={isTogglingBenefitAccount && togglingBenefitAccountId === account.id ? 'loading' : 'idle'}
-                      onClick={() => toggleBenefitAccount(account.id, !account.isBenefitAccount)}
-                      aria-label={
-                        account.isBenefitAccount
-                          ? 'Desmarcar como conta de benefício'
-                          : 'Marcar como conta de benefício'
-                      }
-                      title={account.isBenefitAccount ? 'Conta de benefício' : 'Marcar como conta de benefício'}
-                    >
-                      <WalletIcon />
-                    </Button>
+      {connectedAccounts.length > 0 && (
+        <section>
+          <h2 className="text-base font-bold text-ink">Conectadas pelo banco</h2>
+          <ul className="mt-1 flex flex-col">
+            {connectedAccounts.map((account) => (
+              <li key={account.id} className="flex flex-col gap-2 border-b border-surface py-3.5 last:border-b-0">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-surface text-ink shadow-hair">
+                    <Landmark size={22} strokeWidth={1.8} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-ink" title={account.name}>
+                      {account.name}
+                    </p>
+                    <p className="text-sm text-muted">{formatAccountType(account.type)}</p>
+                  </div>
+                  {benefitToggle(account)}
+                  {removeButton(account)}
+                </div>
+
+                <div className="ml-14 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  {account.disconnected ? (
+                    <span className="flex items-center gap-1.5 text-sm font-medium text-danger">
+                      <AlertTriangle size={15} strokeWidth={2.2} />
+                      Desconectada — conecte de novo
+                    </span>
+                  ) : account.lastSyncAt ? (
+                    <span className="flex items-center gap-1.5 text-sm font-medium text-primary-ink">
+                      <Check size={15} strokeWidth={2.4} />
+                      Atualizado {formatSyncedAt(account.lastSyncAt)}
+                    </span>
+                  ) : null}
+                  {account.isBenefitAccount && account.balanceCents != null && (
+                    <span className="text-sm text-muted">
+                      Alimenta a renda de benefícios: {formatMoney(account.balanceCents)}
+                    </span>
                   )}
                 </div>
-              </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-muted">
-                  {account.isBenefitAccount && account.balanceCents != null
-                    ? `Alimenta a renda de benefícios: ${formatMoney(account.balanceCents)}`
-                    : null}
-                </p>
-                <Button
-                  type="button"
-                  variant="link"
-                  size="sm"
-                  state={isArchiving && archivingId === account.id ? 'loading' : 'idle'}
-                  onClick={() => archive(account.id)}
-                >
-                  Remover
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
+      {manualAccounts.length > 0 && (
+        <section>
+          <h2 className="text-base font-bold text-ink">Manuais</h2>
+          <ul className="mt-1 flex flex-col">
+            {manualAccounts.map((account) => (
+              <li key={account.id} className="flex items-center gap-3 border-b border-surface py-3.5 last:border-b-0">
+                <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-surface text-ink shadow-hair">
+                  <Wallet size={20} strokeWidth={1.8} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-ink" title={account.name}>
+                    {account.name}
+                  </p>
+                  <p className="text-sm text-muted">{formatAccountType(account.type)}</p>
+                </div>
+                {benefitToggle(account)}
+                {removeButton(account)}
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <div className="flex flex-col gap-3">
