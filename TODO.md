@@ -371,6 +371,20 @@ type="date">`.
   round-trip). Reverificado ao vivo: as duas datas inválidas agora voltam
   `400 "Informe uma data válida."`, data válida continua funcionando, e o
   fluxo de renomear/criar categoria não vaza mais erro entre contextos.
+- **Front: tela de lista de transações do cartão (2026-09-23)** —
+  `app/(app)/transactions`: lista as transações do mês (`GET /transactions`),
+  cruzando `categoryId`/`personId` com as listas de categorias/pessoas pra
+  mostrar nome (a API não embute a relação). Cada linha mostra
+  descrição/`merchant`, data (`formatShortDate`, `America/Manaus`), badge de
+  categoria (`Sem categoria` quando não tem), badge de pessoa quando não é o
+  próprio usuário, e valor (`MoneyText`, estorno inverte o sinal). Escolhida
+  como próxima etapa por decisão própria ("decida por mim"): é o "coração do
+  produto" do spec, e é exatamente o que o lançamento manual (3.3) foi
+  construído pra destravar — testável com dado de verdade sem precisar do
+  Pluggy. Link "Cartão" adicionado na Home. Verificado ao vivo: usuário de
+  teste com 2 lançamentos manuais (um categorizado "Mercado", um sem
+  categoria) — as duas linhas renderizaram certinho, com data, badges e
+  valores corretos.
 - Próximo: continuar no backend (Sprint 7 Insights e IA, ou pendências:
   5.4/5.5 rótulos de movimentação, 8.4's job/e-mail), ou seguir o front pra
   Sprint 3 (classificação: corrigir pessoa/categoria, dividir, regras — e
