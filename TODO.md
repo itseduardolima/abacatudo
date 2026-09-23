@@ -330,10 +330,18 @@ account-type.ts` traduz o enum pro rótulo em português.
   (a API rejeita arquivar o self, `403 CANNOT_ARCHIVE_SELF` — o front só
   esconde a ação em vez de deixar o usuário bater nesse erro à toa).
   Verificado ao vivo: criar, arquivar (some da lista), self protegido.
-- Próximo: Categorias (mesmo desenho de Pessoas — CRUD tem `rename` a mais)
-  dentro de Configurações, ou continuar no backend (Sprint 7 Insights e IA, ou
-  pendências: 3.3 lançamento manual, 5.4/5.5 rótulos de movimentação, 8.4's
-  job/e-mail).
+- **Front: tela de Categorias (2026-09-23)** — `app/(app)/settings/categories`:
+  lista + criar + renomear + arquivar. Um form só serve criar e renomear
+  (`editing` diferencia os dois); mesma submissão numerada contra a corrida
+  do cancelar. Sprint 2 do front (Contas/Pessoas/Categorias) está completa.
+  Verificado ao vivo: renomear "Lazer" → "Lazer e hobbies" (campo já vem
+  preenchido), arquivar "Outros" (some da lista), as 13 categorias do seed
+  aparecendo certas.
+- Próximo: continuar no backend (Sprint 7 Insights e IA, ou pendências: 3.3
+  lançamento manual, 5.4/5.5 rótulos de movimentação, 8.4's job/e-mail), ou
+  seguir o front pra Sprint 3 (classificação: corrigir pessoa/categoria,
+  dividir, regras — telas mais complexas, sobre a lista de transações que
+  ainda não existe).
 
 ## Decisões já tomadas (2026-09-21)
 
