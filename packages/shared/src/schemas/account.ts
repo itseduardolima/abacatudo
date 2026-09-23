@@ -11,6 +11,11 @@ export type AccountSource = z.infer<typeof accountSourceSchema>
 
 const dayOfMonthSchema = z.number().int().min(1).max(31)
 
+// Só os 3 logos servidos localmente em brand/bancos/ (DESIGN_SYSTEM § Logos de bancos) — nunca string
+// livre, pra nunca apontar pra uma imagem que não existe em /bancos/*.svg.
+export const bankLogoSchema = z.enum(['nubank', 'banco-do-brasil', 'picpay'])
+export type BankLogo = z.infer<typeof bankLogoSchema>
+
 export const accountSchema = z
   .object({
     id: idSchema,
@@ -25,6 +30,8 @@ export const accountSchema = z
     // Marca manual do usuário: "renda de benefícios" usa o saldo desta conta em vez do valor digitado
     // à mão (Fase 4). Só uma conta por usuário fica marcada por vez.
     isBenefitAccount: z.boolean(),
+    // Marca manual do usuário — sem escolha, cai no monograma (avatar Fog com iniciais).
+    bankLogo: bankLogoSchema.nullable(),
     archivedAt: z.string().datetime().nullable(),
     createdAt: z.string().datetime(),
     // Última sincronização com o banco (8.6) — sempre null pra conta MANUAL/IMPORT, que não sincroniza.
@@ -36,8 +43,14 @@ export const accountSchema = z
   .strict()
 export type Account = z.infer<typeof accountSchema>
 
-// Único campo editável hoje (Fase 4) — o resto da conta nunca muda depois de criada.
-export const updateAccountInputSchema = z.object({ isBenefitAccount: z.boolean() }).strict()
+// Os dois campos editáveis hoje — ambos opcionais, o PATCH só toca no que vier (o resto da conta nunca
+// muda depois de criada).
+export const updateAccountInputSchema = z
+  .object({
+    isBenefitAccount: z.boolean().optional(),
+    bankLogo: bankLogoSchema.nullable().optional(),
+  })
+  .strict()
 export type UpdateAccountInput = z.infer<typeof updateAccountInputSchema>
 
 // closingDay/dueDay/creditLimitCents só fazem sentido em CREDIT_CARD — a API rejeita se vierem para

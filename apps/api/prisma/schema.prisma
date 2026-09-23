@@ -124,6 +124,10 @@ model Account {
   // Marca manual do usuário (tela de contas), nunca por heurística de nome de banco — TODO.md/Fase 4: só
   // uma conta por vez pode ser a "conta de benefício" (AccountService garante isso).
   isBenefitAccount  Boolean       @default(false)
+  // Marca manual do usuário (DESIGN_SYSTEM § Logos de bancos): qual logo mostrar, entre os 3 servidos
+  // localmente em brand/bancos/ (validado pelo schema Zod, nunca string livre). Sem logo escolhido,
+  // conta usa monograma (avatar Fog com iniciais).
+  bankLogo          String?
   pluggyItemId      String?
   externalAccountId String?
   archivedAt        DateTime?
