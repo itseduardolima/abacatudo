@@ -1,5 +1,11 @@
 import type { PluggyAccount, PluggyTransaction } from './pluggy/pluggy.schemas'
-import { dayFromDateString, mapAccountFields, mapTransaction, resolveKind } from './banking.mapper'
+import {
+  dayFromDateString,
+  mapAccountFields,
+  mapTransaction,
+  reconnectWarningDays,
+  resolveKind,
+} from './banking.mapper'
 
 function tx(overrides: Partial<PluggyTransaction> = {}): PluggyTransaction {
   return {
@@ -123,5 +129,31 @@ describe('mapAccountFields', () => {
   it('conta BANK vira CHECKING, sem campos de cartão', () => {
     const result = mapAccountFields(account({ type: 'BANK', creditData: null }))
     expect(result).toEqual({ type: 'CHECKING', closingDay: null, dueDay: null, creditLimitCents: null })
+  })
+})
+
+describe('reconnectWarningDays', () => {
+  const now = new Date('2026-09-23T12:00:00.000Z')
+
+  it('sem consentExpiresAt (a maioria dos bancos), nunca avisa', () => {
+    expect(reconnectWarningDays(null, now)).toBeNull()
+  })
+
+  it('mais de 30 dias, nunca avisa', () => {
+    expect(reconnectWarningDays(new Date('2026-10-25T12:00:00.000Z'), now)).toBeNull()
+  })
+
+  it('entre 8 e 30 dias, avisa no limiar de 30', () => {
+    expect(reconnectWarningDays(new Date('2026-10-23T12:00:00.000Z'), now)).toBe(30) // 30 dias
+    expect(reconnectWarningDays(new Date('2026-10-01T12:00:00.000Z'), now)).toBe(30) // 8 dias
+  })
+
+  it('7 dias ou menos, avisa no limiar mais urgente', () => {
+    expect(reconnectWarningDays(new Date('2026-09-30T12:00:00.000Z'), now)).toBe(7) // 7 dias
+    expect(reconnectWarningDays(new Date('2026-09-24T12:00:00.000Z'), now)).toBe(7) // 1 dia
+  })
+
+  it('já vencido continua no limiar mais urgente, nunca vira null — sem sync não sabemos que venceu de verdade', () => {
+    expect(reconnectWarningDays(new Date('2026-09-20T12:00:00.000Z'), now)).toBe(7)
   })
 })

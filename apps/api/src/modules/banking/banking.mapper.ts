@@ -68,3 +68,16 @@ function dayOfMonth(dateStr: string | null | undefined): number | null {
   const match = dateStr ? /^\d{4}-(\d{2})-(\d{2})/.exec(dateStr) : null
   return match ? Number(match[2]) : null
 }
+
+// Aviso 30/7 dias antes do consentimento expirar (03-regras-negocio § Consentimento) — calculado na hora
+// a cada leitura, sem job nem estado persistido (mesmo espírito do `disconnected` de 8.5: derivado, nunca
+// guardado). A maioria dos bancos nunca manda consentExpiresAt (não expira), então nunca avisa. Já vencido
+// continua no limiar mais urgente (7), não vira null — sem sync/checkStatus não sabemos que já venceu de
+// verdade, então o aviso mais forte é o certo até confirmar.
+export function reconnectWarningDays(consentExpiresAt: Date | null, now: Date): 7 | 30 | null {
+  if (!consentExpiresAt) return null
+  const daysLeft = Math.ceil((consentExpiresAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+  if (daysLeft <= 7) return 7
+  if (daysLeft <= 30) return 30
+  return null
+}
