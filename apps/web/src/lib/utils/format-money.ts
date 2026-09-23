@@ -19,3 +19,12 @@ export function formatMoney(cents: number): string {
   const { negative, integer, cents: c } = moneyParts(cents)
   return `${negative ? '\u2212' : ''}R$\u00a0${integer},${c}`
 }
+
+// Converte o que a pessoa digitou ("120", "120,00", "1.200,50") pra centavos \u2014 s\u00f3 transforma\u00e7\u00e3o de
+// formato, nunca valida\u00e7\u00e3o de regra (04-padroes-codigo \u00a7 Formul\u00e1rios; quem valida \u00e9 a API). NaN quando
+// n\u00e3o d\u00e1 pra entender o texto.
+export function parseMoneyInput(value: string): number {
+  const normalized = value.trim().replace(/\./g, '').replace(',', '.')
+  const amount = Number(normalized)
+  return Number.isFinite(amount) ? Math.round(amount * 100) : NaN
+}

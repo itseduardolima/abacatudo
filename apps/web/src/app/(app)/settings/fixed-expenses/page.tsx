@@ -1,0 +1,92 @@
+'use client'
+
+import { Button } from '@/components/ui/Button'
+import { BackIcon, IconButton } from '@/components/ui/IconButton'
+import { InlineAlert } from '@/components/ui/InlineAlert'
+import { Input } from '@/components/ui/Input'
+import { MoneyText } from '@/components/finance/MoneyText'
+import { useFixedExpensesPage } from './use-fixed-expenses-page'
+
+export default function FixedExpensesPage() {
+  const {
+    fixedExpenses,
+    isLoading,
+    isFormOpen,
+    openForm,
+    closeForm,
+    register,
+    errors,
+    onSubmit,
+    isSubmitting,
+    ruleError,
+    archive,
+    archivingId,
+  } = useFixedExpensesPage()
+
+  return (
+    <main className="mx-auto flex min-h-screen max-w-[420px] flex-col gap-6 px-4 pb-28 pt-8 md:pb-10">
+      <div className="flex items-center gap-3">
+        <IconButton href="/">
+          <BackIcon />
+        </IconButton>
+        <div>
+          <h1 className="display-number text-[2rem] text-ink">Gastos fixos</h1>
+          <p className="text-sm text-muted">Aluguel, internet... contam todo mês até você remover.</p>
+        </div>
+      </div>
+
+      {isLoading && <p className="text-text">Carregando…</p>}
+
+      {!isLoading && fixedExpenses.length === 0 && !isFormOpen && <p className="text-text">Nenhum gasto fixo ainda.</p>}
+
+      {fixedExpenses.length > 0 && (
+        <ul className="flex flex-col gap-3">
+          {fixedExpenses.map((expense) => (
+            <li key={expense.id} className="flex items-center justify-between rounded-card border border-border p-4">
+              <span className="font-medium text-ink">{expense.name}</span>
+              <div className="flex items-center gap-3">
+                <MoneyText cents={expense.amountCents} />
+                <Button
+                  variant="link"
+                  size="sm"
+                  state={archivingId === expense.id ? 'loading' : 'idle'}
+                  onClick={() => archive(expense.id)}
+                >
+                  Remover
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!isFormOpen && (
+        <Button variant="outline" onClick={openForm}>
+          Novo gasto fixo
+        </Button>
+      )}
+
+      {isFormOpen && (
+        <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
+          {ruleError && <InlineAlert>{ruleError}</InlineAlert>}
+          <Input label="Nome" placeholder="Aluguel" error={errors.name?.message} {...register('name')} />
+          <Input
+            label="Valor mensal"
+            inputMode="decimal"
+            placeholder="0,00"
+            error={errors.amount?.message}
+            {...register('amount')}
+          />
+          <div className="mt-2 flex gap-3">
+            <Button type="submit" state={isSubmitting ? 'loading' : 'idle'}>
+              Salvar
+            </Button>
+            <Button type="button" variant="link" onClick={closeForm}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      )}
+    </main>
+  )
+}

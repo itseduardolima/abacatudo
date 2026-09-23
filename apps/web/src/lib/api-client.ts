@@ -10,7 +10,7 @@ export class ApiClientError extends Error {
 }
 
 interface RequestOptions<TSchema extends z.ZodTypeAny> {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
   schema: TSchema
   headers?: Record<string, string>
