@@ -17,6 +17,28 @@ export const budgetMonthSchema = z
   .strict()
 export type BudgetMonth = z.infer<typeof budgetMonthSchema>
 
+// Ritmo (7.4, 03-regras-negocio § Orçamento mensal): "restante ÷ dias restantes" — calculado sempre no
+// backend (dinheiro nunca é calculado no frontend), o front só narra.
+export const budgetPaceStatusSchema = z.enum(['ON_TRACK', 'OVER_PACE'])
+export type BudgetPaceStatus = z.infer<typeof budgetPaceStatusSchema>
+
+export const budgetPaceSchema = z
+  .object({
+    month: monthKeySchema,
+    capCents: centsSchema,
+    spentCents: centsSchema,
+    remainingCents: centsSchema,
+    daysInMonth: z.number().int().positive(),
+    daysElapsed: z.number().int().nonnegative(),
+    daysRemaining: z.number().int().nonnegative(),
+    expectedByNowCents: centsSchema,
+    diffCents: centsSchema,
+    status: budgetPaceStatusSchema,
+    perDayRemainingCents: centsSchema,
+  })
+  .strict()
+export type BudgetPace = z.infer<typeof budgetPaceSchema>
+
 export const updateBudgetMonthInputSchema = z
   .object({
     incomeCents: centsSchema.nonnegative(),

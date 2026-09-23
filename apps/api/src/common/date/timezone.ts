@@ -46,6 +46,12 @@ export function dateKey(date: Date): string {
   return `${year}-${pad(month)}-${pad(day)}`
 }
 
+// Dia do mês (1-31) em America/Manaus — usado pelo cálculo de ritmo (7.4) pra saber quantos dias do mês
+// já passaram de verdade, nunca no fuso do servidor.
+export function dayOfMonth(date: Date): number {
+  return zonedParts(date).day
+}
+
 // Sem hardcodar o offset: descobre o offset real comparando o instante "chutado" com o que ele parece no fuso.
 function zonedTimeToUtc(year: number, month: number, day: number, hour = 0, minute = 0, second = 0): Date {
   const guess = new Date(Date.UTC(year, month - 1, day, hour, minute, second))
