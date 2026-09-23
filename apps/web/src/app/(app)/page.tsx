@@ -2,18 +2,32 @@
 
 import Link from 'next/link'
 import { CardInvoiceRow } from './card-invoice-row'
+import { ConnectBankCard } from './connect-bank-card'
 import { useHomePage } from './use-home-page'
 import { Button } from '@/components/ui/Button'
 import { Logo } from '@/components/ui/Logo'
 import { MoneyText } from '@/components/finance/MoneyText'
 import { formatLastDayOfMonth, formatMonthName } from '@/lib/utils/format-month'
 
-// Home fiel ao protótipo (07-inicio): hero de ritmo (HU 7.4, `/budget/pace`) + faturas do mês
-// (`/invoice` por cartão). Segmentado "Cartão/Extrato": só "Cartão" tem tela — "Extrato" (movimentações,
-// 5.2) fica inerte até ter UI própria, em vez de link morto.
+// Home fiel ao protótipo: sem cartão conectado mostra o convite pra conectar (03-inicio-vazio); com
+// cartão, o hero de ritmo (HU 7.4, `/budget/pace`) + faturas do mês (`/invoice` por cartão) do 07-inicio.
+// Segmentado "Cartão/Extrato": só "Cartão" tem tela — "Extrato" (movimentações, 5.2) fica inerte até ter
+// UI própria, em vez de link morto.
 export default function HomePage() {
-  const { email, isLoadingMe, onLogout, isLoggingOut, pace, isLoadingPace, cardAccounts, isLoadingAccounts } =
-    useHomePage()
+  const {
+    email,
+    isLoadingMe,
+    onLogout,
+    isLoggingOut,
+    pace,
+    isLoadingPace,
+    cardAccounts,
+    isLoadingAccounts,
+    onConnectBank,
+    isConnectingBank,
+    connectError,
+  } = useHomePage()
+  const hasNoCard = !isLoadingAccounts && cardAccounts.length === 0
 
   return (
     <main className="mx-auto flex min-h-screen max-w-[420px] flex-col gap-6 px-4 pb-28 md:pb-10 pt-8">
@@ -29,7 +43,11 @@ export default function HomePage() {
 
       {isLoadingMe && <p className="text-text">Carregando…</p>}
 
-      {!isLoadingMe && !isLoadingPace && pace && (
+      {hasNoCard && (
+        <ConnectBankCard onConnect={() => void onConnectBank()} isConnecting={isConnectingBank} error={connectError} />
+      )}
+
+      {!isLoadingMe && !hasNoCard && !isLoadingPace && pace && (
         <div className="rounded-card-lg bg-inverse px-5 py-6 text-on-inverse">
           <div className="flex items-center justify-between">
             <p className="text-xs text-on-inverse-muted">Meu em {formatMonthName(pace.month)}</p>
