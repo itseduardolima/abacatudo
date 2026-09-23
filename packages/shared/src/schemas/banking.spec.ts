@@ -1,4 +1,4 @@
-import { bankConnectionSchema, connectBankResponseSchema } from './banking'
+import { bankConnectionSchema, bankConnectionStatusSchema, connectBankResponseSchema } from './banking'
 
 describe('bankConnectionSchema', () => {
   it('aceita a forma completa e rejeita campo extra', () => {
@@ -13,6 +13,10 @@ describe('bankConnectionSchema', () => {
     }
     expect(bankConnectionSchema.safeParse(valid).success).toBe(true)
     expect(bankConnectionSchema.safeParse({ ...valid, pluggyItemId: 'x' }).success).toBe(false)
+  })
+
+  it('aceita DISCONNECTED (8.5 — só chega por ação local, nunca vem do Pluggy)', () => {
+    expect(bankConnectionStatusSchema.safeParse('DISCONNECTED').success).toBe(true)
   })
 })
 

@@ -24,6 +24,9 @@ export const accountSchema = z
     createdAt: z.string().datetime(),
     // Última sincronização com o banco (8.6) — sempre null pra conta MANUAL/IMPORT, que não sincroniza.
     lastSyncAt: z.string().datetime().nullable(),
+    // Banco desconectado (8.5) — sempre false pra conta MANUAL/IMPORT, que nunca teve PluggyItem. Histórico
+    // continua, só marca que não sincroniza mais.
+    disconnected: z.boolean(),
   })
   .strict()
 export type Account = z.infer<typeof accountSchema>

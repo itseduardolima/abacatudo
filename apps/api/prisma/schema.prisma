@@ -137,6 +137,9 @@ enum PluggyItemStatus {
   LOGIN_ERROR
   OUTDATED
   ERROR
+  // Só chega por ação local (desconectar, 8.5) — nunca vem do Pluggy; item revogado lá continua com o
+  // último status que ele tinha antes de sumir, então marcamos aqui.
+  DISCONNECTED
 }
 
 /// RLS por userId. Nenhuma credencial de banco guardada: pluggyItemId é identificador, não segredo

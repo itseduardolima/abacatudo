@@ -8,6 +8,8 @@ export const bankConnectionStatusSchema = z.enum([
   'LOGIN_ERROR',
   'OUTDATED',
   'ERROR',
+  // Só por ação local (desconectar, 8.5) — nunca vem do Pluggy.
+  'DISCONNECTED',
 ])
 export type BankConnectionStatus = z.infer<typeof bankConnectionStatusSchema>
 
