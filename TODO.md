@@ -575,6 +575,25 @@ type="date">`.
     fechada X" do que `billId` sozinho — talvez cruzar por data **e**
     `billId` (só ignorar `billId` de transação claramente fora da janela
     esperada), ou aceitar a imprecisão de ±alguns dias como escopo do MVP.
+- **Fatura fechada com precisão de centavos (2026-09-23)** — retomei a
+  investigação acima depois que o usuário notou o problema certo: compra
+  parcelada estava entrando **inteira** (todas as parcelas futuras) na
+  fatura aberta, não só a parcela que vence agora. Medido: R$3.317,09
+  contados quando só R$817,39 (a próxima parcela de cada compra) devia
+  entrar — R$2.499,70 de excesso. Os dois bugs (parcela futura +
+  `billId` excluindo saldo anterior) se cancelavam parcialmente, por
+  isso R$1.233,78 "parecia" razoável. Corrigido os dois juntos dessa
+  vez: `keepNextDueInstallmentOnly` (agrupa parcelas da mesma compra
+  pelo nome sem o sufixo "N/M" + data + total de parcelas, mantém só a
+  de menor número) + `computeInvoiceWithCarryover` (soma o saldo da
+  última fatura fechada, `/bills` da Pluggy, com a movimentação ainda
+  sem `billId` — sem o filtro por data que causou a regressão anterior,
+  só `billId IS NULL` mesmo, que não deu negativo dessa vez). Resultado
+  ao vivo: **R$574,88** (era R$1.233,78), contra R$589,88 reais — os
+  R$15,00 que sobram são uma compra do usuário (a mais recente dele)
+  que a API de transações da Pluggy ainda não sincronizou (confirmado:
+  refiz o sync manual e ela continuou ausente — atraso do lado da
+  Pluggy, não bug nosso). Considero essa etapa fechada.
 - Próximo: Fase 4 (saldo InfinitePay/benefício), redesenho por tela do
   desktop (grid 2 colunas, `d0X-*`), UI de divisão de transação entre
   pessoas (`split`), ou seguir no backend (Sprint 7 Insights e IA, ou
