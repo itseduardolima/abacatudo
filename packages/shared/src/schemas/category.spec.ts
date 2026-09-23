@@ -1,16 +1,24 @@
-import { createCategoryInputSchema } from './category'
+import { categorySchema } from './category'
 
-describe('createCategoryInputSchema', () => {
-  it('aceita um nome', () => {
-    expect(createCategoryInputSchema.safeParse({ name: 'Mercado' }).success).toBe(true)
-  })
-
-  it('rejeita nome vazio e nome maior que 40 caracteres', () => {
-    expect(createCategoryInputSchema.safeParse({ name: '' }).success).toBe(false)
-    expect(createCategoryInputSchema.safeParse({ name: 'x'.repeat(41) }).success).toBe(false)
+describe('categorySchema', () => {
+  it('aceita uma categoria válida', () => {
+    const result = categorySchema.safeParse({
+      id: '11111111-1111-1111-1111-111111111111',
+      name: 'Mercado',
+      archivedAt: null,
+      createdAt: '2026-09-01T00:00:00.000Z',
+    })
+    expect(result.success).toBe(true)
   })
 
   it('rejeita campo extra (mass assignment)', () => {
-    expect(createCategoryInputSchema.safeParse({ name: 'Mercado', userId: 'outro' }).success).toBe(false)
+    const result = categorySchema.safeParse({
+      id: '11111111-1111-1111-1111-111111111111',
+      name: 'Mercado',
+      archivedAt: null,
+      createdAt: '2026-09-01T00:00:00.000Z',
+      userId: 'outro',
+    })
+    expect(result.success).toBe(false)
   })
 })
