@@ -459,10 +459,22 @@ type="date">`.
   "sem dono" de verdade nos dados; o mais próximo seria "sem categoria",
   que já é resolvível na Fatura). Verificado ao vivo, incluindo comparação
   pixel a pixel com a imagem do hero que o usuário mandou.
-- Próximo: versão desktop (`AppShell` do spec 05), UI de divisão de
-  transação entre pessoas (`split`), ou seguir no backend (Sprint 7
-  Insights e IA, ou pendências: 5.4/5.5 rótulos de movimentação, 8.4's
-  job/e-mail).
+- **Front: shell de desktop (2026-09-23)** — `05-componentizacao.md`: "um
+  único código, muda só o shell". `TopNav` (barra fixa no topo, `md:flex`)
+  substitui a `BottomNav` (`md:hidden`) a partir do breakpoint `md`; mesmos
+  4 destinos (Início/Classificar/Orçamento/Relatórios), sempre com rótulo
+  visível (tem espaço de sobra). **Gap consciente**: isso é só a troca de
+  shell, não o redesenho por tela — o protótipo tem telas desktop
+  (`d0X-*.dc.html`) com grid de 2 colunas e conteúdo bem mais largo que os
+  420px do celular; cada tela continua centralizada e estreita mesmo em
+  telas grandes. Redesenhar isso é escopo bem maior, fica pra decidir
+  depois se vale a pena. Verificado ao vivo: 1440px mostra `TopNav` (sem
+  `BottomNav`), 390px volta pra `BottomNav` flutuante (sem `TopNav`), nunca
+  as duas juntas.
+- Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), UI de
+  divisão de transação entre pessoas (`split`), ou seguir no backend
+  (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de movimentação,
+  8.4's job/e-mail).
 
 ## Decisões já tomadas (2026-09-21)
 
