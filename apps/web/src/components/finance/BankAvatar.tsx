@@ -7,12 +7,14 @@ const LOGO_SRC: Record<BankLogo, string> = {
   nubank: '/bancos/nubank.svg',
   'banco-do-brasil': '/bancos/banco-do-brasil.svg',
   picpay: '/bancos/picpay.svg',
+  infinitepay: '/bancos/infinitepay.svg',
 }
 
 export const BANK_LOGO_LABEL: Record<BankLogo, string> = {
   nubank: 'Nubank',
   'banco-do-brasil': 'Banco do Brasil',
   picpay: 'PicPay',
+  infinitepay: 'InfinitePay',
 }
 
 export function BankAvatar({

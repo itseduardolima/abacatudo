@@ -11,9 +11,9 @@ export type AccountSource = z.infer<typeof accountSourceSchema>
 
 const dayOfMonthSchema = z.number().int().min(1).max(31)
 
-// Só os 3 logos servidos localmente em brand/bancos/ (DESIGN_SYSTEM § Logos de bancos) — nunca string
+// Só os logos servidos localmente em brand/bancos/ (DESIGN_SYSTEM § Logos de bancos) — nunca string
 // livre, pra nunca apontar pra uma imagem que não existe em /bancos/*.svg.
-export const bankLogoSchema = z.enum(['nubank', 'banco-do-brasil', 'picpay'])
+export const bankLogoSchema = z.enum(['nubank', 'banco-do-brasil', 'picpay', 'infinitepay'])
 export type BankLogo = z.infer<typeof bankLogoSchema>
 
 export const accountSchema = z
