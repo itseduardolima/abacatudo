@@ -162,10 +162,32 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
   batendo o cálculo manual (inclusive virada de ano), `400 INVALID_MONTH` em
   mês malformado, mês sem dado devolvendo tudo zerado, e isolamento entre 2
   Users confirmado com o papel restrito (`-U gastos`).
-- Próximo: Sprint 6 já está pronta até 8.3; faltam 8.4 (aviso de
-  consentimento), 8.5 (desconectar) e 2.3 (cartão adicional → pessoa) — ou,
-  se preferir, Sprint 7 (Insights e IA) usando o `insight` que acabou de
-  nascer nesta etapa.
+- **8.5 concluída (2026-09-23)**: `DELETE /banking/items/:id` desconecta —
+  revoga o Item no Pluggy (melhor esforço, com o mesmo retry/backoff de toda
+  chamada, via `PluggyClient.deleteItem`) e só marca `PluggyItemStatus.
+DISCONNECTED` localmente **depois** da revogação ter dado certo; se o
+  Pluggy falhar, o item continua com o status antigo (nunca marca
+  desconectado por engano). Idempotente: item já desconectado devolve o
+  estado atual sem chamar o Pluggy de novo. `Account` ganhou
+  `disconnected: boolean` (do `PluggyItemStatus` por trás, igual o
+  `lastSyncAt` de 8.6) — histórico nunca é apagado, só para de sincronizar.
+  `manualSync`/`checkStatus` agora rejeitam (`422 BANK_ITEM_DISCONNECTED`)
+  item desconectado, pra não devolver um "Pluggy indisponível" enganoso pra
+  um estado que é permanente e local.
+  **Gap consciente**: 08-seguranca § 4 pede reautenticação (senha, 5 min)
+  pra conectar/desconectar banco (HU 1.7, Sprint 8, ainda não construída) —
+  mesma lacuna que já existia em `connect()` desde a Sprint 6; registrado
+  aqui pra não esquecer quando 1.7 for construída.
+  Verificado ao vivo contra Postgres real: item fake que não existe no
+  Pluggy de verdade devolveu `502 PLUGGY_UNAVAILABLE` e **não** marcou
+  desconectado (status ficou intacto); marcado desconectado manualmente,
+  `GET /accounts` veio com `disconnected: true`, `manualSync`/`checkStatus`
+  rejeitaram com `422`, `DELETE` de novo foi idempotente (200, mesmo
+  status), e isolamento confirmado com um segundo usuário (404 no item
+  alheio, lista de contas vazia).
+- Próximo: Sprint 6 fica só com 8.4 (aviso de reconectar) e 2.3 (cartão
+  adicional → pessoa) — ou, se preferir, Sprint 7 (Insights e IA) usando o
+  `insight` que nasceu na Etapa 4 da Sprint 5.
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -349,7 +371,7 @@ fatura) e `/movements` só com o resto — como o desenho previa.
 - [x] 8.3 — Sync diário/manual (sem webhook): `POST /banking/items/:id/sync` (manual) + primeira vez que o
       `checkStatus` vê o status virar `UPDATED` (automático). **Falta o job diário agendado** — ver gap acima
 - [ ] 8.4 — Aviso de consentimento (`consentExpiresAt` já é lido e salvo; falta a UI de aviso)
-- [ ] 8.5 — Desconectar
+- [x] 8.5 — Desconectar, testado ao vivo
 - [ ] 2.3 — Cartão adicional → pessoa
 
 ### Bugs achados só ao rodar de verdade (e corrigidos)
