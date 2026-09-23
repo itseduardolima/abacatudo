@@ -184,7 +184,10 @@ export default function TransactionsPage() {
                 ) : (
                   <>
                     <MoneyText cents={tx.kind === 'REFUND' ? -tx.amountCents : tx.amountCents} />
-                    {tx.personName ? (
+                    {/* "Eu" é o padrão (03-regras-negocio § Atribuição de pessoa: toda transação nasce
+                    Meu) — mostrar o avatar nesse caso só repetia informação óbvia em toda linha; só vale
+                    a pena chamar atenção quando é de outra pessoa. */}
+                    {tx.personName && !tx.personIsSelf ? (
                       <span
                         className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${personAvatarClass(
                           tx.personIsSelf,
@@ -193,9 +196,9 @@ export default function TransactionsPage() {
                       >
                         {personInitial(tx.personName)}
                       </span>
-                    ) : (
+                    ) : !tx.personName ? (
                       <span className="rounded-pill px-2.5 py-1 text-xs text-muted shadow-hair">Sem dono</span>
-                    )}
+                    ) : null}
                   </>
                 )}
               </div>
