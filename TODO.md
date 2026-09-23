@@ -140,8 +140,32 @@ sem conta de dinheiro no frontend) — não quando o código só "existe".
     total não disparando fora de hora, isolamento entre 2 Users nas duas
     tabelas novas de alerta, e `lastSyncAt` vindo certo do `PluggyItem`
     numa conta marcada como `PLUGGY`.
-- Próximo: Sprint 5 Etapa 4 — relatórios (9.1: gasto por categoria/
-  estabelecimento/pessoa com variação mês a mês).
+- **Sprint 5 Etapa 4 concluída (2026-09-23) — Sprint 5 fechada**: "para onde vai
+  o dinheiro" (9.1). Módulo `insight` novo (nome já previsto em
+  01-arquitetura), `GET /insights/spending?month=` — mesmo escopo da fatura
+  (só cartão, `EXPENSE`/`REFUND` netados, `CARD_PAYMENT` fora), agrupado por
+  categoria, estabelecimento (normalizado como a `Rule` — "Loja X" e "loja x "
+  no mesmo grupo) e pessoa (transação dividida: cada fatia vai pra pessoa
+  dela, nunca a transação inteira pra uma só). Cada grupo traz variação vs.
+  mês anterior e vs. média dos 3 meses anteriores a ele — mesma janela que
+  "categoria acima do normal" (Sprint 7) vai usar; percentual vem `null`
+  quando não há base pra comparar (mês/média zerada), nunca um número
+  inventado a partir de zero. `shiftMonthKey` novo em `common/date/timezone`
+  desloca um `monthKey` por N meses (reaproveitável pra qualquer relatório
+  futuro com janela de meses). Só entram no relatório os grupos com gasto no
+  mês pedido, ordenados do maior pro menor.
+  Verificado ao vivo contra Postgres real: 4 meses de dado sintético (cartão
+  com compra, estorno e uma divisão entre 2 pessoas), total batendo líquido
+  de estorno e excluindo o pagamento de fatura, agrupamento por categoria/
+  estabelecimento/pessoa conferido à mão (inclusive a divisão indo pra cada
+  pessoa certa), variação vs. mês anterior e vs. média dos 3 anteriores
+  batendo o cálculo manual (inclusive virada de ano), `400 INVALID_MONTH` em
+  mês malformado, mês sem dado devolvendo tudo zerado, e isolamento entre 2
+  Users confirmado com o papel restrito (`-U gastos`).
+- Próximo: Sprint 6 já está pronta até 8.3; faltam 8.4 (aviso de
+  consentimento), 8.5 (desconectar) e 2.3 (cartão adicional → pessoa) — ou,
+  se preferir, Sprint 7 (Insights e IA) usando o `insight` que acabou de
+  nascer nesta etapa.
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -305,7 +329,7 @@ Escopo mudou a pedido do usuário (2026-09-22): toda transação nasce "Meu", se
 - [x] 7.2 — Envelopes: `GET/POST/PATCH/DELETE /budget/envelopes`, testado ao vivo
 - [x] 7.3 — Alertas 70/90/100, testado ao vivo
 - [x] 8.6 — "Última atualização" por conta, testado ao vivo
-- [ ] 9.1 — Para onde vai o dinheiro
+- [x] 9.1 — Para onde vai o dinheiro, testado ao vivo
 
 ## Sprint 6 — Integração Pluggy
 
