@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import type { Account, CreateAccountInput } from '@gastos/shared'
 import { NotFoundError } from '../../common/errors/domain.error'
-import { AccountRepository, type AccountWithLastSync } from './account.repository'
+import { AccountRepository, type AccountWithPluggyItem } from './account.repository'
 
 @Injectable()
 export class AccountService {
@@ -35,8 +35,10 @@ export class AccountService {
 
 // lastSyncAt: "última atualização" (8.6) é a do PluggyItem por trás da conta — dado velho nunca parece
 // atual (se um sync não terminou de verdade, o item nunca chega a atualizar lastSyncAt, ver
-// BankingService.runSync). Conta MANUAL/IMPORT não tem PluggyItem, então é sempre null (não sincroniza).
-function toDto(row: AccountWithLastSync): Account {
+// BankingService.runSync). disconnected (8.5): true só quando o PluggyItem foi desconectado localmente —
+// histórico continua, a conta só para de sincronizar. Conta MANUAL/IMPORT não tem PluggyItem, então os
+// dois ficam sempre null/false.
+function toDto(row: AccountWithPluggyItem): Account {
   return {
     id: row.id,
     name: row.name,
@@ -48,5 +50,6 @@ function toDto(row: AccountWithLastSync): Account {
     archivedAt: row.archivedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     lastSyncAt: row.pluggyItem?.lastSyncAt?.toISOString() ?? null,
+    disconnected: row.pluggyItem?.status === 'DISCONNECTED',
   }
 }

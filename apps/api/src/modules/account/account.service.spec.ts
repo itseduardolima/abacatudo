@@ -1,7 +1,7 @@
-import type { Account as AccountRow } from '@prisma/client'
+import type { Account as AccountRow, PluggyItemStatus } from '@prisma/client'
 import { NotFoundError } from '../../common/errors/domain.error'
 import { AccountService } from './account.service'
-import type { AccountRepository, AccountWithLastSync } from './account.repository'
+import type { AccountRepository, AccountWithPluggyItem } from './account.repository'
 
 function repoMock() {
   return { create: jest.fn(), findMany: jest.fn(), findById: jest.fn() } as unknown as jest.Mocked<AccountRepository>
@@ -9,8 +9,8 @@ function repoMock() {
 
 function row(
   overrides: Partial<AccountRow> = {},
-  pluggyItem: { lastSyncAt: Date | null } | null = null,
-): AccountWithLastSync {
+  pluggyItem: { lastSyncAt: Date | null; status: PluggyItemStatus } | null = null,
+): AccountWithPluggyItem {
   return {
     id: 'acc-1',
     userId: 'user-1',
@@ -100,7 +100,10 @@ describe('AccountService', () => {
   it('lastSyncAt vem do PluggyItem por trás da conta (8.6)', async () => {
     const repo = repoMock()
     repo.findById.mockResolvedValue(
-      row({ source: 'PLUGGY', pluggyItemId: 'item-1' }, { lastSyncAt: new Date('2026-09-22T10:00:00.000Z') }),
+      row(
+        { source: 'PLUGGY', pluggyItemId: 'item-1' },
+        { lastSyncAt: new Date('2026-09-22T10:00:00.000Z'), status: 'UPDATED' },
+      ),
     )
     const service = new AccountService(repo)
 
@@ -127,5 +130,38 @@ describe('AccountService', () => {
     const result = await service.create('user-1', { name: 'Nubank', type: 'CREDIT_CARD', source: 'MANUAL' })
 
     expect(result.lastSyncAt).toBeNull()
+  })
+
+  it('disconnected é true quando o PluggyItem por trás foi desconectado (8.5)', async () => {
+    const repo = repoMock()
+    repo.findById.mockResolvedValue(
+      row({ source: 'PLUGGY', pluggyItemId: 'item-1' }, { lastSyncAt: null, status: 'DISCONNECTED' }),
+    )
+    const service = new AccountService(repo)
+
+    const result = await service.getById('user-1', 'acc-1')
+
+    expect(result.disconnected).toBe(true)
+  })
+
+  it('disconnected é false pra conta manual e pra conta com PluggyItem ainda conectado', async () => {
+    const repo = repoMock()
+    repo.findById
+      .mockResolvedValueOnce(row())
+      .mockResolvedValueOnce(row({ source: 'PLUGGY', pluggyItemId: 'item-1' }, { lastSyncAt: null, status: 'UPDATED' }))
+    const service = new AccountService(repo)
+
+    expect((await service.getById('user-1', 'acc-1')).disconnected).toBe(false)
+    expect((await service.getById('user-1', 'acc-1')).disconnected).toBe(false)
+  })
+
+  it('create: uma conta recém-criada nunca é desconectada', async () => {
+    const repo = repoMock()
+    repo.create.mockResolvedValue(row())
+    const service = new AccountService(repo)
+
+    const result = await service.create('user-1', { name: 'Nubank', type: 'CREDIT_CARD', source: 'MANUAL' })
+
+    expect(result.disconnected).toBe(false)
   })
 })

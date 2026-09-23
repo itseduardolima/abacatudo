@@ -1,10 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common'
-import type { Account, Prisma } from '@prisma/client'
+import type { Account, Prisma, PluggyItemStatus } from '@prisma/client'
 import { PRISMA, type PrismaService } from '../../prisma/prisma.client'
 
-// "Última atualização" (8.6) é do PluggyItem, não da própria linha da conta — conta manual nunca tem
-// (lastSyncAt fica null pra ela); ver AccountService.toDto.
-export type AccountWithLastSync = Account & { pluggyItem: { lastSyncAt: Date | null } | null }
+// "Última atualização" (8.6) e "desconectada" (8.5) vêm do PluggyItem por trás da conta, não de campo
+// próprio — conta manual nunca tem um (fica null pra ela); ver AccountService.toDto.
+export type AccountWithPluggyItem = Account & {
+  pluggyItem: { lastSyncAt: Date | null; status: PluggyItemStatus } | null
+}
 
 @Injectable()
 export class AccountRepository {
@@ -14,18 +16,18 @@ export class AccountRepository {
     return this.prisma.account.create({ data: { ...data, userId } })
   }
 
-  findMany(userId: string, includeArchived: boolean): Promise<AccountWithLastSync[]> {
+  findMany(userId: string, includeArchived: boolean): Promise<AccountWithPluggyItem[]> {
     return this.prisma.account.findMany({
       where: { userId, ...(includeArchived ? {} : { archivedAt: null }) },
       orderBy: { createdAt: 'asc' },
-      include: { pluggyItem: { select: { lastSyncAt: true } } },
+      include: { pluggyItem: { select: { lastSyncAt: true, status: true } } },
     })
   }
 
-  findById(userId: string, id: string): Promise<AccountWithLastSync | null> {
+  findById(userId: string, id: string): Promise<AccountWithPluggyItem | null> {
     return this.prisma.account.findFirst({
       where: { userId, id },
-      include: { pluggyItem: { select: { lastSyncAt: true } } },
+      include: { pluggyItem: { select: { lastSyncAt: true, status: true } } },
     })
   }
 
