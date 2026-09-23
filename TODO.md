@@ -718,7 +718,22 @@ type="date">`.
   indicava que era pagamento de fatura. Agora vem com sinal negativo,
   "Pagamento da fatura" no lugar da categoria, sem avatar; no sheet de
   detalhe, "Quem gastou"/"Categoria" somem pra essa linha (atribuir isso
-  a um pagamento não faz sentido).
+  a um pagamento não faz sentido). Cor do valor de pagamento também
+  ajustada: `text-primary-ink` sozinho quase não se distinguia do preto
+  em texto pequeno — virou chip com fundo `tint` (mesmo padrão dos
+  badges de status), agora visivelmente verde.
+- **Terceiro bug na mesma fatura, achado analisando o OFX real do
+  Nubank do usuário direto**: Centauro (R$86,51) e Mercado Livre
+  (R$358,33) não apareciam de jeito nenhum na lista — a parcela que
+  vence agora foi comprada em agosto (a data da linha é a da compra,
+  não a do vencimento), e a lista só olhava o mês calendário atual. Mês
+  calendário sozinho nunca foi suficiente pra saber o que está na
+  fatura aberta — `billId IS NULL` (Pluggy) é o sinal certo, mesmo
+  critério que o `InvoiceService` já usava pro total. Corrigido com um
+  `OR` na query (mês calendário OU parcela ainda sem billId de conta
+  PLUGGY); afetava várias outras parcelas mais antigas também
+  (Mastercel, Gocase, Playstation, Vivoeasyanual), todas voltaram a
+  aparecer.
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), UI de
   divisão de transação entre pessoas (`split`), ou seguir no backend
   (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de movimentação,
