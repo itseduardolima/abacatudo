@@ -676,6 +676,15 @@ type="date">`.
   listar e atribuir numa transação continuam existindo. Tela virou só
   leitura, com ícone próprio por categoria (`categoryIcon`, 13 ícones da
   lista do seed + fallback genérico pra categoria fora dela).
+- **Tela de Fatura (/transactions) alinhada ao protótipo (08-fatura).**
+  Cabeçalho com ícone do banco + nome da conta + subtítulo, badge "Fatura
+  aberta de [mês]" + "vence dia X", card escuro com o número grande, barra
+  de progresso e a quebra "Fatura do banco / − Não é meu / = Meu" dentro
+  de uma caixa clara; linhas do dia sem card, divisória fina. Sem a faixa
+  "A classificar" do protótipo — decisão já tomada (ver acima, "Toda
+  transação nasce Meu"), esse app não tem fila de classificação.
+  `currentMonthKey()` novo em `format-month.ts`: mês "de agora" sempre em
+  America/Manaus, nunca `toISOString().slice(0,7)` (erra perto da virada).
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), UI de
   divisão de transação entre pessoas (`split`), ou seguir no backend
   (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de movimentação,
