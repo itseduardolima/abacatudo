@@ -685,6 +685,16 @@ type="date">`.
   transação nasce Meu"), esse app não tem fila de classificação.
   `currentMonthKey()` novo em `format-month.ts`: mês "de agora" sempre em
   America/Manaus, nunca `toISOString().slice(0,7)` (erra perto da virada).
+- **Detalhe da transação virou bottom sheet (12-detalhe).** Pedido do
+  usuário: "tem que aparecer uma tela igual a do protótipo e não as
+  opções em baixo" — trocado o acordeão inline (abria embaixo da linha)
+  por uma folha (véu + puxador, mesmo padrão do menu Configurar): detalhe
+  (data, cartão, parcela, quem gastou, categoria, aviso de parcelas
+  restantes) + os dois seletores de 10-classificar-escolha, tudo na
+  mesma folha — escolher nunca fecha, volta pro detalhe. "Concluído" no
+  lugar do "Salvar" do protótipo: a escolha já salva na hora, não fica
+  nada pendente pra salvar de verdade. `TransactionSheet` novo componente,
+  `formatDateTimeLong` novo em `format-date.ts`.
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), UI de
   divisão de transação entre pessoas (`split`), ou seguir no backend
   (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de movimentação,
