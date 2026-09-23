@@ -76,6 +76,11 @@ Backup nunca restaurado é esperança, não backup.
 
 ## 5. Deploy e rollback
 
+- **`deploy-check.sh` também roda sozinho**: o `docker-compose.yml` tem um
+  serviço `env-check` que executa o script e bloqueia `api`/`web`/`caddy` se
+  falhar — rodar manualmente antes continua valendo (falha mais cedo, com
+  mensagem melhor), mas `docker compose up` sem `.env` real não sobe mais
+  os containers de app mesmo que esse passo seja esquecido.
 - **Primeiro deploy** (checklist em `README.md`): DNS A/AAAA de `APP_DOMAIN`;
   `.env` real validado por `scripts/deploy-check.sh`; `docker compose up -d
 --build`; seed do primeiro User (`SEED_USER_*`); ligar 2FA; registrar o

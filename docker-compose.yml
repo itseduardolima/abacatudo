@@ -1,7 +1,17 @@
 # Defaults valem só para desenvolvimento local (senhas triviais). Em produção
-# o .env é obrigatório — rode ./scripts/deploy-check.sh antes de
-# `docker compose up`, ele barra .env ausente ou com placeholder.
+# o .env é obrigatório — o serviço `env-check` roda ./scripts/deploy-check.sh antes de qualquer serviço de
+# app subir (barra .env ausente ou com placeholder), então não depende do operador lembrar de rodar o
+# script à parte antes do `docker compose up` (achado de baixa severidade da auditoria de 2026-09-23). Só
+# gate os serviços de app — o `postgres` sozinho continua subindo direto pro fluxo de dev documentado
+# (`docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres`, sem .env nenhum).
 services:
+  env-check:
+    image: alpine:3.20
+    volumes:
+      - .:/app:ro
+    working_dir: /app
+    entrypoint: ['sh', './scripts/deploy-check.sh']
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -47,6 +57,8 @@ services:
       DATABASE_URL: postgresql://${APP_DB_USER:-gastos}:${APP_DB_PASSWORD:-gastos}@postgres:5432/${APP_DB_NAME:-gastos}?schema=public
       WEB_ORIGIN: https://${APP_DOMAIN:-localhost}
     depends_on:
+      env-check:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
 
