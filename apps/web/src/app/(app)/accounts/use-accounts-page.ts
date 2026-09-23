@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import type { AccountType, CreateAccountInput } from '@gastos/shared'
 import { useAccounts } from '@/hooks/queries/use-accounts'
@@ -24,14 +24,22 @@ export function useAccountsPage() {
     formState: { errors },
   } = useForm<CreateAccountInput>({ defaultValues: { name: '', type: 'CREDIT_CARD', source: 'MANUAL' } })
 
+  // "Cancelar" não trava enquanto a request está no ar (rede lenta é comum, mobile-first) — esse número
+  // marca qual envio ainda importa. Cancelar incrementa; se a resposta (sucesso ou erro) chegar depois de
+  // outro cancelamento/reabertura, ela é descartada em vez de reaparecer como erro fora de contexto.
+  const submissionRef = useRef(0)
+
   const onSubmit = handleSubmit(async (values) => {
+    const submission = ++submissionRef.current
     setRuleError(null)
     try {
       await createAccount.mutateAsync(values)
+      if (submission !== submissionRef.current) return
       reset()
       setIsFormOpen(false)
     } catch (error) {
       if (!(error instanceof ApiClientError)) throw error
+      if (submission !== submissionRef.current) return
 
       const fieldErrors = error.error.details?.fieldErrors as Record<string, string[] | undefined> | undefined
       if (fieldErrors) {
@@ -50,6 +58,7 @@ export function useAccountsPage() {
     isFormOpen,
     openForm: () => setIsFormOpen(true),
     closeForm: () => {
+      submissionRef.current++
       setIsFormOpen(false)
       reset()
       setRuleError(null)
