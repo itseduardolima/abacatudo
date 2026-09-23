@@ -170,21 +170,31 @@ export default function TransactionsPage() {
             >
               <div className="min-w-0">
                 <p className="truncate font-semibold text-ink">{tx.merchant ?? tx.description}</p>
-                <p className="mt-0.5 text-sm text-muted">{tx.categoryName ?? 'Sem categoria'}</p>
+                <p className="mt-0.5 text-sm text-muted">
+                  {/* Pagamento de fatura nunca é gasto (03-regras-negocio § Movimentações) — nem categoria,
+                  nem "dono" fazem sentido pra essa linha, então nunca mostra "Sem categoria"/"Sem dono". */}
+                  {tx.kind === 'CARD_PAYMENT' ? 'Pagamento da fatura' : (tx.categoryName ?? 'Sem categoria')}
+                </p>
               </div>
               <div className="flex flex-shrink-0 items-center gap-2">
-                <MoneyText cents={tx.kind === 'REFUND' ? -tx.amountCents : tx.amountCents} />
-                {tx.personName ? (
-                  <span
-                    className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${personAvatarClass(
-                      tx.personIsSelf,
-                      tx.personOthersIndex,
-                    )}`}
-                  >
-                    {personInitial(tx.personName)}
-                  </span>
+                {tx.kind === 'CARD_PAYMENT' ? (
+                  <MoneyText cents={-tx.amountCents} className="!text-primary-ink" />
                 ) : (
-                  <span className="rounded-pill px-2.5 py-1 text-xs text-muted shadow-hair">Sem dono</span>
+                  <>
+                    <MoneyText cents={tx.kind === 'REFUND' ? -tx.amountCents : tx.amountCents} />
+                    {tx.personName ? (
+                      <span
+                        className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${personAvatarClass(
+                          tx.personIsSelf,
+                          tx.personOthersIndex,
+                        )}`}
+                      >
+                        {personInitial(tx.personName)}
+                      </span>
+                    ) : (
+                      <span className="rounded-pill px-2.5 py-1 text-xs text-muted shadow-hair">Sem dono</span>
+                    )}
+                  </>
                 )}
               </div>
             </button>

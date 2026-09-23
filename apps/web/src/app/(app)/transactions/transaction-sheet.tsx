@@ -105,8 +105,13 @@ export function TransactionSheet({
               </button>
             </div>
 
-            <p className="display-number text-[2.75rem] text-ink">
-              <MoneyText cents={tx.kind === 'REFUND' ? -tx.amountCents : tx.amountCents} />
+            <p
+              className={`display-number text-[2.75rem] ${tx.kind === 'CARD_PAYMENT' ? 'text-primary-ink' : 'text-ink'}`}
+            >
+              <MoneyText
+                cents={tx.kind === 'CARD_PAYMENT' || tx.kind === 'REFUND' ? -tx.amountCents : tx.amountCents}
+                className={tx.kind === 'CARD_PAYMENT' ? '!text-primary-ink' : undefined}
+              />
             </p>
 
             <div>
@@ -114,7 +119,11 @@ export function TransactionSheet({
                 <span className="text-muted">Data</span>
                 <span className="font-medium text-ink">{formatDateTimeLong(tx.occurredAt)}</span>
               </div>
-              <div className="flex items-center justify-between border-b border-surface py-3 text-sm">
+              <div
+                className={`flex items-center justify-between py-3 text-sm ${
+                  tx.kind === 'CARD_PAYMENT' && !tx.installmentTotal ? '' : 'border-b border-surface'
+                }`}
+              >
                 <span className="text-muted">Cartão</span>
                 <span className="font-medium text-ink">
                   {accountName}
@@ -129,39 +138,45 @@ export function TransactionSheet({
                   </span>
                 </div>
               )}
-              <button
-                type="button"
-                onClick={() => setView('person')}
-                className="flex w-full items-center justify-between border-b border-surface py-3 text-sm"
-              >
-                <span className="text-muted">Quem gastou</span>
-                {tx.personName ? (
-                  <span className="flex items-center gap-1.5">
-                    <span
-                      className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${personAvatarClass(
-                        tx.personIsSelf,
-                        tx.personOthersIndex,
-                      )}`}
-                    >
-                      {personInitial(tx.personName)}
+              {/* Pagamento de fatura nunca é gasto (03-regras-negocio § Movimentações) — atribuir categoria
+              ou "quem gastou" a essa linha não faz sentido, então nem oferece. */}
+              {tx.kind !== 'CARD_PAYMENT' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setView('person')}
+                    className="flex w-full items-center justify-between border-b border-surface py-3 text-sm"
+                  >
+                    <span className="text-muted">Quem gastou</span>
+                    {tx.personName ? (
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${personAvatarClass(
+                            tx.personIsSelf,
+                            tx.personOthersIndex,
+                          )}`}
+                        >
+                          {personInitial(tx.personName)}
+                        </span>
+                        <span className="font-medium text-ink">{tx.personName}</span>
+                      </span>
+                    ) : (
+                      <span className="font-medium text-muted">Sem dono</span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setView('category')}
+                    className="flex w-full items-center justify-between py-3 text-sm"
+                  >
+                    <span className="text-muted">Categoria</span>
+                    <span className="flex items-center gap-1 font-medium text-ink">
+                      {tx.categoryName ?? 'Sem categoria'}
+                      <ChevronRight size={16} strokeWidth={1.8} className="text-muted" />
                     </span>
-                    <span className="font-medium text-ink">{tx.personName}</span>
-                  </span>
-                ) : (
-                  <span className="font-medium text-muted">Sem dono</span>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => setView('category')}
-                className="flex w-full items-center justify-between py-3 text-sm"
-              >
-                <span className="text-muted">Categoria</span>
-                <span className="flex items-center gap-1 font-medium text-ink">
-                  {tx.categoryName ?? 'Sem categoria'}
-                  <ChevronRight size={16} strokeWidth={1.8} className="text-muted" />
-                </span>
-              </button>
+                  </button>
+                </>
+              )}
             </div>
 
             {remainingInstallments > 0 && (
