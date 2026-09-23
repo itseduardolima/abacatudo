@@ -1,11 +1,5 @@
 import type { PluggyAccount, PluggyTransaction } from './pluggy/pluggy.schemas'
-import {
-  dayFromDateString,
-  mapAccountFields,
-  mapTransaction,
-  reconnectWarningDays,
-  resolveKind,
-} from './banking.mapper'
+import { mapAccountFields, mapTransaction, reconnectWarningDays, resolveKind } from './banking.mapper'
 
 function tx(overrides: Partial<PluggyTransaction> = {}): PluggyTransaction {
   return {
@@ -48,18 +42,6 @@ describe('resolveKind', () => {
 
   it('category "Credit card payment" também é CARD_PAYMENT (fallback sem categoryId)', () => {
     expect(resolveKind(tx({ type: 'CREDIT', category: 'Credit card payment' }), true)).toBe('CARD_PAYMENT')
-  })
-})
-
-describe('dayFromDateString', () => {
-  it('data pura (AAAA-MM-DD) vira meio-dia UTC, sem cruzar dia em America/Manaus', () => {
-    const result = dayFromDateString('2026-09-21')
-    expect(result.toISOString()).toBe('2026-09-21T12:00:00.000Z')
-  })
-
-  it('timestamp completo é preservado', () => {
-    const result = dayFromDateString('2026-09-21T23:10:00.000Z')
-    expect(result.toISOString()).toBe('2026-09-21T23:10:00.000Z')
   })
 })
 

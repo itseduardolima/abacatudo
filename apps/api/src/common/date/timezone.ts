@@ -95,3 +95,10 @@ export function shiftMonthKey(monthKeyValue: string, delta: number): string {
   const newMonth = (total % 12) + 1
   return `${newYear}-${pad(newMonth)}`
 }
+
+// Data pura ("2026-09-21", sem hora — o Pluggy manda assim às vezes, e é o que um `<input type="date">`
+// de lançamento manual também dá) vira meio-dia UTC, pra nunca cruzar dia ao converter para
+// America/Manaus (UTC-4) nas contas de mês/dia do produto.
+export function dayFromDateString(date: string): Date {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T12:00:00.000Z`) : new Date(date)
+}

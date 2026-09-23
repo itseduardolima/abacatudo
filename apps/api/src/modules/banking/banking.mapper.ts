@@ -1,5 +1,8 @@
 import type { Prisma, AccountType, TransactionKind, TransactionStatus } from '@prisma/client'
+import { dayFromDateString } from '../../common/date/timezone'
 import type { PluggyAccount, PluggyTransaction } from './pluggy/pluggy.schemas'
+
+export { dayFromDateString }
 
 export type MappedTransaction = Omit<Prisma.TransactionUncheckedCreateInput, 'userId' | 'accountId'> & {
   externalId: string
@@ -21,12 +24,6 @@ export function resolveKind(tx: PluggyTransaction, isCreditCard: boolean): Trans
   }
   if (tx.type !== 'CREDIT') return 'EXPENSE'
   return isCreditCard ? 'REFUND' : 'INCOME'
-}
-
-// Pluggy manda data pura ("2026-09-21") às vezes; meio-dia UTC evita cruzar dia ao converter para
-// America/Manaus (UTC-4) nas contas de mês/dia do produto.
-export function dayFromDateString(date: string): Date {
-  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T12:00:00.000Z`) : new Date(date)
 }
 
 export function mapTransaction(tx: PluggyTransaction, isCreditCard: boolean): MappedTransaction {

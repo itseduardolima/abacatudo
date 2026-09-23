@@ -1,4 +1,4 @@
-import { dateKey, monthKey, monthRange, shiftMonthKey } from './timezone'
+import { dateKey, dayFromDateString, monthKey, monthRange, shiftMonthKey } from './timezone'
 
 describe('monthKey / dateKey', () => {
   it('compra às 23h30 do dia 31 (horário de Manaus) não cai no mês seguinte por fuso', () => {
@@ -74,5 +74,17 @@ describe('shiftMonthKey', () => {
 
   it('rejeita uma chave de mês em formato inválido', () => {
     expect(() => shiftMonthKey('2026-9', -1)).toThrow('monthKey inválido')
+  })
+})
+
+describe('dayFromDateString', () => {
+  it('data pura (AAAA-MM-DD) vira meio-dia UTC, sem cruzar dia em America/Manaus', () => {
+    const result = dayFromDateString('2026-09-21')
+    expect(result.toISOString()).toBe('2026-09-21T12:00:00.000Z')
+  })
+
+  it('timestamp completo é preservado', () => {
+    const result = dayFromDateString('2026-09-21T23:10:00.000Z')
+    expect(result.toISOString()).toBe('2026-09-21T23:10:00.000Z')
   })
 })
