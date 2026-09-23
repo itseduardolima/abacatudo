@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common'
-import type { PluggyItem as PluggyItemRow, Rule } from '@prisma/client'
+import type { CardHolderHint, PluggyItem as PluggyItemRow, Rule } from '@prisma/client'
 import type { BankConnection, ConnectBankResponse, SyncResult } from '@gastos/shared'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository } from '../account/account.repository'
+import { CardHolderHintRepository } from '../card-holder-hint/card-holder-hint.repository'
 import { PersonRepository } from '../person/person.repository'
 import { normalizeMerchant } from '../rule/normalize-merchant'
 import { RuleRepository } from '../rule/rule.repository'
@@ -34,6 +35,7 @@ export class BankingService {
     private readonly sync: BankingSyncRepository,
     private readonly people: PersonRepository,
     private readonly rules: RuleRepository,
+    private readonly cardHolderHints: CardHolderHintRepository,
   ) {}
 
   async connect(userId: string): Promise<ConnectBankResponse> {
@@ -138,6 +140,13 @@ export class BankingService {
     const selfPerson = await this.people.findSelf(userId)
     if (!selfPerson) throw new DomainError('SELF_PERSON_NOT_FOUND', 'Pessoa "Eu" não encontrada.', 500)
     const ruleByMerchant = new Map((await this.rules.findMany(userId)).map((rule: Rule) => [rule.merchant, rule]))
+    // Chave accountId:cardLast4 — o mesmo final pode existir em contas diferentes (2.3).
+    const hintByAccountCard = new Map(
+      (await this.cardHolderHints.findMany(userId)).map((hint: CardHolderHint) => [
+        `${hint.accountId}:${hint.cardLast4}`,
+        hint.personId,
+      ]),
+    )
 
     const pluggyAccounts = await this.pluggy.listAccounts(item.pluggyItemId)
     let accountsSynced = 0
@@ -164,9 +173,12 @@ export class BankingService {
         for (const tx of page.results) {
           const mapped = mapTransaction(tx, isCreditCard)
           const merchant = mapped.merchant ?? null
+          const cardLast4 = mapped.cardLast4 ?? null
           // Pessoa/categoria só existem em cartão de crédito (03-regras-negocio § Escopo) — movimentação
           // nunca ganha nenhum dos dois, nem por Rule.
-          const personId = isCreditCard ? resolvePersonId(merchant, ruleByMerchant, selfPerson.id) : null
+          const personId = isCreditCard
+            ? resolvePersonId(account.id, cardLast4, merchant, hintByAccountCard, ruleByMerchant, selfPerson.id)
+            : null
           const categoryId = isCreditCard ? resolveCategoryId(merchant, ruleByMerchant) : null
           await this.sync.upsertTransaction(userId, account.id, personId, categoryId, mapped)
           transactionsSynced++
@@ -180,9 +192,20 @@ export class BankingService {
   }
 }
 
-// Toda transação nasce "Meu" (03-regras-negocio § Atribuição de pessoa) a não ser que uma Rule diga outra
-// pessoa pra este estabelecimento.
-function resolvePersonId(merchant: string | null, ruleByMerchant: Map<string, Rule>, selfPersonId: string): string {
+// Pipeline de atribuição na criação (03-regras-negocio § Atribuição de pessoa), parando no primeiro que
+// decidir: (1) já confirmada pelo User nunca é tocada aqui — upsertTransaction só atribui pessoa na
+// criação, nunca no update, então isso já está garantido antes de chegar aqui; (2) CardHolderHint (2.3,
+// cartão adicional/virtual); (3) Rule por estabelecimento; (4) padrão self.
+function resolvePersonId(
+  accountId: string,
+  cardLast4: string | null,
+  merchant: string | null,
+  hintByAccountCard: Map<string, string>,
+  ruleByMerchant: Map<string, Rule>,
+  selfPersonId: string,
+): string {
+  const hintPersonId = cardLast4 ? hintByAccountCard.get(`${accountId}:${cardLast4}`) : undefined
+  if (hintPersonId) return hintPersonId
   if (!merchant) return selfPersonId
   return ruleByMerchant.get(normalizeMerchant(merchant))?.personId ?? selfPersonId
 }

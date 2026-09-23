@@ -1,6 +1,13 @@
-import type { Account as AccountRow, Person as PersonRow, PluggyItem as PluggyItemRow, Rule } from '@prisma/client'
+import type {
+  Account as AccountRow,
+  CardHolderHint,
+  Person as PersonRow,
+  PluggyItem as PluggyItemRow,
+  Rule,
+} from '@prisma/client'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import type { AccountRepository } from '../account/account.repository'
+import type { CardHolderHintRepository } from '../card-holder-hint/card-holder-hint.repository'
 import type { PersonRepository } from '../person/person.repository'
 import type { RuleRepository } from '../rule/rule.repository'
 import type { BankingSyncRepository } from './banking-sync.repository'
@@ -53,6 +60,12 @@ function rulesMock() {
   return mock
 }
 
+function cardHolderHintsMock() {
+  const mock = { findMany: jest.fn(), upsertPerson: jest.fn() } as unknown as jest.Mocked<CardHolderHintRepository>
+  mock.findMany.mockResolvedValue([])
+  return mock
+}
+
 function newService(
   overrides: {
     pluggy?: jest.Mocked<PluggyClient>
@@ -61,6 +74,7 @@ function newService(
     sync?: jest.Mocked<BankingSyncRepository>
     people?: jest.Mocked<PersonRepository>
     rules?: jest.Mocked<RuleRepository>
+    cardHolderHints?: jest.Mocked<CardHolderHintRepository>
   } = {},
 ) {
   return new BankingService(
@@ -70,6 +84,7 @@ function newService(
     overrides.sync ?? syncMock(),
     overrides.people ?? peopleMock(),
     overrides.rules ?? rulesMock(),
+    overrides.cardHolderHints ?? cardHolderHintsMock(),
   )
 }
 
@@ -128,6 +143,19 @@ function ruleRow(overrides: Partial<Rule> = {}): Rule {
     merchant: 'loja da família',
     personId: 'person-2',
     categoryId: null,
+    createdAt: new Date('2026-09-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-09-01T00:00:00.000Z'),
+    ...overrides,
+  }
+}
+
+function cardHolderHintRow(overrides: Partial<CardHolderHint> = {}): CardHolderHint {
+  return {
+    id: 'hint-1',
+    userId: 'user-1',
+    accountId: 'acc-1',
+    cardLast4: '1234',
+    personId: 'person-3',
     createdAt: new Date('2026-09-01T00:00:00.000Z'),
     updatedAt: new Date('2026-09-01T00:00:00.000Z'),
     ...overrides,
@@ -469,6 +497,83 @@ describe('BankingService', () => {
       'cat-mercado',
       expect.any(Object),
     )
+  })
+
+  it('manualSync: CardHolderHint (cartão adicional, 2.3) decide antes da Rule de estabelecimento', async () => {
+    const items = itemsMock()
+    items.findById.mockResolvedValue(itemRow())
+    const accounts = accountsMock()
+    accounts.upsertFromSync.mockResolvedValue(accountRow({ id: 'acc-1' }))
+    const pluggy = pluggyMock()
+    pluggy.listAccounts.mockResolvedValue([{ id: 'ext-acc-1', type: 'CREDIT', name: 'Nubank', creditData: null }])
+    pluggy.listTransactions.mockResolvedValue({
+      results: [
+        {
+          id: 'tx-1',
+          amount: 50,
+          type: 'DEBIT',
+          operationType: null,
+          category: null,
+          categoryId: null,
+          status: 'POSTED',
+          date: '2026-09-21',
+          description: 'PAG*LOJA DA FAMILIA',
+          merchant: { businessName: 'Loja da Família' },
+          creditCardMetadata: { cardNumber: '1234', totalInstallments: null, installmentNumber: null, billId: null },
+        },
+      ],
+      next: null,
+    })
+    const sync = syncMock()
+    const rules = rulesMock()
+    rules.findMany.mockResolvedValue([ruleRow({ merchant: 'loja da família', personId: 'person-2' })])
+    const cardHolderHints = cardHolderHintsMock()
+    cardHolderHints.findMany.mockResolvedValue([
+      cardHolderHintRow({ accountId: 'acc-1', cardLast4: '1234', personId: 'person-3' }),
+    ])
+    const service = newService({ pluggy, items, accounts, sync, rules, cardHolderHints })
+
+    await service.manualSync('user-1', 'item-1')
+
+    // person-3 (do hint), não person-2 (da Rule) — cartão adicional decide antes do estabelecimento.
+    expect(sync.upsertTransaction).toHaveBeenCalledWith('user-1', 'acc-1', 'person-3', null, expect.any(Object))
+  })
+
+  it('manualSync: CardHolderHint é por conta — o mesmo final de cartão em outra conta não bate', async () => {
+    const items = itemsMock()
+    items.findById.mockResolvedValue(itemRow())
+    const accounts = accountsMock()
+    accounts.upsertFromSync.mockResolvedValue(accountRow({ id: 'acc-2' }))
+    const pluggy = pluggyMock()
+    pluggy.listAccounts.mockResolvedValue([{ id: 'ext-acc-1', type: 'CREDIT', name: 'Nubank', creditData: null }])
+    pluggy.listTransactions.mockResolvedValue({
+      results: [
+        {
+          id: 'tx-1',
+          amount: 50,
+          type: 'DEBIT',
+          operationType: null,
+          category: null,
+          categoryId: null,
+          status: 'POSTED',
+          date: '2026-09-21',
+          description: 'PAG*LOJA',
+          merchant: null,
+          creditCardMetadata: { cardNumber: '1234', totalInstallments: null, installmentNumber: null, billId: null },
+        },
+      ],
+      next: null,
+    })
+    const sync = syncMock()
+    const cardHolderHints = cardHolderHintsMock()
+    // hint é da conta 'acc-1', mas a transação é da conta 'acc-2'.
+    cardHolderHints.findMany.mockResolvedValue([cardHolderHintRow({ accountId: 'acc-1', cardLast4: '1234' })])
+    const service = newService({ pluggy, items, accounts, sync, cardHolderHints })
+
+    await service.manualSync('user-1', 'item-1')
+
+    // cai no padrão "Meu" (self-1), não no hint de outra conta.
+    expect(sync.upsertTransaction).toHaveBeenCalledWith('user-1', 'acc-2', 'self-1', null, expect.any(Object))
   })
 
   it('manualSync: Rule só de categoria (sem pessoa) deixa a pessoa cair no padrão "Meu"', async () => {
