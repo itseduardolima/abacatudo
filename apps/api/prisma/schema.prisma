@@ -36,6 +36,7 @@ model User {
   envelopeAlerts    EnvelopeAlert[]
   budgetMonthAlerts BudgetMonthAlert[]
   cardHolderHints   CardHolderHint[]
+  fixedExpenses     FixedExpense[]
 }
 
 /// Sem RLS: resolvida pelo hash do token do cookie, antes de existir userId no contexto (mesma exceção
@@ -255,6 +256,23 @@ model CardHolderHint {
   person  Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
 
   @@unique([accountId, cardLast4])
+  @@index([userId])
+}
+
+/// RLS por userId. Gasto fixo mensal informado pelo usuário (aluguel, internet...) — recorrente por
+/// natureza (conta todo mês até ser arquivado, sem `month` próprio; ver 03-regras-negocio § Orçamento
+/// mensal). Soma junto da fatura aberta no ritmo (HU 7.4).
+model FixedExpense {
+  id          String    @id @default(uuid())
+  userId      String
+  name        String
+  amountCents Int
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 
