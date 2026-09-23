@@ -1,8 +1,8 @@
 'use client'
 
-import Link from 'next/link'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { BackIcon, IconButton } from '@/components/ui/IconButton'
 import { InlineAlert } from '@/components/ui/InlineAlert'
 import { Input } from '@/components/ui/Input'
 import { usePeoplePage } from './use-people-page'
@@ -24,12 +24,12 @@ export default function PeoplePage() {
   } = usePeoplePage()
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-[420px] flex-col gap-6 px-4 py-8">
-      <div>
-        <Link href="/" className="text-sm text-muted underline underline-offset-4">
-          ← Início
-        </Link>
-        <h1 className="display-number mt-2 text-[2rem] text-ink">Pessoas</h1>
+    <main className="mx-auto flex min-h-screen max-w-[420px] flex-col gap-6 px-4 pb-28 pt-8">
+      <div className="flex items-center gap-3">
+        <IconButton href="/">
+          <BackIcon />
+        </IconButton>
+        <h1 className="display-number text-[2rem] text-ink">Pessoas</h1>
       </div>
 
       {isLoadingPeople && <p className="text-text">Carregando…</p>}

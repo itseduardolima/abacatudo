@@ -11,7 +11,7 @@ export default function HomePage() {
   const { email, isLoadingMe, onLogout, isLoggingOut } = useHomePage()
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-[420px] flex-col justify-between px-4 py-8">
+    <main className="mx-auto flex min-h-screen max-w-[420px] flex-col justify-between px-4 pb-28 pt-8">
       <Logo height={48} />
       <section>
         <h1 className="display-number text-[2.5rem] text-ink">{isLoadingMe ? 'Carregando…' : `Olá, ${email}`}</h1>
