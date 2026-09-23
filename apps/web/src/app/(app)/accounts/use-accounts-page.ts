@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import type { AccountType, CreateAccountInput } from '@gastos/shared'
 import { useAccounts } from '@/hooks/queries/use-accounts'
 import { useCreateAccount } from '@/hooks/queries/use-create-account'
+import { useUpdateAccount } from '@/hooks/queries/use-update-account'
 import { ApiClientError } from '@/lib/api-client'
 
 // Hook de página: só orquestração (04-padroes-codigo). Campos de cartão (fechamento, vencimento, limite)
@@ -12,6 +13,7 @@ import { ApiClientError } from '@/lib/api-client'
 export function useAccountsPage() {
   const accounts = useAccounts()
   const createAccount = useCreateAccount()
+  const updateAccount = useUpdateAccount()
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [ruleError, setRuleError] = useState<string | null>(null)
   const {
@@ -70,5 +72,10 @@ export function useAccountsPage() {
     onSubmit,
     isSubmitting: createAccount.isPending,
     ruleError,
+    // Fase 4: marca/desmarca qual conta CHECKING alimenta "renda de benefícios" (/settings/income).
+    toggleBenefitAccount: (id: string, isBenefitAccount: boolean) =>
+      updateAccount.mutate({ id, input: { isBenefitAccount } }),
+    isTogglingBenefitAccount: updateAccount.isPending,
+    togglingBenefitAccountId: updateAccount.variables?.id ?? null,
   }
 }

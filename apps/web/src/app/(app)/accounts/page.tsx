@@ -7,6 +7,7 @@ import { BackIcon, IconButton } from '@/components/ui/IconButton'
 import { InlineAlert } from '@/components/ui/InlineAlert'
 import { Input } from '@/components/ui/Input'
 import { formatAccountType } from '@/lib/utils/format-account-type'
+import { formatMoney } from '@/lib/utils/format-money'
 import { useAccountsPage } from './use-accounts-page'
 
 const TYPE_OPTIONS: AccountType[] = ['CREDIT_CARD', 'CHECKING', 'CASH']
@@ -25,6 +26,9 @@ export default function AccountsPage() {
     onSubmit,
     isSubmitting,
     ruleError,
+    toggleBenefitAccount,
+    isTogglingBenefitAccount,
+    togglingBenefitAccountId,
   } = useAccountsPage()
 
   return (
@@ -45,9 +49,30 @@ export default function AccountsPage() {
       {accounts.length > 0 && (
         <ul className="flex flex-col gap-3">
           {accounts.map((account) => (
-            <li key={account.id} className="flex items-center justify-between rounded-card border border-border p-4">
-              <span className="font-medium text-ink">{account.name}</span>
-              <Badge>{formatAccountType(account.type)}</Badge>
+            <li key={account.id} className="flex flex-col gap-3 rounded-card border border-border p-4">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-ink">{account.name}</span>
+                <Badge>{formatAccountType(account.type)}</Badge>
+              </div>
+
+              {account.type === 'CHECKING' && (
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-muted">
+                    {account.isBenefitAccount && account.balanceCents != null
+                      ? `Alimenta a renda de benefícios: ${formatMoney(account.balanceCents)}`
+                      : 'Pode virar a fonte da renda de benefícios.'}
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={account.isBenefitAccount ? 'primary' : 'outline'}
+                    state={isTogglingBenefitAccount && togglingBenefitAccountId === account.id ? 'loading' : 'idle'}
+                    onClick={() => toggleBenefitAccount(account.id, !account.isBenefitAccount)}
+                  >
+                    {account.isBenefitAccount ? 'Conta de benefício' : 'Marcar como benefício'}
+                  </Button>
+                </div>
+              )}
             </li>
           ))}
         </ul>
