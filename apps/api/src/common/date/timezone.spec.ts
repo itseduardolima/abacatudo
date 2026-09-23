@@ -1,4 +1,4 @@
-import { dateKey, monthKey, monthRange } from './timezone'
+import { dateKey, monthKey, monthRange, shiftMonthKey } from './timezone'
 
 describe('monthKey / dateKey', () => {
   it('compra às 23h30 do dia 31 (horário de Manaus) não cai no mês seguinte por fuso', () => {
@@ -50,5 +50,29 @@ describe('monthRange', () => {
     expect(() => monthRange('2026-9')).toThrow('monthKey inválido')
     expect(() => monthRange('2026-13')).toThrow('monthKey inválido')
     expect(() => monthRange('lixo')).toThrow('monthKey inválido')
+  })
+})
+
+describe('shiftMonthKey', () => {
+  it('desloca pra trás dentro do mesmo ano', () => {
+    expect(shiftMonthKey('2026-09', -1)).toBe('2026-08')
+    expect(shiftMonthKey('2026-09', -3)).toBe('2026-06')
+  })
+
+  it('vira o ano ao cruzar janeiro', () => {
+    expect(shiftMonthKey('2026-01', -1)).toBe('2025-12')
+    expect(shiftMonthKey('2026-02', -3)).toBe('2025-11')
+  })
+
+  it('desloca pra frente', () => {
+    expect(shiftMonthKey('2026-11', 2)).toBe('2027-01')
+  })
+
+  it('delta zero devolve o mesmo mês', () => {
+    expect(shiftMonthKey('2026-09', 0)).toBe('2026-09')
+  })
+
+  it('rejeita uma chave de mês em formato inválido', () => {
+    expect(() => shiftMonthKey('2026-9', -1)).toThrow('monthKey inválido')
   })
 })

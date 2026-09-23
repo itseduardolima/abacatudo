@@ -82,3 +82,16 @@ export function resolveMonthRange(month?: string): { start: Date; end: Date } {
   }
   return monthRange(key)
 }
+
+// Desloca um monthKey por `delta` meses (negativo = passado) — usado pra janela "mês anterior" / "média
+// dos 3 meses anteriores" dos relatórios (03-regras-negocio § Relatórios e insights).
+export function shiftMonthKey(monthKeyValue: string, delta: number): string {
+  const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(monthKeyValue)
+  if (!match) throw new Error(`monthKey inválido (esperado AAAA-MM): "${monthKeyValue}"`)
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const total = year * 12 + (month - 1) + delta
+  const newYear = Math.floor(total / 12)
+  const newMonth = (total % 12) + 1
+  return `${newYear}-${pad(newMonth)}`
+}
