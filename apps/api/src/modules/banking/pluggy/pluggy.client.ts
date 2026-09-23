@@ -57,11 +57,16 @@ export class PluggyClient {
   // Desconectar (8.5): "revoga o Item no Pluggy, best effort + retry" (03-regras-negocio) — o retry/backoff
   // já vem de fetchWithRetry, mesmo caminho de toda outra chamada. Sem corpo esperado na resposta, então
   // não passa pelo `request` (que sempre parseia JSON contra um schema).
+  // 404 conta como sucesso: o item já não existe lá — pode ser porque outra desconexão já revogou antes
+  // (idempotência normal), ou porque a revogação de uma tentativa anterior deu certo mas a escrita local
+  // que marca DISCONNECTED falhou depois (queda de conexão, etc.). Sem isso, essa segunda situação travava
+  // pra sempre: toda nova tentativa batia o mesmo 404 e nunca conseguia marcar localmente.
   async deleteItem(pluggyItemId: string): Promise<void> {
-    await this.fetchWithRetry(`${BASE_URL}/items/${pluggyItemId}`, {
-      method: 'DELETE',
-      headers: { 'x-api-key': await this.apiKey() },
-    })
+    await this.fetchWithRetry(
+      `${BASE_URL}/items/${pluggyItemId}`,
+      { method: 'DELETE', headers: { 'x-api-key': await this.apiKey() } },
+      [404],
+    )
   }
 
   // Paginado de verdade (visto na prática: a resposta vem com total/totalPages/page) — sem isso, alguém com
@@ -139,7 +144,9 @@ export class PluggyClient {
     return parsed.data
   }
 
-  private async fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+  // `treatAsSuccess`: status que não é 2xx mas deve ser aceito como se fosse (ex.: 404 no delete de um item
+  // que já não existe lá — ver deleteItem, o motivo é evitar reintroduzir o bug do parágrafo abaixo).
+  private async fetchWithRetry(url: string, init: RequestInit, treatAsSuccess: number[] = []): Promise<Response> {
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
@@ -156,7 +163,7 @@ export class PluggyClient {
           await sleep(2 ** attempt * 200)
           continue
         }
-        if (!response.ok) throw new PluggyUnavailableError()
+        if (!response.ok && !treatAsSuccess.includes(response.status)) throw new PluggyUnavailableError()
         return response
       } catch (error) {
         clearTimeout(timer)

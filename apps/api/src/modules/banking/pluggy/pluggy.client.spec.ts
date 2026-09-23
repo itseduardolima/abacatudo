@@ -260,6 +260,15 @@ describe('PluggyClient', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
+  it('deleteItem: 404 conta como sucesso (item já não existe lá — nunca trava um retry depois de uma escrita local que falhou)', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
+      .mockResolvedValueOnce(jsonResponse(404, { message: 'not found' }))
+    const client = new PluggyClient(configMock())
+
+    await expect(client.deleteItem('item-1')).resolves.toBeUndefined()
+  })
+
   it('400 falha na hora, sem tentar de novo (repetir não ajudaria)', async () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
