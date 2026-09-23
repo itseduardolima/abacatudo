@@ -24,7 +24,9 @@ export class MovementService {
       direction,
       search: query.search,
     })
-    return rows.map(toTransactionDto)
+    // Movimentação nunca tem split (03-regras-negocio § Escopo: só existe em cartão de crédito) — nunca
+    // passa `row.splits` aqui de propósito, mesmo que o tipo do row tivesse o campo.
+    return rows.map((row) => toTransactionDto(row))
   }
 
   async totals(userId: string, month?: string): Promise<MovementTotals> {

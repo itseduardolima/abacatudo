@@ -101,7 +101,7 @@ export class TransactionService {
   }
 
   async listByMonth(userId: string, month?: string): Promise<Transaction[]> {
-    return (await this.repo.findMany(userId, resolveMonthRange(month))).map(toTransactionDto)
+    return (await this.repo.findMany(userId, resolveMonthRange(month))).map((row) => toTransactionDto(row, row.splits))
   }
 
   async updatePerson(userId: string, id: string, input: UpdateTransactionPersonInput): Promise<Transaction> {
@@ -127,7 +127,7 @@ export class TransactionService {
 
     const updated = await this.repo.findById(userId, id)
     if (!updated) throw NOT_FOUND()
-    return toTransactionDto(updated)
+    return toTransactionDto(updated, updated.splits)
   }
 
   async updateCategory(userId: string, id: string, input: UpdateTransactionCategoryInput): Promise<Transaction> {
@@ -147,6 +147,6 @@ export class TransactionService {
 
     const updated = await this.repo.findById(userId, id)
     if (!updated) throw NOT_FOUND()
-    return toTransactionDto(updated)
+    return toTransactionDto(updated, updated.splits)
   }
 }

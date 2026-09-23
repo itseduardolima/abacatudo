@@ -1,7 +1,10 @@
 import type { Transaction as TransactionRow } from '@prisma/client'
 import type { Transaction } from '@gastos/shared'
 
-export function toTransactionDto(row: TransactionRow): Transaction {
+export function toTransactionDto(
+  row: TransactionRow,
+  splits: { personId: string; amountCents: number }[] = [],
+): Transaction {
   return {
     id: row.id,
     accountId: row.accountId,
@@ -18,5 +21,6 @@ export function toTransactionDto(row: TransactionRow): Transaction {
     installmentNumber: row.installmentNumber,
     installmentTotal: row.installmentTotal,
     createdAt: row.createdAt.toISOString(),
+    splits,
   }
 }

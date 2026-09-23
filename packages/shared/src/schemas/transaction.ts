@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { centsSchema, idSchema } from './common'
+import { splitItemSchema } from './split'
 
 export const transactionKindSchema = z.enum(['EXPENSE', 'INCOME', 'TRANSFER', 'REFUND', 'CARD_PAYMENT'])
 export type TransactionKind = z.infer<typeof transactionKindSchema>
@@ -26,6 +27,9 @@ export const transactionSchema = z
     installmentNumber: z.number().int().nullable(),
     installmentTotal: z.number().int().nullable(),
     createdAt: z.string().datetime(),
+    // Vazio quando a transação não está dividida (personId sozinho decide o dono) — preenchido só depois
+    // de um PUT .../split (03-regras-negocio § Só a minha parte).
+    splits: z.array(splitItemSchema),
   })
   .strict()
 export type Transaction = z.infer<typeof transactionSchema>

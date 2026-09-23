@@ -12,7 +12,7 @@ import type { PersonRepository } from '../person/person.repository'
 import type { RuleRepository } from '../rule/rule.repository'
 import type { SplitRepository } from '../split/split.repository'
 import { TransactionService } from './transaction.service'
-import type { TransactionRepository } from './transaction.repository'
+import type { TransactionRepository, TransactionWithSplits } from './transaction.repository'
 
 function repoMock() {
   return {
@@ -47,7 +47,10 @@ function splitsMock() {
   return { setSinglePerson: jest.fn() } as unknown as jest.Mocked<SplitRepository>
 }
 
-function row(overrides: Partial<TransactionRow> = {}): TransactionRow {
+function row(
+  overrides: Partial<TransactionRow> = {},
+  splits: { personId: string; amountCents: number }[] = [],
+): TransactionWithSplits {
   return {
     id: 'tx-1',
     userId: 'user-1',
@@ -69,6 +72,7 @@ function row(overrides: Partial<TransactionRow> = {}): TransactionRow {
     createdAt: new Date('2026-09-21T12:00:00.000Z'),
     updatedAt: new Date('2026-09-21T12:00:00.000Z'),
     ...overrides,
+    splits,
   }
 }
 

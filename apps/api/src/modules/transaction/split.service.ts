@@ -47,7 +47,7 @@ export class SplitService {
     await this.splits.replaceAll(userId, transactionId, input.splits)
     const updated = await this.transactions.findById(userId, transactionId)
     if (!updated) throw NOT_FOUND()
-    return toTransactionDto(updated)
+    return toTransactionDto(updated, updated.splits)
   }
 
   async clear(userId: string, transactionId: string): Promise<Transaction> {
@@ -60,7 +60,7 @@ export class SplitService {
     await this.splits.setSinglePerson(userId, transactionId, self.id)
     const updated = await this.transactions.findById(userId, transactionId)
     if (!updated) throw NOT_FOUND()
-    return toTransactionDto(updated)
+    return toTransactionDto(updated, updated.splits)
   }
 
   private async assertPeopleExist(userId: string, personIds: string[]): Promise<void> {
