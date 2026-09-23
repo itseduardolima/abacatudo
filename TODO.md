@@ -397,9 +397,32 @@ type="date">`.
   ao vivo: cliquei em "Cinema" (sem categoria), selecionei "Lazer", o painel
   fechou e o badge atualizou na lista; conferido no Postgres que
   `categoryId` gravou de verdade.
-- Próximo: UI de divisão de transação entre pessoas (`split`), ou seguir no
-  backend (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de
-  movimentação, 8.4's job/e-mail).
+- **Alinhamento com o protótipo (2026-09-22, o de verdade: `docs/specs/06`)
+  (2026-09-23)** — usuário apontou que o front não estava batendo com o
+  desenho. Reconstruí a tela de transações como **Fatura de verdade**
+  (`08-fatura.dc.html`): hero escuro com "Meu nesta fatura" em lima gigante,
+  barra de progresso, tabela `Fatura do banco − Não é meu = Meu` (usa
+  `GET /invoice`, Sprint 4, que não tinha UI ainda), filtro em pílula
+  Todas/Meu/Não é meu, lista agrupada por dia (Hoje/Ontem/data), chip de
+  pessoa com avatar colorido (self sempre lima) em vez do `Badge` genérico.
+  Também: `BottomNav` flutuante fiel ao protótipo (pílula com margem de 16px,
+  só o item ativo mostra rótulo dentro de uma pílula lima, os demais só
+  ícone) — Início/Classificar (aponta pra `/transactions`, que já faz a
+  correção de categoria/pessoa)/Orçamento/Relatórios (os 2 últimos
+  desabilitados, sem tela ainda); e `IconButton` circular (44px, fundo
+  surface) no lugar do link de texto "← Início" em todas as telas, batendo
+  com o `.ib` do protótipo. **Gap consciente**: a Home continua provisória
+  (não é `07-inicio` — falta o dashboard de orçamento/ritmo, Sprint 5 no
+  front); o protótipo também tem uma **versão desktop** completa (`d0X-*`,
+  layout em grid, nav no topo) prevista em `docs/specs/05-componentizacao.md`
+  ("um único código, shell muda") — ainda não construída, decidir com o
+  usuário quando entrar. Verificado ao vivo: fatura com 3 lançamentos em 2
+  dias, filtro "Não é meu" isolando só a transação da Juliana, categorizar
+  "Cinema" via painel funcionando, botão de voltar circular igual ao
+  protótipo.
+- Próximo: UI de divisão de transação entre pessoas (`split`), versão
+  desktop (`AppShell` do spec 05), ou seguir no backend (Sprint 7 Insights e
+  IA, ou pendências: 5.4/5.5 rótulos de movimentação, 8.4's job/e-mail).
 
 ## Decisões já tomadas (2026-09-21)
 
