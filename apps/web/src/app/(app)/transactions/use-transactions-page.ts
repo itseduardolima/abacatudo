@@ -84,6 +84,10 @@ export function useTransactionsPage() {
         personName: person?.name ?? null,
         personIsSelf: person?.isSelf ?? false,
         personOthersIndex: person ? othersOrder.indexOf(person.id) : -1,
+        // Dividida: `personId` fica null (mesmo sinal que "nunca atribuído"), mas aqui já tem dono — mais
+        // de uma pessoa. Não é "Sem dono" (03-regras-negocio § Atribuição de pessoa: toda transação nasce
+        // Meu, então null sem split ainda significa Eu, não "sem dono" de verdade).
+        isSplit: tx.splits.length > 0,
         dayLabel: dayGroupLabel(tx.occurredAt),
       }
     })

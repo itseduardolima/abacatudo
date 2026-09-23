@@ -207,6 +207,10 @@ export default function TransactionsPage() {
                       >
                         {personInitial(tx.personName)}
                       </span>
+                    ) : tx.isSplit ? (
+                      <span className="rounded-pill bg-tint px-2.5 py-1 text-xs font-medium text-primary-ink">
+                        Dividido
+                      </span>
                     ) : !tx.personName ? (
                       <span className="rounded-pill px-2.5 py-1 text-xs text-muted shadow-hair">Sem dono</span>
                     ) : null}
