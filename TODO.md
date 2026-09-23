@@ -439,11 +439,30 @@ type="date">`.
   dia até o fim do mês. Verificado ao vivo: sem orçamento configurado tudo
   zero; configurando renda/fixos/poupança, os números batem à mão (22/30
   dias, esperado R$ 1.833,33, R$ 312,50/dia restante).
-- Próximo: reconstruir a Home (`07-inicio`) usando `/budget/pace` +
-  `/invoice/summary` (agora desbloqueada), versão desktop (`AppShell` do
-  spec 05), UI de divisão de transação entre pessoas (`split`), ou seguir no
-  backend (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de
-  movimentação, 8.4's job/e-mail).
+- **Front: Home 100% fiel ao protótipo (2026-09-23)** — `07-inicio`
+  reconstruída: segmentado "Cartão/Extrato" (só Cartão tem tela, Extrato
+  inerte até 5.2 ter UI), hero de ritmo (`GET /budget/pace`) com badge
+  "No ritmo"/"Fora do ritmo", número grande, barra com marcador "ritmo de
+  hoje" na posição `daysElapsed/daysInMonth`, "R$X abaixo/acima do ritmo",
+  teto, "Sobram" e "Por dia, até [data]". "Faturas de [mês]": uma linha por
+  cartão (`CardInvoiceRow`, um `useInvoice` por conta — não dá pra chamar
+  hook em loop), com barra mine/total e "vence dia N". **Bug achado e
+  corrigido nessa etapa**: o modificador de opacidade do Tailwind
+  (`bg-x/15`) não resolve quando a cor é uma CSS custom property — virava
+  transparente de verdade (track da barra e divisores sumiam, só sobrava o
+  preenchimento e o marcador soltos). Corrigido trocando por tokens
+  semânticos de verdade (`on-inverse-muted`, `on-inverse-hairline`,
+  `accent-tint-on-inverse` em `theme.css`) em vez de opacidade improvisada —
+  mesma correção aplicada retroativamente na Fatura, que tinha o mesmo bug.
+  **Gap consciente**: o nudge "N compras sem dono" do protótipo não entrou —
+  nosso modelo sempre atribui `personId` = self por padrão (não existe
+  "sem dono" de verdade nos dados; o mais próximo seria "sem categoria",
+  que já é resolvível na Fatura). Verificado ao vivo, incluindo comparação
+  pixel a pixel com a imagem do hero que o usuário mandou.
+- Próximo: versão desktop (`AppShell` do spec 05), UI de divisão de
+  transação entre pessoas (`split`), ou seguir no backend (Sprint 7
+  Insights e IA, ou pendências: 5.4/5.5 rótulos de movimentação, 8.4's
+  job/e-mail).
 
 ## Decisões já tomadas (2026-09-21)
 
