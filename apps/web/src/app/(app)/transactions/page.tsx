@@ -1,10 +1,10 @@
 'use client'
 
-import { Landmark } from 'lucide-react'
 import type { Segment } from './use-transactions-page'
 import { TransactionSheet } from './transaction-sheet'
 import { Button } from '@/components/ui/Button'
 import { BackIcon, IconButton } from '@/components/ui/IconButton'
+import { BankAvatar } from '@/components/finance/BankAvatar'
 import { MoneyText } from '@/components/finance/MoneyText'
 import { formatAccountType } from '@/lib/utils/format-account-type'
 import { currentMonthKey, formatMonthName } from '@/lib/utils/format-month'
@@ -57,9 +57,11 @@ export default function TransactionsPage() {
         </IconButton>
         {selectedAccount ? (
           <>
-            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-surface text-ink">
-              <Landmark size={20} strokeWidth={1.8} />
-            </span>
+            <BankAvatar
+              bankLogo={selectedAccount.bankLogo}
+              fallbackInitial={selectedAccount.name.charAt(0).toUpperCase()}
+              size={40}
+            />
             <div className="min-w-0 flex-1">
               <p className="truncate text-xl font-bold text-ink">{selectedAccount.name}</p>
               <p className="text-sm text-muted">{formatAccountType(selectedAccount.type)}</p>

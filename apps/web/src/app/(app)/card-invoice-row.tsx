@@ -2,6 +2,7 @@
 
 import type { Account } from '@gastos/shared'
 import Link from 'next/link'
+import { BankAvatar } from '@/components/finance/BankAvatar'
 import { MoneyText } from '@/components/finance/MoneyText'
 import { useInvoice } from '@/hooks/queries/use-invoice'
 
@@ -19,9 +20,7 @@ export function CardInvoiceRow({ account }: { account: Account }) {
     <Link href="/transactions" className="block border-b border-surface py-3.5 last:border-0">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-tint text-xs font-bold text-primary-ink">
-            {account.name.charAt(0).toUpperCase()}
-          </span>
+          <BankAvatar bankLogo={account.bankLogo} fallbackInitial={account.name.charAt(0).toUpperCase()} size={28} />
           <span className="font-semibold text-ink">{account.name}</span>
         </div>
         {account.dueDay && (
