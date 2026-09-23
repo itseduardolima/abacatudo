@@ -54,16 +54,31 @@ export const updateTransactionCategoryInputSchema = z
   .strict()
 export type UpdateTransactionCategoryInput = z.infer<typeof updateTransactionCategoryInputSchema>
 
+// Confere que "AAAA-MM-DD" é uma data de calendário de verdade (nunca só o formato) — sem isso, "2026-02-30"
+// passava batido e virava silenciosamente 2 de março (JS "rola" a data em vez de reclamar), e "2026-13-01"
+// virava Invalid Date, que só quebrava depois, na hora de gravar (500 em vez do 400 daqui).
+function isValidCalendarDate(year: number, month: number, day: number): boolean {
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+}
+
 // Lançamento manual (3.3): só vale pra conta MANUAL/IMPORT (a API rejeita conta PLUGGY — ela é escrita só
 // pelo sync). categoryId/personId só fazem sentido em conta CREDIT_CARD (03-regras-negocio § Escopo); a
 // API rejeita se vierem numa conta que não é cartão. occurredAt aceita data pura ("AAAA-MM-DD", o que um
-// <input type="date"> dá) ou datetime completo.
+// <input type="date"> dá) ou datetime completo — os dois validados como data de calendário real.
 export const createTransactionInputSchema = z
   .object({
     accountId: idSchema,
     kind: z.enum(['EXPENSE', 'INCOME']),
     amountCents: centsSchema.positive(),
-    occurredAt: z.string().regex(/^\d{4}-\d{2}-\d{2}(T.*)?$/, 'Informe uma data válida.'),
+    occurredAt: z.string().refine((value) => {
+      const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+      if (dateOnly) {
+        const [, year, month, day] = dateOnly
+        return isValidCalendarDate(Number(year), Number(month), Number(day))
+      }
+      return !Number.isNaN(new Date(value).getTime())
+    }, 'Informe uma data válida.'),
     description: z.string().trim().min(1, 'Informe uma descrição.').max(140),
     categoryId: idSchema.optional(),
     personId: idSchema.optional(),
