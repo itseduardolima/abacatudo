@@ -639,6 +639,21 @@ type="date">`.
   altura porque o card de benefício usa `h-full` dentro do item do
   carrossel (que já estica pra bater com o mais alto, o de ritmo) — não um
   `min-height` chutado.
+- **Nav reorganizada, a pedido do usuário.** "Configurar" (Contas, Pessoas,
+  Categorias, Gastos fixos, Renda) saiu do rodapé solto da Início e virou
+  a engrenagem na nav (`SettingsMenu`), abrindo um bottom sheet — mesmo
+  padrão do protótipo usado em "Conectar cartão" (`04-escolher-banco`: véu
+  escuro + folha com puxador subindo da base), não um popover de canto (a
+  primeira tentativa, rejeitada: "ficou ruim, siga o padrão do design").
+  "Orçamento" (ícone de alvo) saiu da nav — nunca teve tela própria.
+  Segundo item virou "Fatura" (era "Classificar"), ícone de recibo. Sair
+  também mudou de lugar: era e-mail + botão soltos no fim da Início, agora
+  é a última linha do mesmo bottom sheet — Início não mostra mais e-mail
+  nem tem botão de sair. Ícones da nav trocados de SVG desenhado à mão
+  para `lucide-react` (a pedido do usuário: "use lib pra esses ícones").
+  Token novo: `--color-scrim` (véu do bottom sheet) — mudança de
+  `tailwind.config.ts` exigiu restart do dev server pra pegar (gotcha já
+  conhecido, não é hot-reload).
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), UI de
   divisão de transação entre pessoas (`split`), ou seguir no backend
   (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de movimentação,
