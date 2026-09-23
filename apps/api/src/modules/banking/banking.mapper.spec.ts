@@ -105,12 +105,34 @@ describe('mapAccountFields', () => {
     const result = mapAccountFields(
       account({ creditData: { creditLimit: 5000, balanceCloseDate: '2026-09-20', balanceDueDate: '2026-09-27' } }),
     )
-    expect(result).toEqual({ type: 'CREDIT_CARD', closingDay: 20, dueDay: 27, creditLimitCents: 500000 })
+    expect(result).toEqual({
+      type: 'CREDIT_CARD',
+      closingDay: 20,
+      dueDay: 27,
+      creditLimitCents: 500000,
+      balanceCents: null,
+    })
   })
 
-  it('conta BANK vira CHECKING, sem campos de cartão', () => {
+  it('conta CREDIT nunca leva saldo, mesmo que o Pluggy mande um (a fatura é calculada à parte)', () => {
+    const result = mapAccountFields(account({ balance: 1234.5 }))
+    expect(result.balanceCents).toBeNull()
+  })
+
+  it('conta BANK vira CHECKING, sem campos de cartão, saldo em centavos', () => {
+    const result = mapAccountFields(account({ type: 'BANK', creditData: null, balance: 589.9 }))
+    expect(result).toEqual({
+      type: 'CHECKING',
+      closingDay: null,
+      dueDay: null,
+      creditLimitCents: null,
+      balanceCents: 58990,
+    })
+  })
+
+  it('conta BANK sem balance (Pluggy não mandou), saldo fica null', () => {
     const result = mapAccountFields(account({ type: 'BANK', creditData: null }))
-    expect(result).toEqual({ type: 'CHECKING', closingDay: null, dueDay: null, creditLimitCents: null })
+    expect(result.balanceCents).toBeNull()
   })
 })
 

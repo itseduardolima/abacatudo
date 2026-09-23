@@ -29,6 +29,9 @@ export const pluggyAccountSchema = z.object({
   id: z.string(),
   type: z.enum(['BANK', 'CREDIT']),
   name: z.string(),
+  // Só existe em BANK (conta de movimentação) — CREDIT tem seu próprio saldo devedor, calculado à parte
+  // pelo InvoiceService (fatura), nunca por aqui.
+  balance: z.number().nullable().optional(),
   creditData: z
     .object({
       creditLimit: z.number().nullable().optional(),
