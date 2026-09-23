@@ -37,7 +37,7 @@ export class AccountRepository {
     userId: string,
     externalAccountId: string,
     create: Omit<Prisma.AccountUncheckedCreateInput, 'userId' | 'externalAccountId'>,
-    update: Prisma.AccountUpdateInput,
+    update: Prisma.AccountUncheckedUpdateInput,
   ): Promise<Account> {
     return this.prisma.account.upsert({
       where: { userId_externalAccountId: { userId, externalAccountId } },

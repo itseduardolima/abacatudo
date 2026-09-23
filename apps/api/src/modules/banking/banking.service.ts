@@ -7,7 +7,7 @@ import { PersonRepository } from '../person/person.repository'
 import { normalizeMerchant } from '../rule/normalize-merchant'
 import { RuleRepository } from '../rule/rule.repository'
 import { BankingSyncRepository } from './banking-sync.repository'
-import { mapAccountFields, mapTransaction } from './banking.mapper'
+import { mapAccountFields, mapTransaction, reconnectWarningDays } from './banking.mapper'
 import { PluggyClient } from './pluggy/pluggy.client'
 import { PluggyItemRepository } from './pluggy-item.repository'
 
@@ -100,6 +100,37 @@ export class BankingService {
     return toConnectionDto(refreshed)
   }
 
+  // Reconectar (8.4): testado ao vivo contra o Pluggy real que PATCH no Item não é suportado pelo conector
+  // Meu Pluggy ("MeuPluggy item cant be updated") — diferente do que 07-integracao-bancaria assumia. Então
+  // reconectar cria um Item novo, igual o connect() original; Account/histórico não duplicam porque
+  // upsertFromSync já casa pela conta externa do Pluggy (estável entre Items, confirmado ao vivo com 2
+  // Items reais pro mesmo banco: mesma Account, mesmas 1674 transações, nunca dobrou).
+  async reconnect(userId: string, id: string): Promise<ConnectBankResponse> {
+    const oldItem = await this.items.findById(userId, id)
+    if (!oldItem) throw NOT_FOUND()
+
+    const { pluggyItemId, authorizeUrl } = await this.pluggy.createMeuPluggyItem()
+    const newItem = await this.items.create(userId, {
+      pluggyItemId,
+      institutionName: oldItem.institutionName,
+      status: 'WAITING_USER_INPUT',
+    })
+
+    // Revoga o item antigo, melhor esforço (mesma lógica do disconnect/8.5, já auto-recupera de um 404 de
+    // retry) — se falhar, o usuário fica com 2 items por um tempo, sem risco de dado, e ainda pode chamar
+    // DELETE nesse item antigo manualmente depois. Nunca bloqueia o reconectar em si, que já deu certo.
+    if (oldItem.status !== 'DISCONNECTED') {
+      try {
+        await this.pluggy.deleteItem(oldItem.pluggyItemId)
+        await this.items.update(userId, oldItem.id, { status: 'DISCONNECTED' })
+      } catch {
+        // melhor esforço — ver comentário acima.
+      }
+    }
+
+    return { id: newItem.id, authorizeUrl }
+  }
+
   private async runSync(userId: string, itemId: string): Promise<SyncResult> {
     const item = await this.items.findById(userId, itemId)
     if (!item) throw NOT_FOUND()
@@ -115,11 +146,15 @@ export class BankingService {
     for (const pluggyAccount of pluggyAccounts) {
       const fields = mapAccountFields(pluggyAccount)
       const isCreditCard = fields.type === 'CREDIT_CARD'
+      // pluggyItemId também no update: sem isso, uma conta que já existia (upsert bate no update, não no
+      // create) nunca troca de dono quando reconectar (8.4) cria um Item novo — ficava presa apontando pro
+      // Item antigo revogado, e disconnected/lastSyncAt (8.5/8.6) mentiam mesmo com o Item novo sincronizando
+      // em dia. Achado testando reconectar ao vivo com 2 Items reais pro mesmo banco.
       const account = await this.accounts.upsertFromSync(
         userId,
         pluggyAccount.id,
         { ...fields, name: pluggyAccount.name, source: 'PLUGGY', pluggyItemId: item.id },
-        fields,
+        { ...fields, pluggyItemId: item.id },
       )
       accountsSynced++
 
@@ -168,5 +203,6 @@ function toConnectionDto(row: PluggyItemRow): BankConnection {
     lastSyncAt: row.lastSyncAt?.toISOString() ?? null,
     lastErrorCode: row.lastErrorCode,
     createdAt: row.createdAt.toISOString(),
+    reconnectWarningDays: reconnectWarningDays(row.consentExpiresAt, new Date()),
   }
 }
