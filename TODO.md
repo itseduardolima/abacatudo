@@ -695,6 +695,16 @@ type="date">`.
   lugar do "Salvar" do protótipo: a escolha já salva na hora, não fica
   nada pendente pra salvar de verdade. `TransactionSheet` novo componente,
   `formatDateTimeLong` novo em `format-date.ts`.
+- **Bandeira do banco, escolhida pelo usuário.** `Account` ganhou `bankLogo`
+  (enum fechado: nubank/banco-do-brasil/picpay, nunca string livre) —
+  marca manual, nunca heurística por nome do banco. Logos de
+  `brand/bancos/` servidos em `apps/web/public/bancos/` (CSP `img-src
+'self'`, nunca imagem do Pluggy). `BankAvatar` novo componente
+  (DESIGN_SYSTEM § Logos de bancos: avatar redondo branco, logo a ~58%,
+  PicPay 50%; monograma Fog quando não escolhido) usado em Contas (toca
+  no avatar pra abrir o `BankLogoPicker`), cabeçalho da Fatura e linha de
+  fatura da Início. `AccountService.setBenefitAccount` virou `update`
+  (PATCH único pros dois campos editáveis, só mexe no que vier no body).
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), UI de
   divisão de transação entre pessoas (`split`), ou seguir no backend
   (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de movimentação,
