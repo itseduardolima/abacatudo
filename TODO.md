@@ -471,6 +471,31 @@ type="date">`.
   depois se vale a pena. Verificado ao vivo: 1440px mostra `TopNav` (sem
   `BottomNav`), 390px volta pra `BottomNav` flutuante (sem `TopNav`), nunca
   as duas juntas.
+- **Front: fluxo de conectar cartão (2026-09-23)** — usuário reparou que a
+  Home sem nenhum cartão não tinha a tela de onboarding do protótipo
+  (`03-inicio-vazio` → `04-escolher-banco` → `05-lendo` → `06-pessoas`).
+  Construído: Home sem cartão mostra o convite (`ConnectBankCard`, hero +
+  os 3 itens "app só lê"/"senha fica com o banco"/"Pix e débito no
+  Extrato"); "Conectar pelo banco" chama `POST /banking/items` e abre o
+  `authorizeUrl` **numa aba nova de verdade** — a lista de bancos e o login
+  são a tela hospedada do próprio Pluggy, nunca dentro do nosso app (por
+  isso a etapa "Conectar cartão" do protótipo não precisou de tela nossa).
+  Nossa aba vai pra `/connect-bank/[id]`, que faz o polling de
+  `GET /banking/items/:id` (sem webhook, mesmo padrão de `checkStatus`) e
+  mostra "Aguardando você autorizar.../Lendo suas compras…"; ao sincronizar
+  (`status=UPDATED`), invalida `accounts`/`transactions`/`budget-pace` e
+  entra numa etapa leve "Quem mais usa seus cartões?" (reaproveita os hooks
+  de pessoa já existentes: criar, arquivar). **Gap consciente**: o
+  protótipo mostra contagem ao vivo de compras lidas ("143 compras
+  encontradas") — nosso backend sincroniza tudo de uma vez numa chamada só
+  (sem progresso incremental do Pluggy), então a tela mostra um estado de
+  espera indeterminado, nunca um número inventado. Verificado ao vivo: o
+  clique em "Conectar pelo banco" abriu de verdade o OAuth do Pluggy numa
+  aba nova; sem completar a autorização real (não interajo com login de
+  banco), simulei a resposta `UPDATED` só no `fetch` do browser pra
+  confirmar a transição pra "Quem mais usa seus cartões" — criei "Mãe" de
+  verdade ali (API real), "Continuar" voltou pra Home, que corretamente
+  continuou "sem cartão" (nada foi sincronizado de verdade, como devia).
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), UI de
   divisão de transação entre pessoas (`split`), ou seguir no backend
   (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de movimentação,
