@@ -259,10 +259,42 @@ cardLast4])` — o mesmo final pode existir em contas diferentes, nunca é só
   `shared` linkado. Precisa `pnpm --filter shared build` e reiniciar o
   processo da API à mão, senão o schema Zod antigo continua valendo e a
   API rejeita o campo novo como "Unrecognized key".
-- **Sprint 6 fechada.** Próximo: Sprint 7 (Insights e IA) usando o `insight`
-  que nasceu na Etapa 4 da Sprint 5, ou alguma pendência de Sprint anterior
-  (3.3 lançamento manual, 5.4/5.5 rótulos de movimentação, 8.1-8.5 já
-  prontos, resta 8.4's job/e-mail se decidirmos a infra).
+- **Sprint 6 fechada.**
+- **Front iniciado (2026-09-23) — primeira tela de verdade: login (1.2)**. Até
+  aqui só backend, a pedido do usuário ("puxar dado de verdade é melhor
+  teste"); o DoD original (`docs/scrum/SPRINTS.md`) previa tela por sprint, e
+  agora começamos a repor isso, começando pela raiz de dependência (nenhuma
+  tela funciona sem sessão).
+  - `app/(public)/login` (form com `react-hook-form` sem resolver — validação
+    é sempre da API) e `app/(app)` (início provisório, só prova que a sessão
+    funciona: e-mail + sair). Componentes novos reaproveitáveis: `Input`
+    (erro de campo = texto exato da API, ícone + borda 2px danger) e
+    `InlineAlert` (erro de regra, ex. credenciais inválidas) — ambos com
+    teste de componente Cypress, seguindo o padrão de `Button`/`MoneyText`.
+    `middleware.ts` ganhou proteção de rota (ausência do cookie manda pro
+    login).
+  - **2 bugs achados só testando num Chrome de verdade** (não pega em
+    typecheck/lint/teste): (1) cookie de sessão velho (de um teste anterior
+    nesta mesma sessão do Chrome, já revogado no servidor) fazia a home
+    mostrar "Olá, undefined" em vez de mandar pro login — corrigido tratando
+    o erro 401 de `/auth/me` explicitamente (antes só tratava sucesso/
+    carregando). (2) a correção acima expôs um loop `/ → /login → /`: o
+    middleware original mandava de volta pra `/` só por ver o cookie
+    presente (nunca validava), então a home mandava pro login por 401 e o
+    middleware mandava de volta na hora. Corrigido tirando essa decisão do
+    middleware (que só pode ver "existe cookie", nunca "é válido") — quem
+    decide "já estou logado, não preciso ver o login" é a própria página,
+    depois de confirmar com `/auth/me` de verdade.
+  - Verificado ao vivo: e-mail/senha errados (mensagem exata da API no
+    `InlineAlert`), e-mail mal formado (erro de campo com foco automático),
+    login certo (redireciona, mostra o e-mail), logout (limpa cookie,
+    `/` depois disso manda pro login), e mobile (390×844, sem quebrar).
+  - `react-hook-form` novo em `apps/web` (só pacote, sem resolver — a spec
+    04-padroes-codigo já previa isso, só não estava instalado ainda).
+- Próximo: seguir telas sprint a sprint (a ordem de dependência aponta pra
+  contas/pessoas/categorias, Sprint 2), ou continuar no backend (Sprint 7
+  Insights e IA, ou pendências: 3.3 lançamento manual, 5.4/5.5 rótulos de
+  movimentação, 8.4's job/e-mail).
 
 ## Decisões já tomadas (2026-09-21)
 
