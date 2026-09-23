@@ -15,6 +15,7 @@ export function useLoginPage() {
   const login = useLogin()
   const me = useMe()
   const [ruleError, setRuleError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   // Já autenticado (sessão válida de verdade, não só cookie presente — o middleware não decide isso, ver
   // seu comentário) e caiu no /login mesmo assim: manda pra home em vez de mostrar o formulário à toa.
@@ -52,5 +53,13 @@ export function useLoginPage() {
     }
   })
 
-  return { register, errors, onSubmit, isPending: login.isPending, ruleError }
+  return {
+    register,
+    errors,
+    onSubmit,
+    isPending: login.isPending,
+    ruleError,
+    showPassword,
+    toggleShowPassword: () => setShowPassword((value) => !value),
+  }
 }

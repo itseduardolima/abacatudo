@@ -1,16 +1,19 @@
-import { forwardRef, type InputHTMLAttributes } from 'react'
+import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
   // Erro de campo é sempre o texto exato que a API devolveu — nunca inventado no cliente
   // (04-padroes-codigo § Formulários).
   error?: string
+  // Ícone de ação dentro do campo (ex.: mostrar/ocultar senha, protótipo 01-login). Não aparece junto do
+  // ícone de erro — erro sempre tem prioridade visual.
+  trailingAction?: { label: string; icon: ReactNode; onClick: () => void }
 }
 
 // Input Field do design system: raio card, borda 1px border (foco: border-strong, sem anel de brilho).
 // Erro: borda 2px danger + ícone no campo; mensagem abaixo, danger 500 12px (DESIGN_SYSTEM § Validação).
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { label, error, id, className = '', ...rest },
+  { label, error, trailingAction, id, className = '', ...rest },
   ref,
 ) {
   const inputId = id ?? rest.name
@@ -28,10 +31,24 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           aria-invalid={error ? true : undefined}
           aria-describedby={errorId}
           className={`min-h-control w-full rounded-card border bg-canvas px-4 text-base text-ink placeholder:text-muted focus:outline-none ${
-            error ? 'border-2 border-danger pr-10' : 'border-border focus:border-border-strong'
+            error
+              ? 'border-2 border-danger pr-10'
+              : trailingAction
+                ? 'border-border pr-11 focus:border-border-strong'
+                : 'border-border focus:border-border-strong'
           } ${className}`}
           {...rest}
         />
+        {!error && trailingAction && (
+          <button
+            type="button"
+            onClick={trailingAction.onClick}
+            aria-label={trailingAction.label}
+            className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center justify-center text-muted"
+          >
+            {trailingAction.icon}
+          </button>
+        )}
         {error && (
           <svg
             aria-hidden="true"
