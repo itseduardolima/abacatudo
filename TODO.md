@@ -337,11 +337,28 @@ account-type.ts` traduz o enum pro rótulo em português.
   Verificado ao vivo: renomear "Lazer" → "Lazer e hobbies" (campo já vem
   preenchido), arquivar "Outros" (some da lista), as 13 categorias do seed
   aparecendo certas.
-- Próximo: continuar no backend (Sprint 7 Insights e IA, ou pendências: 3.3
-  lançamento manual, 5.4/5.5 rótulos de movimentação, 8.4's job/e-mail), ou
-  seguir o front pra Sprint 3 (classificação: corrigir pessoa/categoria,
-  dividir, regras — telas mais complexas, sobre a lista de transações que
-  ainda não existe).
+- **3.3 concluída (2026-09-23) — Sprint 2 fechada de verdade**: `POST
+/transactions` lança à mão. Só conta `MANUAL`/`IMPORT` (`422
+MANUAL_ENTRY_NOT_ALLOWED` numa conta `PLUGGY` — ela só é escrita pelo
+  sync). Categoria/pessoa só em `CREDIT_CARD` (`400
+CATEGORY_PERSON_ONLY_ON_CARD` fora disso, igual o sync já filtra); sem
+  pessoa informada num cartão, cai no padrão "Meu" (mesmo self do sync). A
+  mesma linha aparece em `/transactions` (cartão) ou `/movements` (resto)
+  pelo tipo da conta, sem endpoint separado — como tudo mais nessa tabela.
+  Aproveitei pra mover `dayFromDateString` de `banking.mapper.ts` pra
+  `common/date/timezone.ts` (não é coisa de Pluggy, é semântica de data do
+  produto) — reaproveitado aqui pra aceitar data pura de um futuro `<input
+type="date">`.
+  Verificado ao vivo: lançamento em cartão (personId default = self),
+  lançamento em carteira (sem categoria/pessoa), rejeição de pessoa numa
+  conta não-cartão, rejeição numa conta Pluggy, separação certa entre
+  `/transactions` e `/movements`, isolamento entre 2 usuários (404 na conta
+  alheia).
+- Próximo: continuar no backend (Sprint 7 Insights e IA, ou pendências:
+  5.4/5.5 rótulos de movimentação, 8.4's job/e-mail), ou seguir o front pra
+  Sprint 3 (classificação: corrigir pessoa/categoria, dividir, regras — e
+  agora já dá pra testar com dado de verdade via lançamento manual, sem
+  precisar do Pluggy).
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -452,7 +469,7 @@ account-type.ts` traduz o enum pro rótulo em português.
       dado passou a ser a API do Pluggy direto, não arquivo. Ver Sprint 6.
 - [x] 3.4 — Lista e filtros: básico pronto (`GET /transactions?month=`, `GET /movements?month=`, filtro por
       mês em America/Manaus); filtro por categoria/pessoa/texto fica pra quando existir UI pra isso
-- [ ] 3.3 — Lançamento manual (deixado por último de propósito)
+- [x] 3.3 — Lançamento manual, testado ao vivo
 - [x] 5.1 — `Account.type` decide o escopo (sem campo de canal por lançamento); `TransactionRepository`
       (só `CREDIT_CARD`) e `MovementRepository` (o resto), mesma tabela `Transaction`, filtros diferentes
 
