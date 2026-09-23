@@ -496,10 +496,43 @@ type="date">`.
   confirmar a transição pra "Quem mais usa seus cartões" — criei "Mãe" de
   verdade ali (API real), "Continuar" voltou pra Home, que corretamente
   continuou "sem cartão" (nada foi sincronizado de verdade, como devia).
-- Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), UI de
-  divisão de transação entre pessoas (`split`), ou seguir no backend
-  (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de movimentação,
-  8.4's job/e-mail).
+- **Ritmo repensado com dado bancário real (2026-09-23)** — usuário conectou
+  um Nubank de verdade e reparou que "Meu em setembro" (R$339,34) não batia
+  com a fatura real do banco (R$589,89). Investigando ao vivo (query direta
+  no Postgres com `set_config('app.user_id', ...)`, mesmo truque de sempre
+  pra RLS), achei a causa: a fatura estava sendo calculada por **mês
+  calendário** (`occurredAt`), mas o spec já dizia que deveria agrupar por
+  `billId` de verdade — "as pendentes (sem billId) pertencem à fatura
+  aberta" (03-regras-negocio). Bug meu, não do usuário. Corrigido:
+  - `InvoiceService`: conta `PLUGGY` usa `billId IS NULL` (fatura aberta de
+    verdade); conta `MANUAL`/`IMPORT` (sem banco por trás, `billId` sempre
+    null) continua no mês calendário, única aproximação possível.
+    `getSummary` agora soma a fatura aberta de cada cartão (não mais um
+    único `month`).
+  - **Gastos fixos** (novo): model `FixedExpense` (nome + valor, RLS,
+    arquivar), `GET/POST/PATCH /fixed-expenses`, tela
+    `/settings/fixed-expenses` — lista + criar + remover.
+  - **Ritmo redesenhado**: Teto = renda informada direto (não mais a
+    fórmula renda+benefício−fixos−poupança — o usuário quer os dois
+    conceitos separados). Gasto = fatura aberta somada em todos os
+    cartões + gastos fixos ativos. Removido o campo "Por dia, até..." do
+    hero (a pedido do usuário); "Sobram" ficou sozinho, largura cheia.
+  - **Tela de Renda** (nova, `/settings/income`) — faltava completamente
+    (só dava pra configurar via API); agora edita renda mensal e renda de
+    benefícios (a segunda ainda digitada à mão).
+  - `Input` ganhou `trailingAction` reaproveitado; `parseMoneyInput` novo
+    em `format-money.ts` (converte "1.200,50" digitado pra centavos, só
+    formato, nunca validação — quem valida é a API).
+    **Gap consciente (Fase 4, adiada)**: "renda de benefícios" deveria vir do
+    saldo real da conta InfinitePay via Pluggy — hoje não guardamos saldo de
+    conta nenhuma (só fatura de cartão), então fica manual por enquanto;
+    decidir formato (aba própria?) depois. Verificado ao vivo contra o
+    Nubank real do usuário: teto e gasto corretos após configurar renda,
+    criar/remover gasto fixo refletindo no hero na hora.
+- Próximo: Fase 4 (saldo InfinitePay/benefício), redesenho por tela do
+  desktop (grid 2 colunas, `d0X-*`), UI de divisão de transação entre
+  pessoas (`split`), ou seguir no backend (Sprint 7 Insights e IA, ou
+  pendências: 5.4/5.5 rótulos de movimentação, 8.4's job/e-mail).
 
 ## Decisões já tomadas (2026-09-21)
 
