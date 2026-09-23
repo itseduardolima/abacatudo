@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common'
+import { installmentGroupKey } from '../../common/installment-group'
 import { PRISMA, type PrismaService } from '../../prisma/prisma.client'
 import type { InvoiceRow } from './invoice.mapper'
 
@@ -49,12 +50,14 @@ function installmentOf(row: {
   installmentTotal: number | null
 }): InvoiceRow['installment'] {
   if (row.installmentNumber == null || row.installmentTotal == null) return null
-  // O texto da parcela ("Compra 2/6") é único por linha — tira o "N/M" do fim pra achar as outras
-  // parcelas da mesma compra, junto com a data (todas as parcelas nascem na mesma compra) e o total de
-  // parcelas (evita juntar duas compras diferentes que por acaso têm o mesmo nome no mesmo dia).
-  const baseDescription = row.description.replace(/\s*\d+\/\d+$/, '')
-  const groupKey = `${baseDescription}|${row.occurredAt.toISOString()}|${row.installmentTotal}`
-  return { groupKey, number: row.installmentNumber }
+  return {
+    groupKey: installmentGroupKey({
+      description: row.description,
+      occurredAt: row.occurredAt,
+      installmentTotal: row.installmentTotal,
+    }),
+    number: row.installmentNumber,
+  }
 }
 
 function toInvoiceRow(
