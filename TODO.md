@@ -734,10 +734,25 @@ type="date">`.
   PLUGGY); afetava várias outras parcelas mais antigas também
   (Mastercel, Gocase, Playstation, Vivoeasyanual), todas voltaram a
   aparecer.
-- Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), UI de
-  divisão de transação entre pessoas (`split`), ou seguir no backend
-  (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de movimentação,
-  8.4's job/e-mail).
+- **UI de dividir compra construída (2026-09-23)**: sheet de transação ganhou
+  a view `split` (padrão do protótipo 11-dividir) — modo Igualmente/Por
+  valor, grade de pessoas pra "quem entra", preview calculado pela API
+  (nunca no cliente), soma validada antes de salvar. Usa os endpoints do
+  backend (Sprint 3 Etapa 3) que já existiam. Junto, corrigido um bug de
+  cache achado ao vivo: mudar pessoa/split de uma transação só atualizava o
+  card de "Meu"/"Não é meu" depois de dar refresh manual — as mutações
+  agora invalidam `invoice` e `budget-pace` além da lista de transações.
+  Verificado ao vivo: R$17,45 dividido em R$8,73+R$8,72 entre duas pessoas,
+  card da Fatura caiu de R$130,04 pra R$121,32 na hora, sem refresh.
+- **Máscara de valor em todo input de dinheiro (2026-09-23)**: `MoneyInput`
+  (novo componente) reformata o texto a cada tecla digitada (preenche da
+  direita pra esquerda, como o padrão brasileiro de caixa). Aplicado em
+  Renda, Gastos fixos e nos campos de valor da divisão de compra. Conferido
+  também que todo input já usa 16px (`text-base` do Tailwind) — não tem
+  zoom indesejado no iOS, nenhuma mudança necessária aí.
+- Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou seguir
+  no backend (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de
+  movimentação, 8.4's job/e-mail).
 
 ## Decisões já tomadas (2026-09-21)
 
