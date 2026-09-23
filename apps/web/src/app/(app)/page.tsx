@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { Logo } from '@/components/ui/Logo'
 import { useHomePage } from './use-home-page'
@@ -15,6 +16,9 @@ export default function HomePage() {
       <section>
         <h1 className="display-number text-[2.5rem] text-ink">{isLoadingMe ? 'Carregando…' : `Olá, ${email}`}</h1>
         <p className="mt-2 text-text">As telas do dia a dia entram sprint a sprint a partir daqui.</p>
+        <Link href="/accounts" className="mt-4 inline-block text-text underline underline-offset-4">
+          Contas
+        </Link>
       </section>
       <Button variant="outline" state={isLoggingOut ? 'loading' : 'idle'} onClick={() => void onLogout()}>
         Sair
