@@ -523,12 +523,12 @@ type="date">`.
   - `Input` ganhou `trailingAction` reaproveitado; `parseMoneyInput` novo
     em `format-money.ts` (converte "1.200,50" digitado pra centavos, só
     formato, nunca validação — quem valida é a API).
-    **Gap consciente (Fase 4, adiada)**: "renda de benefícios" deveria vir do
-    saldo real da conta InfinitePay via Pluggy — hoje não guardamos saldo de
-    conta nenhuma (só fatura de cartão), então fica manual por enquanto;
-    decidir formato (aba própria?) depois. Verificado ao vivo contra o
-    Nubank real do usuário: teto e gasto corretos após configurar renda,
-    criar/remover gasto fixo refletindo no hero na hora.
+    **Gap fechado (Fase 4, ver entrada de 2026-09-23 mais abaixo)**: "renda
+    de benefícios" agora vem do saldo real de uma conta InfinitePay/CHECKING
+    via Pluggy quando o usuário marca essa conta na tela de contas; sem
+    conta marcada, continua manual. Verificado ao vivo contra o Nubank real
+    do usuário: teto e gasto corretos após configurar renda, criar/remover
+    gasto fixo refletindo no hero na hora.
 - **Pagamento antecipado abate a fatura aberta (2026-09-23)** — usuário
   reparou que o valor (R$3.695,77) continuava longe do real (R$589,89) e
   explicou: já tinha adiantado pagamentos. Achado: `CARD_PAYMENT` era
@@ -594,10 +594,23 @@ type="date">`.
   que a API de transações da Pluggy ainda não sincronizou (confirmado:
   refiz o sync manual e ela continuou ausente — atraso do lado da
   Pluggy, não bug nosso). Considero essa etapa fechada.
-- Próximo: Fase 4 (saldo InfinitePay/benefício), redesenho por tela do
-  desktop (grid 2 colunas, `d0X-*`), UI de divisão de transação entre
-  pessoas (`split`), ou seguir no backend (Sprint 7 Insights e IA, ou
-  pendências: 5.4/5.5 rótulos de movimentação, 8.4's job/e-mail).
+- **Fase 4 (saldo InfinitePay/benefício) implementada.** `Account` ganhou
+  `balanceCents` (só populado em CHECKING pelo sync do Pluggy — CREDIT_CARD
+  nunca leva saldo, a fatura é calculada à parte) e `isBenefitAccount` (flag
+  manual, marcada na tela de contas; só uma conta por vez, sempre CHECKING —
+  `AccountService.setBenefitAccount` desmarca a anterior e rejeita cartão
+  com 422). Decisão de produto (perguntada ao usuário, não inferida):
+  quando existe conta marcada, "Renda de benefícios" em `/settings/income`
+  vira só leitura e usa o saldo sincronizado automaticamente em vez do
+  valor digitado à mão; sem conta marcada, continua manual como antes.
+  Verificado ao vivo contra o Nubank real do usuário: sync popula
+  `balanceCents`, o toggle na tela de contas reflete na tela de renda,
+  desmarcar volta a ser editável. Deixei a conta do usuário desmarcada ao
+  final (era só teste — ele marca se quiser usar de verdade).
+- Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), UI de
+  divisão de transação entre pessoas (`split`), ou seguir no backend
+  (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de movimentação,
+  8.4's job/e-mail).
 
 ## Decisões já tomadas (2026-09-21)
 
