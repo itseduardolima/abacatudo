@@ -16,7 +16,7 @@ export default function HomePage() {
     useHomePage()
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-[420px] flex-col gap-6 px-4 pb-28 pt-8">
+    <main className="mx-auto flex min-h-screen max-w-[420px] flex-col gap-6 px-4 pb-28 md:pb-10 pt-8">
       <div className="flex items-center justify-between">
         <div className="inline-flex gap-1 rounded-pill bg-surface p-1">
           <span className="rounded-pill bg-primary px-4 py-1.5 text-sm font-semibold text-primary-ink">Cartão</span>

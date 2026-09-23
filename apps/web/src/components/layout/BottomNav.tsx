@@ -21,7 +21,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-4 bottom-4 z-10 mx-auto flex h-16 max-w-[388px] items-center gap-1 rounded-pill bg-surface p-2 shadow-hair"
+      className="fixed inset-x-4 bottom-4 z-10 mx-auto flex h-16 max-w-[388px] items-center gap-1 rounded-pill bg-surface p-2 shadow-hair md:hidden"
       style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       {LINKS.map(({ href, label, icon: Icon }) => {

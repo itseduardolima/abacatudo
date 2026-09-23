@@ -41,7 +41,7 @@ export default function TransactionsPage() {
   const selectedAccount = cardAccounts.find((account) => account.id === selectedAccountId)
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-[420px] flex-col gap-4 px-4 pb-28 pt-8">
+    <main className="mx-auto flex min-h-screen max-w-[420px] flex-col gap-4 px-4 pb-28 md:pb-10 pt-8">
       <div className="flex items-center gap-3">
         <IconButton href="/">
           <BackIcon />
