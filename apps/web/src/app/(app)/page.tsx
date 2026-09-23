@@ -22,6 +22,9 @@ export default function HomePage() {
         <Link href="/settings/people" className="mt-2 block text-text underline underline-offset-4">
           Pessoas
         </Link>
+        <Link href="/settings/categories" className="mt-2 block text-text underline underline-offset-4">
+          Categorias
+        </Link>
       </section>
       <Button variant="outline" state={isLoggingOut ? 'loading' : 'idle'} onClick={() => void onLogout()}>
         Sair
