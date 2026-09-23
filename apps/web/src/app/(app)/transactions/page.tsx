@@ -178,7 +178,9 @@ export default function TransactionsPage() {
               </div>
               <div className="flex flex-shrink-0 items-center gap-2">
                 {tx.kind === 'CARD_PAYMENT' ? (
-                  <MoneyText cents={-tx.amountCents} className="!text-primary-ink" />
+                  <span className="rounded-pill bg-tint px-2.5 py-1">
+                    <MoneyText cents={-tx.amountCents} className="!text-primary-ink" />
+                  </span>
                 ) : (
                   <>
                     <MoneyText cents={tx.kind === 'REFUND' ? -tx.amountCents : tx.amountCents} />
