@@ -69,15 +69,22 @@ export function useCategoriesPage() {
     isLoadingCategories: categories.isPending,
     isFormOpen,
     editing,
+    // Trocar de alvo sem passar por "Cancelar" (a lista continua clicável com o form aberto) também precisa
+    // invalidar a submissão em andamento e limpar o erro da tentativa anterior — senão um erro de regra de
+    // "Nova categoria" ficava colado embaixo de "Renomear categoria" depois de clicar direto na lista.
     openCreateForm: () => {
+      submissionRef.current++
       setEditing(null)
       reset({ name: '' })
       setIsFormOpen(true)
+      setRuleError(null)
     },
     openEditForm: (category: Category) => {
+      submissionRef.current++
       setEditing(category)
       reset({ name: category.name })
       setIsFormOpen(true)
+      setRuleError(null)
     },
     closeForm,
     register,
