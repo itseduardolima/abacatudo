@@ -7,7 +7,7 @@ import { useHomePage } from './use-home-page'
 import { Button } from '@/components/ui/Button'
 import { Logo } from '@/components/ui/Logo'
 import { MoneyText } from '@/components/finance/MoneyText'
-import { formatLastDayOfMonth, formatMonthName } from '@/lib/utils/format-month'
+import { formatMonthName } from '@/lib/utils/format-month'
 
 // Home fiel ao protótipo: sem cartão conectado mostra o convite pra conectar (03-inicio-vazio); com
 // cartão, o hero de ritmo (HU 7.4, `/budget/pace`) + faturas do mês (`/invoice` por cartão) do 07-inicio.
@@ -91,19 +91,11 @@ export default function HomePage() {
 
           <div className="my-4 h-px bg-on-inverse-hairline" />
 
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <p className="text-sm text-on-inverse-muted">Sobram</p>
-              <p className="mt-1 text-xl font-bold text-on-inverse">
-                <MoneyText cents={pace.remainingCents} className="!text-on-inverse" />
-              </p>
-            </div>
-            <div className="flex-1">
-              <p className="text-sm text-on-inverse-muted">Por dia, até {formatLastDayOfMonth(pace.month)}</p>
-              <p className="mt-1 text-xl font-bold text-on-inverse">
-                <MoneyText cents={pace.perDayRemainingCents} className="!text-on-inverse" />
-              </p>
-            </div>
+          <div>
+            <p className="text-sm text-on-inverse-muted">Sobram</p>
+            <p className="mt-1 text-xl font-bold text-on-inverse">
+              <MoneyText cents={pace.remainingCents} className="!text-on-inverse" />
+            </p>
           </div>
         </div>
       )}
@@ -129,6 +121,12 @@ export default function HomePage() {
         </Link>
         <Link href="/settings/categories" className="text-text underline underline-offset-4">
           Categorias
+        </Link>
+        <Link href="/settings/fixed-expenses" className="text-text underline underline-offset-4">
+          Gastos fixos
+        </Link>
+        <Link href="/settings/income" className="text-text underline underline-offset-4">
+          Renda
         </Link>
       </section>
 
