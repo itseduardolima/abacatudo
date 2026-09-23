@@ -705,6 +705,20 @@ type="date">`.
   no avatar pra abrir o `BankLogoPicker`), cabeçalho da Fatura e linha de
   fatura da Início. `AccountService.setBenefitAccount` virou `update`
   (PATCH único pros dois campos editáveis, só mexe no que vier no body).
+- **Dois bugs achados testando a fatura do "gold" ao vivo.** (1) Lista de
+  lançamentos mostrava TODAS as parcelas de uma compra parcelada (1/3,
+  2/3, 3/3 juntas), não só a da vez — mesmo bug já corrigido no cálculo
+  da fatura (Fase 4), mas ali na lista, não: todas as parcelas
+  compartilham a mesma `occurredAt` (data da compra), então caem no
+  mesmo mês calendário juntas. `installmentGroupKey` extraído pra
+  `common/installment-group.ts` (fonte única entre InvoiceRepository e
+  TransactionRepository — já divergiu uma vez, ver histórico da Fase 4).
+  (2) "Pagamento recebido" (CARD_PAYMENT) aparecia igual a uma compra
+  normal na lista — sem sinal, "Sem categoria", avatar de pessoa, nada
+  indicava que era pagamento de fatura. Agora vem com sinal negativo,
+  "Pagamento da fatura" no lugar da categoria, sem avatar; no sheet de
+  detalhe, "Quem gastou"/"Categoria" somem pra essa linha (atribuir isso
+  a um pagamento não faz sentido).
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), UI de
   divisão de transação entre pessoas (`split`), ou seguir no backend
   (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de movimentação,
