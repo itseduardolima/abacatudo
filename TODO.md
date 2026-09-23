@@ -750,6 +750,35 @@ type="date">`.
   Renda, Gastos fixos e nos campos de valor da divisão de compra. Conferido
   também que todo input já usa 16px (`text-base` do Tailwind) — não tem
   zoom indesejado no iOS, nenhuma mudança necessária aí.
+- **Logo do InfinitePay (2026-09-23)**: adicionado ao `bankLogoSchema` e à
+  lista de opções do `BankLogoPicker`, com o SVG oficial em
+  `apps/web/public/bancos/infinitepay.svg`. Verificado ao vivo: selecionado
+  numa conta InfinitePay real, avatar atualizou na hora em Contas.
+- **Auditoria de segurança (2026-09-23)**: rodado o checklist das 5
+  categorias (isolamento por usuário, permissão no navegador, IDOR, chaves
+  expostas, XSS) sobre `apps/api`/`apps/web`. Nenhum achado crítico/alto/
+  médio. Duas observações de baixa severidade registradas (não corrigidas
+  por não serem exploráveis hoje): `auth.repository.ts` `touchSession`/
+  `revokeSession` sem `userId` no where (seguro porque só rodam depois do
+  token já validado, mas sem teste que trave essa invariante); e
+  `docker-compose.yml` com senha default fraca só de dev, protegida por
+  `scripts/deploy-check.sh` mas não chamada automaticamente por
+  `docker compose up`.
+- **Bug real achado conectando o Banco do Brasil pela primeira vez
+  (2026-09-23)**: pagamento de fatura do BB aparecia na lista como uma
+  compra comum ("Sem categoria", sem chip verde) — o `resolveKind` só
+  reconhecia pagamento pelo `categoryId` "05100000" do Nubank, mas o BB
+  manda uma categoria diferente e não-exclusiva por canal de pagamento
+  (Cash, Transferência interna, PIX). Corrigido usando
+  `operationType === "PAGAMENTO_FATURA"` (visto na prática em ambos os
+  bancos, e distinto do "PAGAMENTO" genérico de uma parcela comum) como
+  sinal adicional. Verificado ao vivo: as 61 linhas "PGTO..." do BB
+  viraram "Pagamento da fatura" com chip verde depois de um novo sync.
+- **Bug achado no mesmo teste: transação dividida aparecia "Sem dono" na
+  lista** — `personId` null é o mesmo sinal tanto pra "nunca atribuído"
+  quanto pra "dividido entre pessoas" (`Split`), e a lista só tratava o
+  primeiro caso. Agora mostra um chip "Dividido" quando a transação tem
+  `splits`. Verificado ao vivo numa compra parcelada já dividida.
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou seguir
   no backend (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de
   movimentação, 8.4's job/e-mail).
