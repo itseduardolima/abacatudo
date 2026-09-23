@@ -291,10 +291,28 @@ cardLast4])` — o mesmo final pode existir em contas diferentes, nunca é só
     `/` depois disso manda pro login), e mobile (390×844, sem quebrar).
   - `react-hook-form` novo em `apps/web` (só pacote, sem resolver — a spec
     04-padroes-codigo já previa isso, só não estava instalado ainda).
-- Próximo: seguir telas sprint a sprint (a ordem de dependência aponta pra
-  contas/pessoas/categorias, Sprint 2), ou continuar no backend (Sprint 7
-  Insights e IA, ou pendências: 3.3 lançamento manual, 5.4/5.5 rótulos de
-  movimentação, 8.4's job/e-mail).
+- **Front: tela de Contas (2026-09-23)** — `app/(app)/accounts`: lista +
+  criar (nome + tipo; campos só de cartão — fechamento/vencimento/limite —
+  ficam pra uma próxima etapa, não bloqueiam ter a conta). Componente `Badge`
+  novo (pílula, mapeado no design system), com teste Cypress. `format-
+account-type.ts` traduz o enum pro rótulo em português.
+  **Lição de ambiente (não é bug do app)**: rodar `pnpm build` (build de
+  produção) com o `next dev` no ar ao mesmo tempo corrompe o `.next`
+  compartilhado pelos dois — a próxima página pedida pelo dev server vira
+  `503`/`ENOENT` num chunk que o build de produção sobrescreveu. Sintoma:
+  página sem estilo nenhum e a query nunca resolve ("Carregando…" preso,
+  já que o JS do React nunca terminou de carregar pra hidratar). Correção:
+  nunca rodar os dois ao mesmo tempo contra o mesmo `.next`; se acontecer,
+  `rm -rf apps/web/.next` e reiniciar o `next dev`.
+  Verificado ao vivo: criar 2 contas (cartão e carteira), lista atualiza sem
+  reload, nome vazio rejeitado com a mensagem exata da API, sobrevive a um
+  reload completo da página.
+- Próximo: seguir telas sprint a sprint (Pessoas/Categorias, provavelmente
+  dentro de Configurações — a spec 04-padroes-codigo só reserva rota própria
+  pra `accounts/`; `people/[id]` é só a visão informativa de gasto por
+  pessoa, não CRUD), ou continuar no backend (Sprint 7 Insights e IA, ou
+  pendências: 3.3 lançamento manual, 5.4/5.5 rótulos de movimentação, 8.4's
+  job/e-mail).
 
 ## Decisões já tomadas (2026-09-21)
 
