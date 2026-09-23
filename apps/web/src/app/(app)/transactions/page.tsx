@@ -72,26 +72,26 @@ export default function TransactionsPage() {
 
       {selectedAccount && invoice && (
         <div className="rounded-card-lg bg-inverse px-5 py-6 text-on-inverse">
-          <p className="text-xs text-on-inverse/70">Meu nesta fatura — {selectedAccount.name}</p>
+          <p className="text-xs text-on-inverse-muted">Meu nesta fatura — {selectedAccount.name}</p>
           <p className="display-number mt-2 text-[2.5rem] text-on-inverse-accent">
             <MoneyText cents={invoice.mineCents} className="!text-on-inverse-accent" />
           </p>
-          <div className="mt-4 h-3.5 overflow-hidden rounded-pill bg-on-inverse/15">
+          <div className="mt-4 h-3.5 overflow-hidden rounded-pill bg-on-inverse-hairline">
             <div
               className="h-full rounded-pill bg-on-inverse-accent"
               style={{ width: `${invoice.totalCents > 0 ? (invoice.mineCents / invoice.totalCents) * 100 : 0}%` }}
             />
           </div>
-          <div className="mt-4 flex flex-col gap-2 rounded-card bg-canvas/10 px-4 py-3 text-sm">
+          <div className="mt-4 flex flex-col gap-2 rounded-card bg-on-inverse-hairline px-4 py-3 text-sm">
             <div className="flex justify-between">
               <span>Fatura do banco</span>
               <MoneyText cents={invoice.totalCents} className="!text-on-inverse" />
             </div>
-            <div className="flex justify-between text-on-inverse/80">
+            <div className="flex justify-between text-on-inverse-muted">
               <span>− Não é meu</span>
               <MoneyText cents={invoice.notMineCents} className="!text-on-inverse" />
             </div>
-            <div className="flex justify-between border-t border-on-inverse/15 pt-2 font-semibold text-on-inverse-accent">
+            <div className="flex justify-between border-t border-on-inverse-hairline pt-2 font-semibold text-on-inverse-accent">
               <span>= Meu</span>
               <MoneyText cents={invoice.mineCents} className="!text-on-inverse-accent" />
             </div>

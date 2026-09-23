@@ -28,6 +28,12 @@
   --color-inverse-2: var(--color-spruce);
   --color-on-inverse: var(--color-paper);
   --color-on-inverse-accent: var(--color-lime-voltage);
+  /* Overlays sobre fundo escuro (hero do ritmo, DESIGN_SYSTEM § Cartão de ritmo): tokens próprios em vez
+     de modificador de opacidade do Tailwind, que não resolve com cor em CSS custom property (vira
+     transparente — bug visto ao vivo). */
+  --color-on-inverse-muted: rgba(255, 255, 255, 0.72);
+  --color-on-inverse-hairline: rgba(255, 255, 255, 0.16);
+  --color-accent-tint-on-inverse: rgba(159, 232, 112, 0.16);
   --color-border: var(--color-pebble);
   --color-border-strong: var(--color-forest-ink);
   --color-accent: var(--color-signal-blue);
