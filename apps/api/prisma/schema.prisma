@@ -118,6 +118,12 @@ model Account {
   closingDay        Int?
   dueDay            Int?
   creditLimitCents  Int?
+  // Saldo sincronizado pelo Pluggy (Fase 4) — só populado em CHECKING via runSync; conta MANUAL/IMPORT
+  // nunca tem saldo de verdade, fica null.
+  balanceCents      Int?
+  // Marca manual do usuário (tela de contas), nunca por heurística de nome de banco — TODO.md/Fase 4: só
+  // uma conta por vez pode ser a "conta de benefício" (AccountService garante isso).
+  isBenefitAccount  Boolean       @default(false)
   pluggyItemId      String?
   externalAccountId String?
   archivedAt        DateTime?

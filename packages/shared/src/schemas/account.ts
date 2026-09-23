@@ -20,6 +20,11 @@ export const accountSchema = z
     closingDay: z.number().int().nullable(),
     dueDay: z.number().int().nullable(),
     creditLimitCents: centsSchema.nullable(),
+    // Saldo sincronizado pelo Pluggy (Fase 4, TODO.md) — sempre null pra conta MANUAL/IMPORT.
+    balanceCents: centsSchema.nullable(),
+    // Marca manual do usuário: "renda de benefícios" usa o saldo desta conta em vez do valor digitado
+    // à mão (Fase 4). Só uma conta por usuário fica marcada por vez.
+    isBenefitAccount: z.boolean(),
     archivedAt: z.string().datetime().nullable(),
     createdAt: z.string().datetime(),
     // Última sincronização com o banco (8.6) — sempre null pra conta MANUAL/IMPORT, que não sincroniza.
@@ -30,6 +35,10 @@ export const accountSchema = z
   })
   .strict()
 export type Account = z.infer<typeof accountSchema>
+
+// Único campo editável hoje (Fase 4) — o resto da conta nunca muda depois de criada.
+export const updateAccountInputSchema = z.object({ isBenefitAccount: z.boolean() }).strict()
+export type UpdateAccountInput = z.infer<typeof updateAccountInputSchema>
 
 // closingDay/dueDay/creditLimitCents só fazem sentido em CREDIT_CARD — a API rejeita se vierem para
 // CHECKING/CASH (08-seguranca § 8: mass assignment é sobre aceitar campo que não devia estar ali, não só
