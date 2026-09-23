@@ -239,9 +239,30 @@ DISCONNECTED` localmente **depois** da revogação ter dado certo; se o
     metade da regra de 03-regras-negocio § Consentimento) não foi
     construída — hoje só os status que o próprio Pluggy manda
     (`LOGIN_ERROR`/`OUTDATED`/`ERROR`) sinalizam problema.
-- Próximo: Sprint 6 fica só com 2.3 (cartão adicional → pessoa) — ou, se
-  preferir, Sprint 7 (Insights e IA) usando o `insight` que nasceu na Etapa
-  4 da Sprint 5.
+- **2.3 concluída (2026-09-23) — Sprint 6 fechada**: cartão adicional/virtual
+  → pessoa. Model `CardHolderHint` novo (RLS + `@@unique([accountId,
+cardLast4])` — o mesmo final pode existir em contas diferentes, nunca é só
+  por `userId`). Entra no pipeline de atribuição de pessoa (03-regras-negocio
+  § Atribuição de pessoa) **antes** da `Rule` por estabelecimento e do padrão
+  self, só depois de "já confirmada pelo User" (que já está garantido: o
+  upsert do sync só atribui pessoa na criação, nunca no update). Criado do
+  mesmo jeito que a `Rule` já funciona — sem tela própria ainda: `PATCH
+/transactions/:id/person` ganhou `alwaysForCard` (paralelo ao
+  `alwaysForMerchant`; os dois podem vir juntos), rejeita
+  (`400 CARD_REQUIRED_FOR_HINT`) se a transação não tiver `cardLast4`.
+  Verificado ao vivo contra Postgres/API real: hint criado e persistido
+  certo, rejeição sem cartão identificado, isolamento entre 2 usuários (404
+  na transação alheia).
+  **Lição desta etapa**: mudar `packages/shared` no meio da sessão e testar
+  ao vivo contra a API rodando (`pnpm --filter api dev`, `nest --watch`) não
+  basta salvar o arquivo — o watch só cobre `apps/api/src`, não o pacote
+  `shared` linkado. Precisa `pnpm --filter shared build` e reiniciar o
+  processo da API à mão, senão o schema Zod antigo continua valendo e a
+  API rejeita o campo novo como "Unrecognized key".
+- **Sprint 6 fechada.** Próximo: Sprint 7 (Insights e IA) usando o `insight`
+  que nasceu na Etapa 4 da Sprint 5, ou alguma pendência de Sprint anterior
+  (3.3 lançamento manual, 5.4/5.5 rótulos de movimentação, 8.1-8.5 já
+  prontos, resta 8.4's job/e-mail se decidirmos a infra).
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -426,7 +447,7 @@ fatura) e `/movements` só com o resto — como o desenho previa.
       `checkStatus` vê o status virar `UPDATED` (automático). **Falta o job diário agendado** — ver gap acima
 - [x] 8.4 — Aviso de reconectar + reconectar, testado ao vivo (falta job diário + e-mail, gap consciente)
 - [x] 8.5 — Desconectar, testado ao vivo
-- [ ] 2.3 — Cartão adicional → pessoa
+- [x] 2.3 — Cartão adicional → pessoa, testado ao vivo
 
 ### Bugs achados só ao rodar de verdade (e corrigidos)
 
