@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common'
+import { CardHolderHintModule } from '../card-holder-hint/card-holder-hint.module'
 import { CategoryModule } from '../category/category.module'
 import { PersonModule } from '../person/person.module'
 import { RuleModule } from '../rule/rule.module'
@@ -12,7 +13,7 @@ import { TransactionRepository } from './transaction.repository'
 import { TransactionService } from './transaction.service'
 
 @Module({
-  imports: [PersonModule, CategoryModule, RuleModule, SplitModule],
+  imports: [PersonModule, CategoryModule, RuleModule, SplitModule, CardHolderHintModule],
   controllers: [TransactionController, MovementController],
   providers: [TransactionService, TransactionRepository, MovementService, MovementRepository, SplitService],
 })

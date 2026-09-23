@@ -38,10 +38,20 @@ describe('transactionSchema', () => {
 })
 
 describe('updateTransactionPersonInputSchema', () => {
-  it('alwaysForMerchant é opcional, padrão false', () => {
+  it('alwaysForMerchant e alwaysForCard são opcionais, padrão false', () => {
     const result = updateTransactionPersonInputSchema.safeParse({ personId: VALID.id })
     expect(result.success).toBe(true)
     expect(result.success && result.data.alwaysForMerchant).toBe(false)
+    expect(result.success && result.data.alwaysForCard).toBe(false)
+  })
+
+  it('aceita os dois juntos (não são exclusivos)', () => {
+    const result = updateTransactionPersonInputSchema.safeParse({
+      personId: VALID.id,
+      alwaysForMerchant: true,
+      alwaysForCard: true,
+    })
+    expect(result.success).toBe(true)
   })
 
   it('rejeita personId inválido e campo extra', () => {

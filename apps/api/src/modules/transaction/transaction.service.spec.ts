@@ -1,5 +1,6 @@
 import type { Category as CategoryRow, Person as PersonRow, Transaction as TransactionRow } from '@prisma/client'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
+import type { CardHolderHintRepository } from '../card-holder-hint/card-holder-hint.repository'
 import type { CategoryRepository } from '../category/category.repository'
 import type { PersonRepository } from '../person/person.repository'
 import type { RuleRepository } from '../rule/rule.repository'
@@ -25,6 +26,10 @@ function categoriesMock() {
 
 function rulesMock() {
   return { upsertPerson: jest.fn(), upsertCategory: jest.fn() } as unknown as jest.Mocked<RuleRepository>
+}
+
+function cardHolderHintsMock() {
+  return { upsertPerson: jest.fn() } as unknown as jest.Mocked<CardHolderHintRepository>
 }
 
 function splitsMock() {
@@ -88,6 +93,7 @@ function newService(
     categories?: jest.Mocked<CategoryRepository>
     rules?: jest.Mocked<RuleRepository>
     splits?: jest.Mocked<SplitRepository>
+    cardHolderHints?: jest.Mocked<CardHolderHintRepository>
   } = {},
 ) {
   return new TransactionService(
@@ -96,6 +102,7 @@ function newService(
     overrides.categories ?? categoriesMock(),
     overrides.rules ?? rulesMock(),
     overrides.splits ?? splitsMock(),
+    overrides.cardHolderHints ?? cardHolderHintsMock(),
   )
 }
 
@@ -128,7 +135,11 @@ describe('TransactionService', () => {
       const service = newService({ repo })
 
       await expect(
-        service.updatePerson('user-1', 'tx-de-outro', { personId: 'person-2', alwaysForMerchant: false }),
+        service.updatePerson('user-1', 'tx-de-outro', {
+          personId: 'person-2',
+          alwaysForMerchant: false,
+          alwaysForCard: false,
+        }),
       ).rejects.toBeInstanceOf(NotFoundError)
     })
 
@@ -140,7 +151,11 @@ describe('TransactionService', () => {
       const service = newService({ repo, people })
 
       await expect(
-        service.updatePerson('user-1', 'tx-1', { personId: 'person-de-outro', alwaysForMerchant: false }),
+        service.updatePerson('user-1', 'tx-1', {
+          personId: 'person-de-outro',
+          alwaysForMerchant: false,
+          alwaysForCard: false,
+        }),
       ).rejects.toBeInstanceOf(NotFoundError)
       expect(repo.findById).toHaveBeenCalledTimes(1)
     })
@@ -153,7 +168,11 @@ describe('TransactionService', () => {
       const splits = splitsMock()
       const service = newService({ repo, people, splits })
 
-      const result = await service.updatePerson('user-1', 'tx-1', { personId: 'person-2', alwaysForMerchant: false })
+      const result = await service.updatePerson('user-1', 'tx-1', {
+        personId: 'person-2',
+        alwaysForMerchant: false,
+        alwaysForCard: false,
+      })
 
       expect(splits.setSinglePerson).toHaveBeenCalledWith('user-1', 'tx-1', 'person-2')
       expect(result.personId).toBe('person-2')
@@ -169,7 +188,7 @@ describe('TransactionService', () => {
       const service = newService({ repo, people, rules, splits })
 
       await expect(
-        service.updatePerson('user-1', 'tx-1', { personId: 'person-2', alwaysForMerchant: true }),
+        service.updatePerson('user-1', 'tx-1', { personId: 'person-2', alwaysForMerchant: true, alwaysForCard: false }),
       ).rejects.toBeInstanceOf(DomainError)
       expect(rules.upsertPerson).not.toHaveBeenCalled()
       expect(splits.setSinglePerson).not.toHaveBeenCalled()
@@ -185,9 +204,69 @@ describe('TransactionService', () => {
       const rules = rulesMock()
       const service = newService({ repo, people, rules })
 
-      await service.updatePerson('user-1', 'tx-1', { personId: 'person-2', alwaysForMerchant: true })
+      await service.updatePerson('user-1', 'tx-1', {
+        personId: 'person-2',
+        alwaysForMerchant: true,
+        alwaysForCard: false,
+      })
 
       expect(rules.upsertPerson).toHaveBeenCalledWith('user-1', 'loja da família', 'person-2')
+    })
+
+    it('alwaysForCard sem final de cartão na transação é rejeitado, sem criar CardHolderHint', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValue(row({ cardLast4: null }))
+      const people = peopleMock()
+      people.findActiveById.mockResolvedValue(personRow())
+      const cardHolderHints = cardHolderHintsMock()
+      const splits = splitsMock()
+      const service = newService({ repo, people, cardHolderHints, splits })
+
+      await expect(
+        service.updatePerson('user-1', 'tx-1', { personId: 'person-2', alwaysForMerchant: false, alwaysForCard: true }),
+      ).rejects.toBeInstanceOf(DomainError)
+      expect(cardHolderHints.upsertPerson).not.toHaveBeenCalled()
+      expect(splits.setSinglePerson).not.toHaveBeenCalled()
+    })
+
+    it('alwaysForCard cria/atualiza o CardHolderHint com a conta e o final do cartão da transação (2.3)', async () => {
+      const repo = repoMock()
+      repo.findById
+        .mockResolvedValueOnce(row({ accountId: 'acc-1', cardLast4: '1234' }))
+        .mockResolvedValueOnce(row({ accountId: 'acc-1', cardLast4: '1234', personId: 'person-2' }))
+      const people = peopleMock()
+      people.findActiveById.mockResolvedValue(personRow())
+      const cardHolderHints = cardHolderHintsMock()
+      const service = newService({ repo, people, cardHolderHints })
+
+      await service.updatePerson('user-1', 'tx-1', {
+        personId: 'person-2',
+        alwaysForMerchant: false,
+        alwaysForCard: true,
+      })
+
+      expect(cardHolderHints.upsertPerson).toHaveBeenCalledWith('user-1', 'acc-1', '1234', 'person-2')
+    })
+
+    it('alwaysForMerchant e alwaysForCard juntos criam a Rule e o CardHolderHint', async () => {
+      const repo = repoMock()
+      repo.findById
+        .mockResolvedValueOnce(row({ merchant: 'Loja X', accountId: 'acc-1', cardLast4: '1234' }))
+        .mockResolvedValueOnce(row({ merchant: 'Loja X', accountId: 'acc-1', cardLast4: '1234', personId: 'person-2' }))
+      const people = peopleMock()
+      people.findActiveById.mockResolvedValue(personRow())
+      const rules = rulesMock()
+      const cardHolderHints = cardHolderHintsMock()
+      const service = newService({ repo, people, rules, cardHolderHints })
+
+      await service.updatePerson('user-1', 'tx-1', {
+        personId: 'person-2',
+        alwaysForMerchant: true,
+        alwaysForCard: true,
+      })
+
+      expect(rules.upsertPerson).toHaveBeenCalledWith('user-1', 'loja x', 'person-2')
+      expect(cardHolderHints.upsertPerson).toHaveBeenCalledWith('user-1', 'acc-1', '1234', 'person-2')
     })
   })
 

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import type { Transaction, UpdateTransactionCategoryInput, UpdateTransactionPersonInput } from '@gastos/shared'
 import { resolveMonthRange } from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
+import { CardHolderHintRepository } from '../card-holder-hint/card-holder-hint.repository'
 import { CategoryRepository } from '../category/category.repository'
 import { PersonRepository } from '../person/person.repository'
 import { normalizeMerchant } from '../rule/normalize-merchant'
@@ -17,6 +18,12 @@ const MERCHANT_REQUIRED_FOR_RULE = () =>
     'Essa transação não tem estabelecimento identificado — não dá pra criar uma regra.',
     400,
   )
+const CARD_REQUIRED_FOR_HINT = () =>
+  new DomainError(
+    'CARD_REQUIRED_FOR_HINT',
+    'Essa transação não tem o final do cartão identificado — não dá pra lembrar desse cartão.',
+    400,
+  )
 
 @Injectable()
 export class TransactionService {
@@ -26,6 +33,7 @@ export class TransactionService {
     private readonly categories: CategoryRepository,
     private readonly rules: RuleRepository,
     private readonly splits: SplitRepository,
+    private readonly cardHolderHints: CardHolderHintRepository,
   ) {}
 
   async listByMonth(userId: string, month?: string): Promise<Transaction[]> {
@@ -42,6 +50,11 @@ export class TransactionService {
     if (input.alwaysForMerchant) {
       if (!existing.merchant) throw MERCHANT_REQUIRED_FOR_RULE()
       await this.rules.upsertPerson(userId, normalizeMerchant(existing.merchant), input.personId)
+    }
+
+    if (input.alwaysForCard) {
+      if (!existing.cardLast4) throw CARD_REQUIRED_FOR_HINT()
+      await this.cardHolderHints.upsertPerson(userId, existing.accountId, existing.cardLast4, input.personId)
     }
 
     // Atômico: corrigir a pessoa direto também desfaz uma divisão, se tiver — nunca deixa split antigo
