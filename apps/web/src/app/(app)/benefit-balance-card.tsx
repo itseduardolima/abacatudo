@@ -16,13 +16,19 @@ export function BenefitBalanceCard({
   syncedAt: string | null
 }) {
   return (
-    <div className="flex min-h-[220px] flex-col justify-center rounded-card-lg bg-inverse px-5 py-6 text-on-inverse">
-      <p className="text-xs text-on-inverse-muted">Saldo de benefício</p>
-      <p className="display-number mt-3 text-[2.75rem] text-on-inverse-accent">
-        <MoneyText cents={cents} className="!text-on-inverse-accent" />
-      </p>
-      {accountName && <p className="mt-2 text-xs text-on-inverse-muted">{accountName}</p>}
-      {syncedAt && <p className="mt-0.5 text-xs text-on-inverse-muted">Atualizado {formatSyncedAt(syncedAt)}</p>}
+    // h-full (não min-h com valor chutado): o carrossel já estica os dois itens pra mesma altura (flex
+    // row, align-items padrão stretch) — o card de ritmo é quem decide a altura de verdade, quantos
+    // campos ele tiver. justify-between distribui o que já é real (saldo no topo, sync embaixo) em vez de
+    // inventar mais uma linha só pra preencher espaço.
+    <div className="flex h-full flex-col justify-between rounded-card-lg bg-inverse px-5 py-6 text-on-inverse">
+      <div>
+        <p className="text-xs text-on-inverse-muted">Saldo de benefício</p>
+        <p className="display-number mt-3 text-[2.75rem] text-on-inverse-accent">
+          <MoneyText cents={cents} className="!text-on-inverse-accent" />
+        </p>
+        {accountName && <p className="mt-2 text-xs text-on-inverse-muted">{accountName}</p>}
+      </div>
+      {syncedAt && <p className="text-xs text-on-inverse-muted">Atualizado {formatSyncedAt(syncedAt)}</p>}
     </div>
   )
 }
