@@ -1,17 +1,18 @@
 import type { Invoice } from '@gastos/shared'
 import { BudgetPaceService } from './budget-pace.service'
 import type { BudgetMonthService } from './budget-month.service'
+import type { FixedExpenseService } from '../fixed-expense/fixed-expense.service'
 import type { InvoiceService } from '../invoice/invoice.service'
 
-function budgetMonthMock(variableCapCents: number) {
+function budgetMonthMock(incomeCents: number) {
   return {
     getOrCreate: jest.fn().mockResolvedValue({
       month: '2026-09',
-      incomeCents: 0,
+      incomeCents,
       benefitCents: 0,
       fixedExpensesCents: 0,
       savingsGoalCents: 0,
-      variableCapCents,
+      variableCapCents: 0,
     }),
   } as unknown as jest.Mocked<BudgetMonthService>
 }
@@ -21,34 +22,41 @@ function invoicesMock(mineCents: number) {
   return { getSummary: jest.fn().mockResolvedValue(summary) } as unknown as jest.Mocked<InvoiceService>
 }
 
+function fixedExpensesMock(sumCents: number) {
+  return { sumActiveCents: jest.fn().mockResolvedValue(sumCents) } as unknown as jest.Mocked<FixedExpenseService>
+}
+
 describe('BudgetPaceService', () => {
   beforeEach(() => {
     jest.useFakeTimers().setSystemTime(new Date('2026-09-15T12:00:00.000Z'))
   })
   afterEach(() => jest.useRealTimers())
 
-  it('junta o teto (BudgetMonth) com o gasto "meu" do mês (InvoiceService.getSummary) e calcula o ritmo', async () => {
+  it('teto = renda; gasto = fatura aberta (todos os cartões) + gastos fixos ativos', async () => {
     const budgetMonth = budgetMonthMock(300_000)
     const invoices = invoicesMock(50_000)
-    const service = new BudgetPaceService(budgetMonth, invoices)
+    const fixedExpenses = fixedExpensesMock(20_000)
+    const service = new BudgetPaceService(budgetMonth, invoices, fixedExpenses)
 
     const result = await service.getPace('user-1')
 
     expect(budgetMonth.getOrCreate).toHaveBeenCalledWith('user-1', undefined)
-    expect(invoices.getSummary).toHaveBeenCalledWith('user-1', undefined)
+    expect(invoices.getSummary).toHaveBeenCalledWith('user-1')
+    expect(fixedExpenses.sumActiveCents).toHaveBeenCalledWith('user-1')
     expect(result.capCents).toBe(300_000)
-    expect(result.spentCents).toBe(50_000)
+    expect(result.spentCents).toBe(70_000)
     expect(result.month).toBe('2026-09')
   })
 
-  it('repassa o mês pedido pros dois lados', async () => {
+  it('sem gasto fixo nenhum, gasto é só a fatura', async () => {
     const budgetMonth = budgetMonthMock(100_000)
-    const invoices = invoicesMock(0)
-    const service = new BudgetPaceService(budgetMonth, invoices)
+    const invoices = invoicesMock(15_000)
+    const fixedExpenses = fixedExpensesMock(0)
+    const service = new BudgetPaceService(budgetMonth, invoices, fixedExpenses)
 
-    await service.getPace('user-1', '2026-08')
+    const result = await service.getPace('user-1', '2026-08')
 
     expect(budgetMonth.getOrCreate).toHaveBeenCalledWith('user-1', '2026-08')
-    expect(invoices.getSummary).toHaveBeenCalledWith('user-1', '2026-08')
+    expect(result.spentCents).toBe(15_000)
   })
 })

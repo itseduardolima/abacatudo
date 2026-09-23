@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common'
+import { FixedExpenseModule } from '../fixed-expense/fixed-expense.module'
 import { InvoiceModule } from '../invoice/invoice.module'
 import { PersonModule } from '../person/person.module'
 import { AlertRepository } from './alert.repository'
@@ -10,7 +11,7 @@ import { BudgetPaceController } from './budget-pace.controller'
 import { BudgetPaceService } from './budget-pace.service'
 
 @Module({
-  imports: [PersonModule, InvoiceModule],
+  imports: [PersonModule, InvoiceModule, FixedExpenseModule],
   controllers: [BudgetMonthController, BudgetPaceController],
   providers: [BudgetMonthService, BudgetMonthRepository, AlertService, AlertRepository, BudgetPaceService],
   exports: [BudgetMonthService, BudgetMonthRepository, AlertService],
