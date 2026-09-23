@@ -54,6 +54,16 @@ export class PluggyClient {
     return this.request('GET', `/items/${pluggyItemId}`, pluggyItemSchema)
   }
 
+  // Desconectar (8.5): "revoga o Item no Pluggy, best effort + retry" (03-regras-negocio) — o retry/backoff
+  // já vem de fetchWithRetry, mesmo caminho de toda outra chamada. Sem corpo esperado na resposta, então
+  // não passa pelo `request` (que sempre parseia JSON contra um schema).
+  async deleteItem(pluggyItemId: string): Promise<void> {
+    await this.fetchWithRetry(`${BASE_URL}/items/${pluggyItemId}`, {
+      method: 'DELETE',
+      headers: { 'x-api-key': await this.apiKey() },
+    })
+  }
+
   // Paginado de verdade (visto na prática: a resposta vem com total/totalPages/page) — sem isso, alguém com
   // contas suficientes pra estourar uma página perdia contas do sync silenciosamente.
   async listAccounts(pluggyItemId: string): Promise<PluggyAccount[]> {

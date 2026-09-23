@@ -236,6 +236,30 @@ describe('PluggyClient', () => {
     expect(fetchMock).toHaveBeenCalledTimes(4) // 1 auth + 3 tentativas
   })
 
+  it('deleteItem: chama DELETE /items/:id com a API key, sem esperar corpo de resposta', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
+      .mockResolvedValueOnce(jsonResponse(200, {}))
+    const client = new PluggyClient(configMock())
+
+    await client.deleteItem('item-1')
+
+    const [, deleteCall] = fetchMock.mock.calls as [unknown, [string, RequestInit]]
+    expect(deleteCall[0]).toBe('https://api.pluggy.ai/items/item-1')
+    expect(deleteCall[1].method).toBe('DELETE')
+  })
+
+  it('deleteItem: 500 tenta de novo (mesmo retry/backoff de toda outra chamada)', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))
+      .mockResolvedValueOnce(jsonResponse(500, {}))
+      .mockResolvedValueOnce(jsonResponse(200, {}))
+    const client = new PluggyClient(configMock())
+
+    await expect(client.deleteItem('item-1')).resolves.toBeUndefined()
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
   it('400 falha na hora, sem tentar de novo (repetir não ajudaria)', async () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse(200, { apiKey: fakeApiKeyJwt(3600) }))

@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common'
+import { Controller, Delete, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common'
 import type { BankConnection, ConnectBankResponse, SyncResult } from '@gastos/shared'
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import { BankingService } from './banking.service'
@@ -25,5 +25,10 @@ export class BankingController {
   @Post(':id/sync')
   sync(@CurrentUser() userId: string, @Param('id', ParseUUIDPipe) id: string): Promise<SyncResult> {
     return this.banking.manualSync(userId, id)
+  }
+
+  @Delete(':id')
+  disconnect(@CurrentUser() userId: string, @Param('id', ParseUUIDPipe) id: string): Promise<BankConnection> {
+    return this.banking.disconnect(userId, id)
   }
 }

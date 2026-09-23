@@ -13,6 +13,18 @@ import { PluggyItemRepository } from './pluggy-item.repository'
 
 const NOT_FOUND = () => new NotFoundError('BANK_CONNECTION_NOT_FOUND', 'Conexão bancária não encontrada.')
 
+// Item desconectado (8.5) não existe mais do lado do Pluggy — checar status ou sincronizar contra ele só
+// devolveria um erro genérico de "Pluggy indisponível", enganoso pra um estado que é permanente e local.
+function assertConnected(item: PluggyItemRow): void {
+  if (item.status === 'DISCONNECTED') {
+    throw new DomainError(
+      'BANK_ITEM_DISCONNECTED',
+      'Essa conexão foi desconectada. Conecte de novo pra sincronizar.',
+      422,
+    )
+  }
+}
+
 @Injectable()
 export class BankingService {
   constructor(
@@ -43,6 +55,7 @@ export class BankingService {
   async checkStatus(userId: string, id: string): Promise<BankConnection> {
     const item = await this.items.findById(userId, id)
     if (!item) throw NOT_FOUND()
+    assertConnected(item)
 
     const remote = await this.pluggy.getItem(item.pluggyItemId)
     // UPDATING é transiente (o Pluggy ainda está buscando) — nunca persistido, só os status finais do enum.
@@ -67,7 +80,24 @@ export class BankingService {
   async manualSync(userId: string, id: string): Promise<SyncResult> {
     const item = await this.items.findById(userId, id)
     if (!item) throw NOT_FOUND()
+    assertConnected(item)
     return this.runSync(userId, item.id)
+  }
+
+  // Desconectar (8.5): revoga o Item no Pluggy (best effort + retry, já embutido no PluggyClient) e marca
+  // localmente — histórico (Account/Transaction) nunca é apagado, só para de sincronizar. Idempotente: item
+  // já desconectado só devolve o estado atual, sem chamar o Pluggy de novo.
+  async disconnect(userId: string, id: string): Promise<BankConnection> {
+    const item = await this.items.findById(userId, id)
+    if (!item) throw NOT_FOUND()
+    if (item.status === 'DISCONNECTED') return toConnectionDto(item)
+
+    await this.pluggy.deleteItem(item.pluggyItemId)
+    await this.items.update(userId, item.id, { status: 'DISCONNECTED' })
+
+    const refreshed = await this.items.findById(userId, id)
+    if (!refreshed) throw NOT_FOUND()
+    return toConnectionDto(refreshed)
   }
 
   private async runSync(userId: string, itemId: string): Promise<SyncResult> {

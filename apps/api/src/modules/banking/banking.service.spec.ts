@@ -1,5 +1,5 @@
 import type { Account as AccountRow, Person as PersonRow, PluggyItem as PluggyItemRow, Rule } from '@prisma/client'
-import { NotFoundError } from '../../common/errors/domain.error'
+import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import type { AccountRepository } from '../account/account.repository'
 import type { PersonRepository } from '../person/person.repository'
 import type { RuleRepository } from '../rule/rule.repository'
@@ -14,6 +14,7 @@ function pluggyMock() {
     getItem: jest.fn(),
     listAccounts: jest.fn(),
     listTransactions: jest.fn(),
+    deleteItem: jest.fn().mockResolvedValue(undefined),
   } as unknown as jest.Mocked<PluggyClient>
 }
 
@@ -497,5 +498,60 @@ describe('BankingService', () => {
     const service = newService({ items, people })
 
     await expect(service.manualSync('user-1', 'item-1')).rejects.toThrow('Pessoa "Eu" não encontrada.')
+  })
+
+  it('manualSync: item desconectado nunca sincroniza (erro claro, nunca "Pluggy indisponível")', async () => {
+    const items = itemsMock()
+    items.findById.mockResolvedValue(itemRow({ status: 'DISCONNECTED' }))
+    const pluggy = pluggyMock()
+    const service = newService({ items, pluggy })
+
+    await expect(service.manualSync('user-1', 'item-1')).rejects.toThrow('desconectada')
+    expect(pluggy.listAccounts).not.toHaveBeenCalled()
+  })
+
+  it('checkStatus: item desconectado nunca chama o Pluggy de novo', async () => {
+    const items = itemsMock()
+    items.findById.mockResolvedValue(itemRow({ status: 'DISCONNECTED' }))
+    const pluggy = pluggyMock()
+    const service = newService({ items, pluggy })
+
+    await expect(service.checkStatus('user-1', 'item-1')).rejects.toBeInstanceOf(DomainError)
+    expect(pluggy.getItem).not.toHaveBeenCalled()
+  })
+
+  it('disconnect: 404 quando a conexão não é do usuário', async () => {
+    const items = itemsMock()
+    items.findById.mockResolvedValue(null)
+    const service = newService({ items })
+
+    await expect(service.disconnect('user-1', 'item-de-outro')).rejects.toBeInstanceOf(NotFoundError)
+  })
+
+  it('disconnect: revoga o Item no Pluggy e marca o status localmente, sem apagar nada', async () => {
+    const items = itemsMock()
+    items.findById
+      .mockResolvedValueOnce(itemRow({ status: 'UPDATED' }))
+      .mockResolvedValueOnce(itemRow({ status: 'DISCONNECTED' }))
+    const pluggy = pluggyMock()
+    const service = newService({ items, pluggy })
+
+    const result = await service.disconnect('user-1', 'item-1')
+
+    expect(pluggy.deleteItem).toHaveBeenCalledWith('pluggy-item-1')
+    expect(items.update).toHaveBeenCalledWith('user-1', 'item-1', { status: 'DISCONNECTED' })
+    expect(result.status).toBe('DISCONNECTED')
+  })
+
+  it('disconnect: idempotente — item já desconectado não chama o Pluggy de novo', async () => {
+    const items = itemsMock()
+    items.findById.mockResolvedValue(itemRow({ status: 'DISCONNECTED' }))
+    const pluggy = pluggyMock()
+    const service = newService({ items, pluggy })
+
+    await service.disconnect('user-1', 'item-1')
+
+    expect(pluggy.deleteItem).not.toHaveBeenCalled()
+    expect(items.update).not.toHaveBeenCalled()
   })
 })
