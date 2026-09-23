@@ -551,6 +551,30 @@ type="date">`.
   fundo (possível causa: mais de um pagamento cobrindo a mesma fatura,
   ou billId ainda não atribuído a transações que já deveriam ter fechado
   num ciclo anterior).
+- **Investigação a fundo com OFX real (2026-09-23), sem solução ainda** —
+  usuário baixou o OFX oficial do Nubank pra conferir. O `LEDGERBAL` do
+  arquivo bate exato com o que ele via no app (R$589,88) e revelou a
+  matemática certa do banco:
+  `saldo devedor = última fatura FECHADA + (compras novas − pagamentos) desde o fechamento dela`
+  (conferido linha a linha: R$1.840,80 + R$1.211,07 − R$2.461,99 =
+  R$589,88 ✓). Tentei implementar isso (`/bills` da Pluggy pro saldo
+  anterior + filtro por `occurredAt >= dueDate − 7 dias` pra pegar só a
+  movimentação do ciclo aberto) e **deu número negativo** — achei outro
+  problema real: o `billId` que esse conector atribui é inconsistente,
+  tem transação de setembro (depois do fechamento) presa a uma fatura de
+  agosto já fechada, então filtrar por data sozinho conta coisa que já
+  está no saldo anterior (dupliquei valor). **Reverti pro que já estava
+  bom** (R$1.233,78, commit anterior: fatura aberta por `billId IS NULL`
+  - `CARD_PAYMENT` abatendo) em vez de arriscar piorar.
+    **Pra quem quiser retomar**: os dados reais de conferência ficam aqui
+    — bill fechada mais recente (`/bills`, id `b4113538-9c59-4c44-9262-
+679ffc7da8e5`, vencimento 2026-09-03, total R$1.840,80); OFX cobre
+  2026-08-27 a 2026-09-26; 27 transações reais nesse período (18 compras
+  somando R$1.211,07, 4 pagamentos somando R$2.461,99). O caminho certo
+    provavelmente exige um sinal mais confiável de "isso já está na fatura
+    fechada X" do que `billId` sozinho — talvez cruzar por data **e**
+    `billId` (só ignorar `billId` de transação claramente fora da janela
+    esperada), ou aceitar a imprecisão de ±alguns dias como escopo do MVP.
 - Próximo: Fase 4 (saldo InfinitePay/benefício), redesenho por tela do
   desktop (grid 2 colunas, `d0X-*`), UI de divisão de transação entre
   pessoas (`split`), ou seguir no backend (Sprint 7 Insights e IA, ou
