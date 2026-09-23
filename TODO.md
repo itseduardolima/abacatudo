@@ -779,6 +779,16 @@ type="date">`.
   quanto pra "dividido entre pessoas" (`Split`), e a lista só tratava o
   primeiro caso. Agora mostra um chip "Dividido" quando a transação tem
   `splits`. Verificado ao vivo numa compra parcelada já dividida.
+- **Os 2 achados de baixa severidade da auditoria de segurança corrigidos
+  (2026-09-23)**: `touchSession`/`revokeSession` (`auth.repository.ts`) agora
+  têm comentário explicando por que são seguros sem `userId` no where (só
+  recebem id já validado — nunca vindo de param/body do cliente); e
+  `docker-compose.yml` ganhou um serviço `env-check` que roda
+  `deploy-check.sh` e bloqueia `api`/`web`/`caddy` (não `postgres` sozinho,
+  pra não quebrar o fluxo de dev) se o `.env` estiver ausente ou com
+  placeholder — antes dependia do operador lembrar de rodar o script à parte
+  antes do `docker compose up`. Verificado: `docker compose config` válido,
+  e `docker compose run --rm env-check` sem `.env` falha como esperado.
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou seguir
   no backend (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de
   movimentação, 8.4's job/e-mail).
