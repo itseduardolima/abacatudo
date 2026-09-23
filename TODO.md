@@ -529,6 +529,28 @@ type="date">`.
     decidir formato (aba própria?) depois. Verificado ao vivo contra o
     Nubank real do usuário: teto e gasto corretos após configurar renda,
     criar/remover gasto fixo refletindo no hero na hora.
+- **Pagamento antecipado abate a fatura aberta (2026-09-23)** — usuário
+  reparou que o valor (R$3.695,77) continuava longe do real (R$589,89) e
+  explicou: já tinha adiantado pagamentos. Achado: `CARD_PAYMENT` era
+  **totalmente excluído** do cálculo (certo pra "gasto", errado pra
+  "quanto falta pagar"). Corrigido: `findOpenRows` agora também traz
+  `CARD_PAYMENT` da fatura aberta, e `computeInvoice` abate do total e do
+  "meu" juntos (nunca do "não é meu" — pagar o próprio cartão não reduz a
+  fatia de terceiros). R$3.695,77 → **R$1.233,78** depois de descontar
+  R$2.461,99 em pagamentos antecipados reais.
+  **Explorado e revertido**: cogitei usar `/bills` da Pluggy como fonte do
+  total (o número "de verdade" do banco) — testei ao vivo contra a conta
+  real e descobri que esse endpoint só devolve **fatura já fechada**
+  (a mais recente tinha vencimento no passado); a fatura aberta de
+  verdade nunca aparece lá enquanto não fecha. Não dava pra usar.
+  **Gap consciente, sem solução ainda**: mesmo com o desconto de
+  pagamento, R$1.233,78 ainda não bate exato com os R$589,89 que o
+  usuário vê no app do Nubank — não consegui fechar essa última
+  diferença sem inspecionar a fatura em tempo real dentro do banco.
+  Registrado aqui pra retomar se o usuário quiser investigar mais a
+  fundo (possível causa: mais de um pagamento cobrindo a mesma fatura,
+  ou billId ainda não atribuído a transações que já deveriam ter fechado
+  num ciclo anterior).
 - Próximo: Fase 4 (saldo InfinitePay/benefício), redesenho por tela do
   desktop (grid 2 colunas, `d0X-*`), UI de divisão de transação entre
   pessoas (`split`), ou seguir no backend (Sprint 7 Insights e IA, ou
