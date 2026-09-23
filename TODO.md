@@ -324,10 +324,14 @@ account-type.ts` traduz o enum pro rótulo em português.
   TanStack Query servindo `/auth/me` velho logo após logout e fazendo o
   `/login` ricochetear pra home) — testado ao vivo com screenshots quadro a
   quadro, não reproduz.
-- Próximo: seguir telas sprint a sprint (Pessoas/Categorias, provavelmente
-  dentro de Configurações — a spec 04-padroes-codigo só reserva rota própria
-  pra `accounts/`; `people/[id]` é só a visão informativa de gasto por
-  pessoa, não CRUD), ou continuar no backend (Sprint 7 Insights e IA, ou
+- **Front: tela de Pessoas (2026-09-23)** — `app/(app)/settings/people`:
+  lista + criar + arquivar. Mesmo desenho de Contas (submissão numerada
+  contra a corrida do cancelar). Self ("Eu") vem com badge e sem "Arquivar"
+  (a API rejeita arquivar o self, `403 CANNOT_ARCHIVE_SELF` — o front só
+  esconde a ação em vez de deixar o usuário bater nesse erro à toa).
+  Verificado ao vivo: criar, arquivar (some da lista), self protegido.
+- Próximo: Categorias (mesmo desenho de Pessoas — CRUD tem `rename` a mais)
+  dentro de Configurações, ou continuar no backend (Sprint 7 Insights e IA, ou
   pendências: 3.3 lançamento manual, 5.4/5.5 rótulos de movimentação, 8.4's
   job/e-mail).
 
