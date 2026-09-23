@@ -16,7 +16,10 @@ export default function HomePage() {
       <section>
         <h1 className="display-number text-[2.5rem] text-ink">{isLoadingMe ? 'Carregando…' : `Olá, ${email}`}</h1>
         <p className="mt-2 text-text">As telas do dia a dia entram sprint a sprint a partir daqui.</p>
-        <Link href="/accounts" className="mt-4 inline-block text-text underline underline-offset-4">
+        <Link href="/transactions" className="mt-4 inline-block text-text underline underline-offset-4">
+          Cartão
+        </Link>
+        <Link href="/accounts" className="mt-2 block text-text underline underline-offset-4">
           Contas
         </Link>
         <Link href="/settings/people" className="mt-2 block text-text underline underline-offset-4">
