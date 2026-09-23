@@ -53,3 +53,20 @@ export const updateTransactionCategoryInputSchema = z
   })
   .strict()
 export type UpdateTransactionCategoryInput = z.infer<typeof updateTransactionCategoryInputSchema>
+
+// Lançamento manual (3.3): só vale pra conta MANUAL/IMPORT (a API rejeita conta PLUGGY — ela é escrita só
+// pelo sync). categoryId/personId só fazem sentido em conta CREDIT_CARD (03-regras-negocio § Escopo); a
+// API rejeita se vierem numa conta que não é cartão. occurredAt aceita data pura ("AAAA-MM-DD", o que um
+// <input type="date"> dá) ou datetime completo.
+export const createTransactionInputSchema = z
+  .object({
+    accountId: idSchema,
+    kind: z.enum(['EXPENSE', 'INCOME']),
+    amountCents: centsSchema.positive(),
+    occurredAt: z.string().regex(/^\d{4}-\d{2}-\d{2}(T.*)?$/, 'Informe uma data válida.'),
+    description: z.string().trim().min(1, 'Informe uma descrição.').max(140),
+    categoryId: idSchema.optional(),
+    personId: idSchema.optional(),
+  })
+  .strict()
+export type CreateTransactionInput = z.infer<typeof createTransactionInputSchema>

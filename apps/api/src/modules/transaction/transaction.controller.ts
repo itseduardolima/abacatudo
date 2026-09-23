@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common'
 import type { SplitPreview, Transaction } from '@gastos/shared'
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
+import { CreateTransactionDto } from './dto/create-transaction.dto'
 import { PreviewSplitDto } from './dto/preview-split.dto'
 import { UpdateTransactionCategoryDto } from './dto/update-transaction-category.dto'
 import { UpdateTransactionPersonDto } from './dto/update-transaction-person.dto'
@@ -14,6 +15,11 @@ export class TransactionController {
     private readonly transactions: TransactionService,
     private readonly splits: SplitService,
   ) {}
+
+  @Post()
+  create(@CurrentUser() userId: string, @Body() body: CreateTransactionDto): Promise<Transaction> {
+    return this.transactions.create(userId, body)
+  }
 
   @Get()
   list(@CurrentUser() userId: string, @Query('month') month?: string): Promise<Transaction[]> {

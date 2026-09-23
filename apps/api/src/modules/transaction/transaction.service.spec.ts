@@ -1,5 +1,11 @@
-import type { Category as CategoryRow, Person as PersonRow, Transaction as TransactionRow } from '@prisma/client'
+import type {
+  Account as AccountRow,
+  Category as CategoryRow,
+  Person as PersonRow,
+  Transaction as TransactionRow,
+} from '@prisma/client'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
+import type { AccountRepository, AccountWithPluggyItem } from '../account/account.repository'
 import type { CardHolderHintRepository } from '../card-holder-hint/card-holder-hint.repository'
 import type { CategoryRepository } from '../category/category.repository'
 import type { PersonRepository } from '../person/person.repository'
@@ -10,14 +16,19 @@ import type { TransactionRepository } from './transaction.repository'
 
 function repoMock() {
   return {
+    create: jest.fn(),
     findMany: jest.fn(),
     findById: jest.fn(),
     updateCategory: jest.fn(),
   } as unknown as jest.Mocked<TransactionRepository>
 }
 
+function accountsMock() {
+  return { findById: jest.fn() } as unknown as jest.Mocked<AccountRepository>
+}
+
 function peopleMock() {
-  return { findActiveById: jest.fn() } as unknown as jest.Mocked<PersonRepository>
+  return { findActiveById: jest.fn(), findSelf: jest.fn() } as unknown as jest.Mocked<PersonRepository>
 }
 
 function categoriesMock() {
@@ -86,6 +97,26 @@ function categoryRow(overrides: Partial<CategoryRow> = {}): CategoryRow {
   }
 }
 
+function accountRow(overrides: Partial<AccountRow> = {}): AccountWithPluggyItem {
+  return {
+    id: 'acc-1',
+    userId: 'user-1',
+    name: 'Carteira',
+    type: 'CASH',
+    source: 'MANUAL',
+    closingDay: null,
+    dueDay: null,
+    creditLimitCents: null,
+    pluggyItemId: null,
+    externalAccountId: null,
+    archivedAt: null,
+    createdAt: new Date('2026-09-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-09-01T00:00:00.000Z'),
+    pluggyItem: null,
+    ...overrides,
+  }
+}
+
 function newService(
   overrides: {
     repo?: jest.Mocked<TransactionRepository>
@@ -94,6 +125,7 @@ function newService(
     rules?: jest.Mocked<RuleRepository>
     splits?: jest.Mocked<SplitRepository>
     cardHolderHints?: jest.Mocked<CardHolderHintRepository>
+    accounts?: jest.Mocked<AccountRepository>
   } = {},
 ) {
   return new TransactionService(
@@ -103,10 +135,159 @@ function newService(
     overrides.rules ?? rulesMock(),
     overrides.splits ?? splitsMock(),
     overrides.cardHolderHints ?? cardHolderHintsMock(),
+    overrides.accounts ?? accountsMock(),
   )
 }
 
 describe('TransactionService', () => {
+  describe('create', () => {
+    it('404 quando a conta não é do usuário', async () => {
+      const accounts = accountsMock()
+      accounts.findById.mockResolvedValue(null)
+      const service = newService({ accounts })
+
+      await expect(
+        service.create('user-1', {
+          accountId: 'acc-de-outro',
+          kind: 'EXPENSE',
+          amountCents: 1000,
+          occurredAt: '2026-09-21',
+          description: 'Compra',
+        }),
+      ).rejects.toBeInstanceOf(NotFoundError)
+    })
+
+    it('rejeita lançamento manual numa conta PLUGGY (só o sync escreve nela)', async () => {
+      const accounts = accountsMock()
+      accounts.findById.mockResolvedValue(accountRow({ source: 'PLUGGY' }))
+      const repo = repoMock()
+      const service = newService({ accounts, repo })
+
+      await expect(
+        service.create('user-1', {
+          accountId: 'acc-1',
+          kind: 'EXPENSE',
+          amountCents: 1000,
+          occurredAt: '2026-09-21',
+          description: 'Compra',
+        }),
+      ).rejects.toBeInstanceOf(DomainError)
+      expect(repo.create).not.toHaveBeenCalled()
+    })
+
+    it('rejeita categoryId/personId fora de cartão de crédito', async () => {
+      const accounts = accountsMock()
+      accounts.findById.mockResolvedValue(accountRow({ type: 'CASH' }))
+      const repo = repoMock()
+      const service = newService({ accounts, repo })
+
+      await expect(
+        service.create('user-1', {
+          accountId: 'acc-1',
+          kind: 'EXPENSE',
+          amountCents: 1000,
+          occurredAt: '2026-09-21',
+          description: 'Compra',
+          personId: 'person-2',
+        }),
+      ).rejects.toBeInstanceOf(DomainError)
+      expect(repo.create).not.toHaveBeenCalled()
+    })
+
+    it('fora de cartão, cria sem categoria/pessoa (sempre null, igual o sync)', async () => {
+      const accounts = accountsMock()
+      accounts.findById.mockResolvedValue(accountRow({ type: 'CASH' }))
+      const repo = repoMock()
+      repo.create.mockResolvedValue(row({ accountId: 'acc-1', personId: null, categoryId: null }))
+      const service = newService({ accounts, repo })
+
+      await service.create('user-1', {
+        accountId: 'acc-1',
+        kind: 'INCOME',
+        amountCents: 5000,
+        occurredAt: '2026-09-21',
+        description: 'Pix recebido',
+      })
+
+      expect(repo.create).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({ personId: null, categoryId: null, kind: 'INCOME' }),
+      )
+    })
+
+    it('em cartão, sem personId informado cai no padrão "Meu" (self)', async () => {
+      const accounts = accountsMock()
+      accounts.findById.mockResolvedValue(accountRow({ type: 'CREDIT_CARD' }))
+      const people = peopleMock()
+      people.findSelf.mockResolvedValue(personRow({ id: 'self-1', isSelf: true }))
+      const repo = repoMock()
+      repo.create.mockResolvedValue(row({ personId: 'self-1' }))
+      const service = newService({ accounts, people, repo })
+
+      await service.create('user-1', {
+        accountId: 'acc-1',
+        kind: 'EXPENSE',
+        amountCents: 1000,
+        occurredAt: '2026-09-21',
+        description: 'Compra',
+      })
+
+      expect(repo.create).toHaveBeenCalledWith('user-1', expect.objectContaining({ personId: 'self-1' }))
+    })
+
+    it('em cartão, com personId e categoryId válidos, usa os dois', async () => {
+      const accounts = accountsMock()
+      accounts.findById.mockResolvedValue(accountRow({ type: 'CREDIT_CARD' }))
+      const people = peopleMock()
+      people.findActiveById.mockResolvedValue(personRow({ id: 'person-2' }))
+      const categories = categoriesMock()
+      categories.findActiveById.mockResolvedValue(categoryRow({ id: 'cat-1' }))
+      const repo = repoMock()
+      repo.create.mockResolvedValue(row({ personId: 'person-2', categoryId: 'cat-1' }))
+      const service = newService({ accounts, people, categories, repo })
+
+      const result = await service.create('user-1', {
+        accountId: 'acc-1',
+        kind: 'EXPENSE',
+        amountCents: 1000,
+        occurredAt: '2026-09-21',
+        description: 'Compra',
+        personId: 'person-2',
+        categoryId: 'cat-1',
+      })
+
+      expect(repo.create).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({ personId: 'person-2', categoryId: 'cat-1', occurredAt: expect.any(Date) }),
+      )
+      expect(result.personId).toBe('person-2')
+    })
+
+    it('404 quando a categoria informada não existe (ou não é do usuário)', async () => {
+      const accounts = accountsMock()
+      accounts.findById.mockResolvedValue(accountRow({ type: 'CREDIT_CARD' }))
+      const people = peopleMock()
+      people.findActiveById.mockResolvedValue(personRow({ id: 'person-2' }))
+      const categories = categoriesMock()
+      categories.findActiveById.mockResolvedValue(null)
+      const repo = repoMock()
+      const service = newService({ accounts, people, categories, repo })
+
+      await expect(
+        service.create('user-1', {
+          accountId: 'acc-1',
+          kind: 'EXPENSE',
+          amountCents: 1000,
+          occurredAt: '2026-09-21',
+          description: 'Compra',
+          personId: 'person-2',
+          categoryId: 'cat-de-outro',
+        }),
+      ).rejects.toBeInstanceOf(NotFoundError)
+      expect(repo.create).not.toHaveBeenCalled()
+    })
+  })
+
   it('listByMonth: sem mês, usa o mês atual em America/Manaus', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-09-21T12:00:00.000Z'))
     const repo = repoMock()
