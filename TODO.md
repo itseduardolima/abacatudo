@@ -669,6 +669,13 @@ type="date">`.
   sincronização inline ("Atualizado hoje às HH:mm", reusa `formatSyncedAt`
   da Fase 4). Pessoas: campo de adicionar sempre visível (sem alternar
   formulário), igual ao protótipo. Verificado ao vivo nas 4 telas.
+- **Categorias virou lista fixa, sem CRUD.** A pedido do usuário: "vou usar
+  esses mesmo padrão [do seed], só quero que add ícone pra cada um".
+  Removido criar/renomear/arquivar categoria em todas as camadas (rota,
+  service, repository, DTO, schema Zod, hooks de mutação do front) — só
+  listar e atribuir numa transação continuam existindo. Tela virou só
+  leitura, com ícone próprio por categoria (`categoryIcon`, 13 ícones da
+  lista do seed + fallback genérico pra categoria fora dela).
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), UI de
   divisão de transação entre pessoas (`split`), ou seguir no backend
   (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de movimentação,
