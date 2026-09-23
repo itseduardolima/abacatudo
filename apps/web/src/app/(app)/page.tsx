@@ -30,6 +30,7 @@ export default function HomePage() {
     connectError,
     benefitAccountName,
     benefitBalanceCents,
+    benefitSyncedAt,
   } = useHomePage()
   const hasNoCard = !isLoadingAccounts && cardAccounts.length === 0
 
@@ -59,7 +60,13 @@ export default function HomePage() {
               ? [
                   {
                     key: 'benefit',
-                    content: <BenefitBalanceCard accountName={benefitAccountName} cents={benefitBalanceCents} />,
+                    content: (
+                      <BenefitBalanceCard
+                        accountName={benefitAccountName}
+                        cents={benefitBalanceCents}
+                        syncedAt={benefitSyncedAt}
+                      />
+                    ),
                   },
                 ]
               : []),

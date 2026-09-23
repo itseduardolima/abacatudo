@@ -66,5 +66,6 @@ export function useHomePage() {
     connectError,
     benefitAccountName: benefitAccount?.name ?? null,
     benefitBalanceCents,
+    benefitSyncedAt: benefitAccount?.lastSyncAt ?? null,
   }
 }
