@@ -33,6 +33,11 @@ export function useHomePage() {
 
   const cardAccounts = (accounts.data ?? []).filter((account) => account.type === 'CREDIT_CARD' && !account.archivedAt)
 
+  // Fase 4: saldo real da conta de benefício (InfinitePay via Pluggy) — só existe card quando o usuário
+  // marcou uma conta em /accounts e ela já sincronizou saldo. Sem isso, o hero fica sozinho, como antes.
+  const benefitAccount = (accounts.data ?? []).find((account) => account.isBenefitAccount) ?? null
+  const benefitBalanceCents = benefitAccount?.balanceCents ?? null
+
   // Abre o widget do Pluggy numa aba nova (é lá que a lista de bancos e o login de verdade acontecem —
   // nunca dentro do nosso app) e leva pra tela de "conectando", que faz o polling do status.
   const onConnectBank = async () => {
@@ -59,5 +64,7 @@ export function useHomePage() {
     onConnectBank,
     isConnectingBank: connectBank.isPending,
     connectError,
+    benefitAccountName: benefitAccount?.name ?? null,
+    benefitBalanceCents,
   }
 }
