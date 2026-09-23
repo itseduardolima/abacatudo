@@ -385,11 +385,21 @@ type="date">`.
   teste com 2 lançamentos manuais (um categorizado "Mercado", um sem
   categoria) — as duas linhas renderizaram certinho, com data, badges e
   valores corretos.
-- Próximo: continuar no backend (Sprint 7 Insights e IA, ou pendências:
-  5.4/5.5 rótulos de movimentação, 8.4's job/e-mail), ou seguir o front pra
-  Sprint 3 (classificação: corrigir pessoa/categoria, dividir, regras — e
-  agora já dá pra testar com dado de verdade via lançamento manual, sem
-  precisar do Pluggy).
+- **Front: corrigir categoria e pessoa na lista de transações (2026-09-23)**
+  — clicar numa transação abre um painel embaixo dela (mesmo padrão de
+  formulário único de `use-categories-page.ts`: um alvo por vez, submissão
+  numerada contra a corrida do cancelar) com botões de categoria e de pessoa
+  (`PATCH /transactions/:id/category`, `PATCH .../person`) e um checkbox
+  "sempre que for [estabelecimento]" (só aparece quando a transação tem
+  `merchant`) que grava a `Rule` junto. Escolhido como continuação natural da
+  lista, já que os dois endpoints (Sprint 3) já existiam no backend. Divisão
+  entre pessoas (`split`) ainda não tem UI — fica pra próxima etapa. Verificado
+  ao vivo: cliquei em "Cinema" (sem categoria), selecionei "Lazer", o painel
+  fechou e o badge atualizou na lista; conferido no Postgres que
+  `categoryId` gravou de verdade.
+- Próximo: UI de divisão de transação entre pessoas (`split`), ou seguir no
+  backend (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de
+  movimentação, 8.4's job/e-mail).
 
 ## Decisões já tomadas (2026-09-21)
 
