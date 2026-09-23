@@ -1,5 +1,6 @@
 'use client'
 
+import { Repeat, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { BackIcon, IconButton } from '@/components/ui/IconButton'
 import { InlineAlert } from '@/components/ui/InlineAlert'
@@ -40,21 +41,25 @@ export default function FixedExpensesPage() {
       {!isLoading && fixedExpenses.length === 0 && !isFormOpen && <p className="text-text">Nenhum gasto fixo ainda.</p>}
 
       {fixedExpenses.length > 0 && (
-        <ul className="flex flex-col gap-3">
+        <ul className="flex flex-col">
           {fixedExpenses.map((expense) => (
-            <li key={expense.id} className="flex items-center justify-between rounded-card border border-border p-4">
-              <span className="font-medium text-ink">{expense.name}</span>
-              <div className="flex items-center gap-3">
-                <MoneyText cents={expense.amountCents} />
-                <Button
-                  variant="link"
-                  size="sm"
-                  state={archivingId === expense.id ? 'loading' : 'idle'}
-                  onClick={() => archive(expense.id)}
-                >
-                  Remover
-                </Button>
-              </div>
+            <li key={expense.id} className="flex items-center gap-3 border-b border-surface py-3 last:border-b-0">
+              <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-surface text-ink">
+                <Repeat size={18} strokeWidth={1.8} />
+              </span>
+              <p className="flex-1 font-semibold text-ink">{expense.name}</p>
+              <MoneyText cents={expense.amountCents} />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-[34px] !px-0"
+                state={archivingId === expense.id ? 'loading' : 'idle'}
+                onClick={() => archive(expense.id)}
+                aria-label={`Remover ${expense.name}`}
+              >
+                <X size={18} strokeWidth={1.8} />
+              </Button>
             </li>
           ))}
         </ul>

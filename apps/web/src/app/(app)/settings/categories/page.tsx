@@ -1,11 +1,14 @@
 'use client'
 
+import { Pencil, Tag, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { BackIcon, IconButton } from '@/components/ui/IconButton'
 import { InlineAlert } from '@/components/ui/InlineAlert'
 import { Input } from '@/components/ui/Input'
 import { useCategoriesPage } from './use-categories-page'
 
+// Linha sem card, divisória fina (mesmo padrão de Pessoas/Contas) — ícone de categoria + nome, ações por
+// ícone (lápis renomeia, X arquiva) em vez de link de texto.
 export default function CategoriesPage() {
   const {
     categories,
@@ -36,23 +39,34 @@ export default function CategoriesPage() {
       {isLoadingCategories && <p className="text-text">Carregando…</p>}
 
       {categories.length > 0 && (
-        <ul className="flex flex-col gap-3">
+        <ul className="flex flex-col">
           {categories.map((category) => (
-            <li key={category.id} className="flex items-center justify-between rounded-card border border-border p-4">
-              <span className="font-medium text-ink">{category.name}</span>
-              <div className="flex gap-3">
-                <Button variant="link" size="sm" onClick={() => openEditForm(category)}>
-                  Renomear
-                </Button>
-                <Button
-                  variant="link"
-                  size="sm"
-                  state={archivingId === category.id ? 'loading' : 'idle'}
-                  onClick={() => archiveCategory(category.id)}
-                >
-                  Arquivar
-                </Button>
-              </div>
+            <li key={category.id} className="flex items-center gap-3 border-b border-surface py-3 last:border-b-0">
+              <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-surface text-ink">
+                <Tag size={18} strokeWidth={1.8} />
+              </span>
+              <p className="flex-1 font-semibold text-ink">{category.name}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-[34px] !px-0"
+                onClick={() => openEditForm(category)}
+                aria-label={`Renomear ${category.name}`}
+              >
+                <Pencil size={16} strokeWidth={1.8} />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-[34px] !px-0"
+                state={archivingId === category.id ? 'loading' : 'idle'}
+                onClick={() => archiveCategory(category.id)}
+                aria-label={`Arquivar ${category.name}`}
+              >
+                <X size={18} strokeWidth={1.8} />
+              </Button>
             </li>
           ))}
         </ul>
