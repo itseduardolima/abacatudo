@@ -70,6 +70,29 @@ describe('computeInvoice', () => {
   it('sem linhas, tudo zero', () => {
     expect(computeInvoice([], SELF)).toEqual({ totalCents: 0, mineCents: 0, notMineCents: 0 })
   })
+
+  it('CARD_PAYMENT (pagamento antecipado) abate o total e o "meu" juntos', () => {
+    const result = computeInvoice(
+      [
+        row({ kind: 'EXPENSE', amountCents: 1000, personId: SELF }),
+        row({ kind: 'CARD_PAYMENT', amountCents: 400, personId: SELF }),
+      ],
+      SELF,
+    )
+    expect(result).toEqual({ totalCents: 600, mineCents: 600, notMineCents: 0 })
+  })
+
+  it('CARD_PAYMENT nunca mexe no "não é meu" de terceiros', () => {
+    const result = computeInvoice(
+      [
+        row({ kind: 'EXPENSE', amountCents: 1000, personId: SELF }),
+        row({ kind: 'EXPENSE', amountCents: 700, personId: FAMILY }),
+        row({ kind: 'CARD_PAYMENT', amountCents: 400, personId: SELF }),
+      ],
+      SELF,
+    )
+    expect(result).toEqual({ totalCents: 1300, mineCents: 600, notMineCents: 700 })
+  })
 })
 
 describe('mergeInvoices', () => {

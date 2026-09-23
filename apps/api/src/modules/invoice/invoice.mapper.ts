@@ -1,5 +1,5 @@
 export interface InvoiceRow {
-  kind: 'EXPENSE' | 'REFUND'
+  kind: 'EXPENSE' | 'REFUND' | 'CARD_PAYMENT'
   amountCents: number
   personId: string | null
   splits: { personId: string; amountCents: number }[]
@@ -13,11 +13,22 @@ export interface Invoice {
 
 // Fatura = Meu + Não é meu (03-regras-negocio § Só a minha parte). Estorno reduz o total, não é uma linha
 // à parte. Split conta pra "Meu" só a fatia do self; sem split, é tudo ou nada pela pessoa da transação.
+//
+// CARD_PAYMENT só aparece aqui na fatura ABERTA (findOpenRows) — pagamento antecipado abate o que falta
+// pagar (a pedido do usuário, achado testando ao vivo contra um Nubank real: sem isso, quem paga adiantado
+// via app do banco continuava vendo o valor cheio aqui). Abate de total e de "meu" juntos — quem paga a
+// própria fatura reduz o que é próprio, nunca o "não é meu" de terceiros.
 export function computeInvoice(rows: InvoiceRow[], selfPersonId: string): Invoice {
   let totalCents = 0
   let mineCents = 0
 
   for (const row of rows) {
+    if (row.kind === 'CARD_PAYMENT') {
+      totalCents -= row.amountCents
+      mineCents -= row.amountCents
+      continue
+    }
+
     const sign = row.kind === 'REFUND' ? -1 : 1
     totalCents += sign * row.amountCents
 

@@ -95,20 +95,23 @@ describe('InvoiceService', () => {
       expect(result).toEqual({ totalCents: 1700, mineCents: 1000, notMineCents: 700 })
     })
 
-    it('conta PLUGGY: calcula pela fatura aberta de verdade (billId), ignora month', async () => {
+    it('conta PLUGGY: fatura aberta (billId), pagamento antecipado abate o que falta pagar', async () => {
       const accounts = accountsMock()
       accounts.findById.mockResolvedValue(accountRow({ source: 'PLUGGY' }))
       const people = peopleMock()
       people.findSelf.mockResolvedValue(personRow())
       const repo = repoMock()
-      repo.findOpenRows.mockResolvedValue([{ kind: 'EXPENSE', amountCents: 58989, personId: 'self-1', splits: [] }])
+      repo.findOpenRows.mockResolvedValue([
+        { kind: 'EXPENSE', amountCents: 100000, personId: 'self-1', splits: [] },
+        { kind: 'CARD_PAYMENT', amountCents: 40000, personId: 'self-1', splits: [] },
+      ])
       const service = new InvoiceService(repo, accounts, people)
 
       const result = await service.getForAccount('user-1', 'acc-1', '2026-09')
 
       expect(repo.findOpenRows).toHaveBeenCalledWith('user-1', 'acc-1')
       expect(repo.findRows).not.toHaveBeenCalled()
-      expect(result).toEqual({ totalCents: 58989, mineCents: 58989, notMineCents: 0 })
+      expect(result).toEqual({ totalCents: 60000, mineCents: 60000, notMineCents: 0 })
     })
   })
 

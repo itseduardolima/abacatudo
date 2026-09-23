@@ -30,8 +30,7 @@ export class InvoiceService {
   }
 
   // "Meu" da fatura aberta, somado em todos os cartões (03-regras-negocio § Só a minha parte) — é o
-  // número que alimenta o ritmo (HU 7.4). Sempre a fatura de agora; não existe "mês passado" aqui (ver
-  // findOpenRows/findRows sobre por que cada tipo de conta usa um critério diferente de "aberta").
+  // número que alimenta o ritmo (HU 7.4). Sempre a fatura de agora; não existe "mês passado" aqui.
   async getSummary(userId: string): Promise<Invoice> {
     const selfId = await this.selfPersonId(userId)
     const cardAccounts = (await this.accounts.findMany(userId, false)).filter((a) => a.type === 'CREDIT_CARD')
@@ -42,8 +41,11 @@ export class InvoiceService {
     return mergeInvoices(invoices)
   }
 
-  // PLUGGY: billId de verdade do banco (findOpenRows, ignora `month`). MANUAL/IMPORT: nunca tem billId
-  // (não existe banco por trás), mês calendário é a aproximação possível — aí `month` ainda vale.
+  // PLUGGY: billId de verdade do banco (findOpenRows — inclui CARD_PAYMENT, pra pagamento antecipado
+  // abater o que falta pagar; ver invoice.mapper). O /bills da Pluggy foi cogitado e descartado: só
+  // devolve fatura já FECHADA, nunca a aberta (checado ao vivo contra um Nubank real — o primeiro
+  // resultado tinha vencimento no passado). MANUAL/IMPORT: nunca tem billId (não existe banco por trás),
+  // mês calendário é a aproximação possível.
   private rowsForAccount(userId: string, account: AccountWithPluggyItem, month?: string): Promise<InvoiceRow[]> {
     return account.source === 'PLUGGY'
       ? this.repo.findOpenRows(userId, account.id)

@@ -24,13 +24,15 @@ export class InvoiceRepository {
 
   // Fatura de verdade (03-regras-negocio § Movimentações: "agrupa por billId; as pendentes (sem billId)
   // pertencem à fatura aberta") — usado pra conta PLUGGY, cujo billId vem do banco real no sync. Nunca
-  // filtra por `occurredAt`: o fechamento do cartão quase nunca bate com o mês calendário.
+  // filtra por `occurredAt`: o fechamento do cartão quase nunca bate com o mês calendário. Inclui
+  // CARD_PAYMENT (só aqui — nunca em findRows): pagamento antecipado abate o que falta pagar da fatura
+  // aberta (computeInvoice trata o sinal).
   async findOpenRows(userId: string, accountId?: string): Promise<InvoiceRow[]> {
     const rows = await this.prisma.transaction.findMany({
       where: {
         userId,
         billId: null,
-        kind: { in: ['EXPENSE', 'REFUND'] },
+        kind: { in: ['EXPENSE', 'REFUND', 'CARD_PAYMENT'] },
         account: { type: 'CREDIT_CARD', source: 'PLUGGY', ...(accountId ? { id: accountId } : {}) },
       },
       include: { splits: { select: { personId: true, amountCents: true } } },
@@ -46,7 +48,7 @@ function toInvoiceRow(row: {
   splits: { personId: string; amountCents: number }[]
 }): InvoiceRow {
   return {
-    kind: row.kind as 'EXPENSE' | 'REFUND',
+    kind: row.kind as 'EXPENSE' | 'REFUND' | 'CARD_PAYMENT',
     amountCents: row.amountCents,
     personId: row.personId,
     splits: row.splits,
