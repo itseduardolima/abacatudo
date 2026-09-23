@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useAccounts } from '@/hooks/queries/use-accounts'
 import { useBudgetMonth } from '@/hooks/queries/use-budget-month'
@@ -33,8 +33,14 @@ export function useIncomePage() {
   const benefitAccount = accounts.data?.find((account) => account.isBenefitAccount) ?? null
   const benefitFromAccountCents = benefitAccount?.balanceCents ?? null
 
+  // isDirty num ref (não na dependência do efeito): um sync em segundo plano pode mudar
+  // benefitFromAccountCents a qualquer momento (refetch de accounts) — sem essa checagem, reset()
+  // descartava silenciosamente uma edição de "renda mensal" ainda não salva.
+  const isDirtyRef = useRef(isDirty)
+  isDirtyRef.current = isDirty
+
   useEffect(() => {
-    if (!budgetMonth.data) return
+    if (!budgetMonth.data || isDirtyRef.current) return
     reset({
       income: formatMoney(budgetMonth.data.incomeCents).replace('R$ ', ''),
       benefit: formatMoney(benefitFromAccountCents ?? budgetMonth.data.benefitCents).replace('R$ ', ''),
