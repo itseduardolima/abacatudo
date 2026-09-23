@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/Button'
 import { BackIcon, IconButton } from '@/components/ui/IconButton'
-import { Input } from '@/components/ui/Input'
+import { MoneyInput } from '@/components/ui/MoneyInput'
 import { useIncomePage } from './use-income-page'
 
 export default function IncomePage() {
@@ -24,17 +24,9 @@ export default function IncomePage() {
 
       {!isLoading && (
         <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
-          <Input
-            label="Renda mensal"
-            inputMode="decimal"
-            placeholder="0,00"
-            error={errors.income?.message}
-            {...register('income')}
-          />
-          <Input
+          <MoneyInput label="Renda mensal" error={errors.income?.message} {...register('income')} />
+          <MoneyInput
             label="Renda de benefícios"
-            inputMode="decimal"
-            placeholder="0,00"
             error={errors.benefit?.message}
             disabled={benefitAccountName != null}
             {...register('benefit')}

@@ -28,3 +28,13 @@ export function parseMoneyInput(value: string): number {
   const amount = Number(normalized)
   return Number.isFinite(amount) ? Math.round(amount * 100) : NaN
 }
+
+// Máscara "preenche da direita pra esquerda" (todo input de dinheiro do app): cada dígito digitado entra
+// como centavo, os separadores (ponto de milhar, vírgula decimal) aparecem sozinhos. Só reformatação de
+// texto — nunca validação (mesma regra do parseMoneyInput acima). Campo vazio continua vazio (backspace até
+// limpar não vira "0,00" forçado).
+export function maskMoneyInput(value: string): string {
+  const digits = value.replace(/\D/g, '')
+  if (!digits) return ''
+  return formatMoney(Number(digits)).replace('R$ ', '')
+}

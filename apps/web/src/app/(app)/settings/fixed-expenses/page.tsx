@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { BackIcon, IconButton } from '@/components/ui/IconButton'
 import { InlineAlert } from '@/components/ui/InlineAlert'
 import { Input } from '@/components/ui/Input'
+import { MoneyInput } from '@/components/ui/MoneyInput'
 import { MoneyText } from '@/components/finance/MoneyText'
 import { useFixedExpensesPage } from './use-fixed-expenses-page'
 
@@ -75,13 +76,7 @@ export default function FixedExpensesPage() {
         <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
           {ruleError && <InlineAlert>{ruleError}</InlineAlert>}
           <Input label="Nome" placeholder="Aluguel" error={errors.name?.message} {...register('name')} />
-          <Input
-            label="Valor mensal"
-            inputMode="decimal"
-            placeholder="0,00"
-            error={errors.amount?.message}
-            {...register('amount')}
-          />
+          <MoneyInput label="Valor mensal" error={errors.amount?.message} {...register('amount')} />
           <div className="mt-2 flex gap-3">
             <Button type="submit" state={isSubmitting ? 'loading' : 'idle'}>
               Salvar
