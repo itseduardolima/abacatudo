@@ -15,6 +15,7 @@ import { BudgetModule } from './modules/budget/budget.module'
 import { CategoryModule } from './modules/category/category.module'
 import { EnvelopeModule } from './modules/envelope/envelope.module'
 import { HealthModule } from './modules/health/health.module'
+import { InsightModule } from './modules/insight/insight.module'
 import { InvoiceModule } from './modules/invoice/invoice.module'
 import { PersonModule } from './modules/person/person.module'
 import { TransactionModule } from './modules/transaction/transaction.module'
@@ -42,6 +43,7 @@ import { PrismaModule } from './prisma/prisma.module'
     InvoiceModule,
     BudgetModule,
     EnvelopeModule,
+    InsightModule,
     HealthModule,
   ],
   providers: [
