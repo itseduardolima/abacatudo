@@ -13,5 +13,6 @@ import { PluggyItemRepository } from './pluggy-item.repository'
   imports: [AccountModule, PersonModule, RuleModule, CardHolderHintModule],
   controllers: [BankingController],
   providers: [BankingService, PluggyClient, PluggyItemRepository, BankingSyncRepository],
+  exports: [PluggyClient],
 })
 export class BankingModule {}

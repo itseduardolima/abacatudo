@@ -3,6 +3,9 @@ export interface InvoiceRow {
   amountCents: number
   personId: string | null
   splits: { personId: string; amountCents: number }[]
+  // Só presente pra parcela ainda sem billId. `groupKey` identifica a compra (todas as parcelas dela
+  // compartilham o mesmo valor); `number` é a posição da parcela (1-based).
+  installment: { groupKey: string; number: number } | null
 }
 
 export interface Invoice {
@@ -41,6 +44,42 @@ export function computeInvoice(rows: InvoiceRow[], selfPersonId: string): Invoic
   }
 
   return { totalCents, mineCents, notMineCents: totalCents - mineCents }
+}
+
+// Uma compra parcelada gera uma Transaction por parcela (03-regras-negocio); enquanto o banco não fatura
+// uma parcela, ela fica sem billId — mas TODAS as parcelas futuras também ficam sem billId até a vez
+// delas chegar, não só a próxima. Sem isso, uma compra em 6x aparecia inteira (as 6 parcelas) na fatura
+// aberta de hoje, quando só uma parcela vence por vez (achado ao vivo comparando com o OFX de um Nubank
+// real: superestimava a fatura em milhares de reais). Mantém só a parcela de menor número por grupo —
+// entre as que ainda não foram faturadas, é sempre a próxima a vencer; linha sem `installment` passa
+// direto.
+export function keepNextDueInstallmentOnly(rows: InvoiceRow[]): InvoiceRow[] {
+  const lowestNumberByGroup = new Map<string, number>()
+  for (const row of rows) {
+    if (!row.installment) continue
+    const current = lowestNumberByGroup.get(row.installment.groupKey)
+    if (current === undefined || row.installment.number < current) {
+      lowestNumberByGroup.set(row.installment.groupKey, row.installment.number)
+    }
+  }
+
+  return rows.filter(
+    (row) => !row.installment || row.installment.number === lowestNumberByGroup.get(row.installment.groupKey),
+  )
+}
+
+// Quanto falta pagar = saldo da última fatura fechada (o Pluggy só materializa fatura depois que ela
+// fecha — nunca a aberta) + a movimentação local ainda sem billId (computeInvoice já sabe somar isso,
+// CARD_PAYMENT incluso). O saldo anterior inteiro vira "meu" — não dá pra saber de quem era o gasto de
+// uma fatura que já fechou há meses (simplificação consciente, documentada no TODO); "não é meu" só nasce
+// da atribuição de pessoa nas transações ainda abertas.
+export function computeInvoiceWithCarryover(rows: InvoiceRow[], selfPersonId: string, carryoverCents: number): Invoice {
+  const movement = computeInvoice(rows, selfPersonId)
+  return {
+    totalCents: carryoverCents + movement.totalCents,
+    mineCents: carryoverCents + movement.mineCents,
+    notMineCents: movement.notMineCents,
+  }
 }
 
 // Soma a fatura de vários cartões numa só (getSummary): cada `Invoice` já respeita sua própria invariante,

@@ -1,18 +1,27 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 import type { Invoice } from '@gastos/shared'
 import { resolveMonthRange } from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository, type AccountWithPluggyItem } from '../account/account.repository'
+import { PluggyClient } from '../banking/pluggy/pluggy.client'
 import { PersonRepository } from '../person/person.repository'
-import { computeInvoice, mergeInvoices, type InvoiceRow } from './invoice.mapper'
+import {
+  computeInvoice,
+  computeInvoiceWithCarryover,
+  keepNextDueInstallmentOnly,
+  mergeInvoices,
+} from './invoice.mapper'
 import { InvoiceRepository } from './invoice.repository'
 
 @Injectable()
 export class InvoiceService {
+  private readonly logger = new Logger(InvoiceService.name)
+
   constructor(
     private readonly repo: InvoiceRepository,
     private readonly accounts: AccountRepository,
     private readonly people: PersonRepository,
+    private readonly pluggy: PluggyClient,
   ) {}
 
   async getForAccount(userId: string, accountId: string | undefined, month?: string): Promise<Invoice> {
@@ -25,8 +34,7 @@ export class InvoiceService {
     }
 
     const selfId = await this.selfPersonId(userId)
-    const rows = await this.rowsForAccount(userId, account, month)
-    return computeInvoice(rows, selfId)
+    return this.invoiceForAccount(account, selfId, month)
   }
 
   // "Meu" da fatura aberta, somado em todos os cartões (03-regras-negocio § Só a minha parte) — é o
@@ -35,21 +43,42 @@ export class InvoiceService {
     const selfId = await this.selfPersonId(userId)
     const cardAccounts = (await this.accounts.findMany(userId, false)).filter((a) => a.type === 'CREDIT_CARD')
 
-    const invoices = await Promise.all(
-      cardAccounts.map(async (account) => computeInvoice(await this.rowsForAccount(userId, account), selfId)),
-    )
+    const invoices = await Promise.all(cardAccounts.map((account) => this.invoiceForAccount(account, selfId)))
     return mergeInvoices(invoices)
   }
 
-  // PLUGGY: billId de verdade do banco (findOpenRows — inclui CARD_PAYMENT, pra pagamento antecipado
-  // abater o que falta pagar; ver invoice.mapper). O /bills da Pluggy foi cogitado e descartado: só
-  // devolve fatura já FECHADA, nunca a aberta (checado ao vivo contra um Nubank real — o primeiro
-  // resultado tinha vencimento no passado). MANUAL/IMPORT: nunca tem billId (não existe banco por trás),
-  // mês calendário é a aproximação possível.
-  private rowsForAccount(userId: string, account: AccountWithPluggyItem, month?: string): Promise<InvoiceRow[]> {
-    return account.source === 'PLUGGY'
-      ? this.repo.findOpenRows(userId, account.id)
-      : this.repo.findRows(userId, resolveMonthRange(month), account.id)
+  // PLUGGY: "quanto falta pagar" = saldo da última fatura fechada (Pluggy /bills) + movimentação local
+  // ainda sem billId (findOpenRows), só a parcela que vence agora em compra parcelada
+  // (keepNextDueInstallmentOnly — sem isso, uma compra em 6x aparecia inteira, não só a parcela da vez).
+  // Fórmula toda verificada ao vivo contra o OFX exportado de um Nubank real, batendo exato (o resíduo
+  // que sobrava era só uma compra recente que a API do Pluggy ainda não tinha sincronizado — nada a ver
+  // com a conta). Sem fatura fechada ainda (cartão novo) ou Pluggy fora do ar, usa toda a movimentação
+  // local sem saldo anterior, em vez de quebrar a tela. MANUAL/IMPORT: nunca tem banco de verdade por
+  // trás, mês calendário é a aproximação possível.
+  private async invoiceForAccount(account: AccountWithPluggyItem, selfPersonId: string, month?: string) {
+    if (account.source !== 'PLUGGY') {
+      const rows = await this.repo.findRows(account.userId, resolveMonthRange(month), account.id)
+      return computeInvoice(rows, selfPersonId)
+    }
+
+    const [rows, carryoverCents] = await Promise.all([
+      this.repo.findOpenRows(account.userId, account.id),
+      this.lastClosedBillCarryoverCents(account),
+    ])
+    return computeInvoiceWithCarryover(keepNextDueInstallmentOnly(rows), selfPersonId, carryoverCents)
+  }
+
+  private async lastClosedBillCarryoverCents(account: AccountWithPluggyItem): Promise<number> {
+    if (!account.externalAccountId) return 0
+    try {
+      const bill = await this.pluggy.getLastClosedBill(account.externalAccountId)
+      return bill?.totalAmount == null ? 0 : Math.round(Math.abs(bill.totalAmount) * 100)
+    } catch (error) {
+      this.logger.warn(
+        `Não foi possível buscar a última fatura fechada no Pluggy pra conta ${account.id}: ${String(error)}`,
+      )
+      return 0
+    }
   }
 
   private async selfPersonId(userId: string): Promise<string> {
