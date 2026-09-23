@@ -420,9 +420,30 @@ type="date">`.
   dias, filtro "Não é meu" isolando só a transação da Juliana, categorizar
   "Cinema" via painel funcionando, botão de voltar circular igual ao
   protótipo.
-- Próximo: UI de divisão de transação entre pessoas (`split`), versão
-  desktop (`AppShell` do spec 05), ou seguir no backend (Sprint 7 Insights e
-  IA, ou pendências: 5.4/5.5 rótulos de movimentação, 8.4's job/e-mail).
+- **Front: tela de login 100% fiel ao protótipo (2026-09-23)** — reconstruída
+  a partir de `01-login.dc.html`: título vira o headline grande "Da fatura,
+  só o que é seu." (em vez do genérico "Entrar"), campo de senha ganhou
+  botão de mostrar/ocultar (`Input` ganhou prop `trailingAction`, reutilizável
+  em qualquer campo), texto de rodapé "O acesso é só por convite." fixo
+  embaixo. **Gap consciente**: o protótipo tem link "Esqueci minha senha" —
+  não incluí porque `POST /auth/forgot-password` (spec 08-seguranca) ainda
+  não existe; um link morto seria pior que a ausência. Verificado ao vivo:
+  toggle de senha funcionando, login de ponta a ponta com o novo layout.
+- **Backend: HU 7.4 Ritmo (2026-09-23)**, pré-requisito pra Home 100% fiel
+  (`07-inicio` mostra "no ritmo"/"sobram"/"por dia", que são dinheiro — não
+  dá pra inventar isso no frontend). `GET /budget/pace?month=`: junta o teto
+  variável (`BudgetMonth`) com o "Meu" do mês (`InvoiceService.getSummary`,
+  mesmo número que já alimenta a fatura) e calcula, em `pace.mapper.ts`
+  (função pura, testada isolada): dias do mês já completos vs. restantes,
+  gasto esperado linear até agora, `ON_TRACK`/`OVER_PACE`, quanto sobra por
+  dia até o fim do mês. Verificado ao vivo: sem orçamento configurado tudo
+  zero; configurando renda/fixos/poupança, os números batem à mão (22/30
+  dias, esperado R$ 1.833,33, R$ 312,50/dia restante).
+- Próximo: reconstruir a Home (`07-inicio`) usando `/budget/pace` +
+  `/invoice/summary` (agora desbloqueada), versão desktop (`AppShell` do
+  spec 05), UI de divisão de transação entre pessoas (`split`), ou seguir no
+  backend (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de
+  movimentação, 8.4's job/e-mail).
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -660,7 +681,7 @@ typecheck/lint/build limpos).
 - [ ] 1.6 — 2FA TOTP
 - [ ] 1.7 — Reautenticação em ação sensível
 - [ ] 1.8 — Exportar e excluir conta
-- [ ] 7.4 — Ritmo (por dia)
+- [x] 7.4 — Ritmo (por dia): `GET /budget/pace?month=`, testado ao vivo
 - [ ] 7.5 — Parcelas futuras
 - [ ] 7.6 — Congelar meses fechados
 - [ ] 10.3 — Chat com tool use
