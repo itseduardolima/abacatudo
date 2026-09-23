@@ -554,4 +554,16 @@ describe('BankingService', () => {
     expect(pluggy.deleteItem).not.toHaveBeenCalled()
     expect(items.update).not.toHaveBeenCalled()
   })
+
+  it('disconnect: se a revogação no Pluggy falhar, nunca marca desconectado localmente (nunca mente sobre o estado)', async () => {
+    const items = itemsMock()
+    items.findById.mockResolvedValue(itemRow({ status: 'UPDATED' }))
+    const pluggy = pluggyMock()
+    pluggy.deleteItem.mockRejectedValue(new Error('Pluggy fora do ar'))
+    const service = newService({ items, pluggy })
+
+    await expect(service.disconnect('user-1', 'item-1')).rejects.toThrow('Pluggy fora do ar')
+
+    expect(items.update).not.toHaveBeenCalled()
+  })
 })
