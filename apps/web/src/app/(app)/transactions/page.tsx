@@ -2,9 +2,9 @@
 
 import { Landmark } from 'lucide-react'
 import type { Segment } from './use-transactions-page'
+import { TransactionSheet } from './transaction-sheet'
 import { Button } from '@/components/ui/Button'
 import { BackIcon, IconButton } from '@/components/ui/IconButton'
-import { InlineAlert } from '@/components/ui/InlineAlert'
 import { MoneyText } from '@/components/finance/MoneyText'
 import { formatAccountType } from '@/lib/utils/format-account-type'
 import { currentMonthKey, formatMonthName } from '@/lib/utils/format-month'
@@ -34,6 +34,9 @@ export default function TransactionsPage() {
     categories,
     people,
     editingId,
+    editingTx,
+    sheetView,
+    setSheetView,
     openEdit,
     closeEdit,
     alwaysForMerchant,
@@ -157,91 +160,53 @@ export default function TransactionsPage() {
         <div key={group.label}>
           <p className="pb-0.5 pt-3.5 text-sm font-semibold text-muted">{group.label}</p>
           {group.items.map((tx) => (
-            <div key={tx.id} className="border-b border-surface last:border-b-0">
-              <button
-                type="button"
-                onClick={() => (editingId === tx.id ? closeEdit() : openEdit(tx.id))}
-                className="flex w-full items-center justify-between gap-3 py-3 text-left"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-semibold text-ink">{tx.merchant ?? tx.description}</p>
-                  <p className="mt-0.5 text-sm text-muted">{tx.categoryName ?? 'Sem categoria'}</p>
-                </div>
-                <div className="flex flex-shrink-0 items-center gap-2">
-                  <MoneyText cents={tx.kind === 'REFUND' ? -tx.amountCents : tx.amountCents} />
-                  {tx.personName ? (
-                    <span
-                      className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${personAvatarClass(
-                        tx.personIsSelf,
-                        tx.personOthersIndex,
-                      )}`}
-                    >
-                      {personInitial(tx.personName)}
-                    </span>
-                  ) : (
-                    <span className="rounded-pill px-2.5 py-1 text-xs text-muted shadow-hair">Sem dono</span>
-                  )}
-                </div>
-              </button>
-
-              {editingId === tx.id && (
-                <div className="flex flex-col gap-4 pb-4">
-                  {ruleError && <InlineAlert>{ruleError}</InlineAlert>}
-
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-sm font-medium text-text">Categoria</span>
-                    <div className="flex flex-wrap gap-2">
-                      {categories.map((category) => (
-                        <Button
-                          key={category.id}
-                          size="sm"
-                          variant={tx.categoryId === category.id ? 'primary' : 'outline'}
-                          state={isSaving ? 'loading' : 'idle'}
-                          onClick={() => void selectCategory(tx.id, category.id)}
-                        >
-                          {category.name}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-sm font-medium text-text">Pessoa</span>
-                    <div className="flex flex-wrap gap-2">
-                      {people.map((person) => (
-                        <Button
-                          key={person.id}
-                          size="sm"
-                          variant={tx.personId === person.id ? 'primary' : 'outline'}
-                          state={isSaving ? 'loading' : 'idle'}
-                          onClick={() => void selectPerson(tx.id, person.id)}
-                        >
-                          {person.name}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {tx.merchant && (
-                    <label className="flex items-center gap-2 text-sm text-text">
-                      <input
-                        type="checkbox"
-                        checked={alwaysForMerchant}
-                        onChange={(event) => setAlwaysForMerchant(event.target.checked)}
-                      />
-                      Sempre que for &quot;{tx.merchant}&quot;
-                    </label>
-                  )}
-
-                  <Button variant="link" onClick={closeEdit}>
-                    Cancelar
-                  </Button>
-                </div>
-              )}
-            </div>
+            <button
+              key={tx.id}
+              type="button"
+              onClick={() => openEdit(tx.id)}
+              className="flex w-full items-center justify-between gap-3 border-b border-surface py-3 text-left last:border-b-0"
+            >
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-ink">{tx.merchant ?? tx.description}</p>
+                <p className="mt-0.5 text-sm text-muted">{tx.categoryName ?? 'Sem categoria'}</p>
+              </div>
+              <div className="flex flex-shrink-0 items-center gap-2">
+                <MoneyText cents={tx.kind === 'REFUND' ? -tx.amountCents : tx.amountCents} />
+                {tx.personName ? (
+                  <span
+                    className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${personAvatarClass(
+                      tx.personIsSelf,
+                      tx.personOthersIndex,
+                    )}`}
+                  >
+                    {personInitial(tx.personName)}
+                  </span>
+                ) : (
+                  <span className="rounded-pill px-2.5 py-1 text-xs text-muted shadow-hair">Sem dono</span>
+                )}
+              </div>
+            </button>
           ))}
         </div>
       ))}
+
+      {editingId && editingTx && selectedAccount && (
+        <TransactionSheet
+          tx={editingTx}
+          accountName={selectedAccount.name}
+          view={sheetView}
+          setView={setSheetView}
+          categories={categories}
+          people={people}
+          isSaving={isSaving}
+          ruleError={ruleError}
+          alwaysForMerchant={alwaysForMerchant}
+          setAlwaysForMerchant={setAlwaysForMerchant}
+          selectCategory={(id, categoryId) => void selectCategory(id, categoryId)}
+          selectPerson={(id, personId) => void selectPerson(id, personId)}
+          onClose={closeEdit}
+        />
+      )}
     </main>
   )
 }

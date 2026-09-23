@@ -12,6 +12,7 @@ import { ApiClientError } from '@/lib/api-client'
 import { dayGroupLabel } from '@/lib/utils/format-day-group'
 
 export type Segment = 'all' | 'mine' | 'notMine'
+export type SheetView = 'detail' | 'category' | 'person'
 
 // Hook de página: só orquestração (04-padroes-codigo). Fatura é por cartão (protótipo 08-fatura) — a
 // API de transações não filtra por conta, então o filtro por `accountId` é feito aqui; a de convite
@@ -35,6 +36,7 @@ export function useTransactionsPage() {
   const [segment, setSegment] = useState<Segment>('all')
 
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [sheetView, setSheetView] = useState<SheetView>('detail')
   const [alwaysForMerchant, setAlwaysForMerchant] = useState(false)
   const [ruleError, setRuleError] = useState<string | null>(null)
   const submissionRef = useRef(0)
@@ -74,6 +76,7 @@ export function useTransactionsPage() {
   const openEdit = (id: string) => {
     submissionRef.current++
     setEditingId(id)
+    setSheetView('detail')
     setAlwaysForMerchant(false)
     setRuleError(null)
   }
@@ -81,17 +84,21 @@ export function useTransactionsPage() {
   const closeEdit = () => {
     submissionRef.current++
     setEditingId(null)
+    setSheetView('detail')
     setAlwaysForMerchant(false)
     setRuleError(null)
   }
 
+  // Escolher categoria/pessoa volta pro detalhe (nunca fecha a folha) — o usuário vê o resultado antes de
+  // decidir fechar, mesmo padrão do protótipo (10-classificar-escolha volta pro 12-detalhe depois de
+  // escolher).
   const runUpdate = async (mutate: () => Promise<unknown>) => {
     const submission = ++submissionRef.current
     setRuleError(null)
     try {
       await mutate()
       if (submission !== submissionRef.current) return
-      setEditingId(null)
+      setSheetView('detail')
       setAlwaysForMerchant(false)
     } catch (error) {
       if (!(error instanceof ApiClientError)) throw error
@@ -108,6 +115,8 @@ export function useTransactionsPage() {
       updatePerson.mutateAsync({ id: transactionId, input: { personId, alwaysForMerchant, alwaysForCard: false } }),
     )
 
+  const editingTx = editingId ? (rows.find((row) => row.id === editingId) ?? null) : null
+
   return {
     isLoading: accounts.isPending || categories.isPending || people.isPending || transactions.isPending,
     cardAccounts,
@@ -120,6 +129,9 @@ export function useTransactionsPage() {
     categories: categories.data ?? [],
     people: people.data ?? [],
     editingId,
+    editingTx,
+    sheetView,
+    setSheetView,
     openEdit,
     closeEdit,
     alwaysForMerchant,

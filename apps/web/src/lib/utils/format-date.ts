@@ -24,3 +24,17 @@ export function formatSyncedAt(isoDateTime: string): string {
   const isToday = formatShortDate(isoDateTime) === formatShortDate(new Date().toISOString())
   return isToday ? `hoje às ${time}` : `${formatShortDate(isoDateTime)} às ${time}`
 }
+
+// "qui 17 set, 19:41" (protótipo 12-detalhe § Data) — dia da semana curto, sem ponto.
+const WEEKDAY_DATE_FORMATTER = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: 'America/Manaus',
+  weekday: 'short',
+  day: '2-digit',
+  month: 'short',
+})
+
+export function formatDateTimeLong(isoDateTime: string): string {
+  const date = new Date(isoDateTime)
+  const weekdayDate = WEEKDAY_DATE_FORMATTER.format(date).replace(/\./g, '')
+  return `${weekdayDate}, ${TIME_FORMATTER.format(date)}`
+}
