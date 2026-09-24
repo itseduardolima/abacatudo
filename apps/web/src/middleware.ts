@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 // Mesmo nome de cookie do AuthController (apps/api/src/common/types/request.ts). httpOnly não impede
 // leitura aqui — o middleware roda no servidor, só o JS do browser é bloqueado.
 const SESSION_COOKIE = '__Host-gastos_session'
-const PUBLIC_ROUTES = new Set(['/login'])
+const PUBLIC_ROUTES = new Set(['/login', '/forgot-password', '/reset-password'])
 
 // CSP com nonce por requisição (08-seguranca § 2): script só 'self' + nonce, sem 'unsafe-inline' em script.
 // 'unsafe-eval' só em desenvolvimento (o HMR do Next precisa). O widget Pluggy Connect (Sprint 6) entra
