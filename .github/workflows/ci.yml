@@ -90,8 +90,9 @@ jobs:
   # (09-operacao.md § 5). Precisa dos secrets DEPLOY_HOST/DEPLOY_USER/DEPLOY_SSH_KEY (e opcionalmente
   # DEPLOY_PATH, default abaixo) configurados no repositório. A VPS de hoje já roda outro app dono das
   # portas 80/443 (pdv-web) — por isso o `up` aqui nunca inclui o serviço `caddy` (nem o `--build` builda
-  # a imagem dele, que não existe) e usa o overlay docker-compose.shared-caddy.yml (mesma rede do Caddy
-  # do outro app). Rodando sozinho numa VPS nova, tirar esse overlay e incluir `caddy` no `up`.
+  # a imagem dele, que não existe) e, depois de subir, roda scripts/connect-shared-network.sh para anexar
+  # web/api na rede do Caddy do outro app (nunca via `networks:` do compose — ver comentário no script).
+  # Rodando sozinho numa VPS nova, tirar essa chamada e incluir `caddy` no `up`.
   deploy:
     runs-on: ubuntu-latest
     needs: [ci, components, docker]
@@ -114,7 +115,8 @@ jobs:
             git checkout main
             git reset --hard origin/main
             ./scripts/deploy-check.sh
-            docker compose -f docker-compose.yml -f docker-compose.shared-caddy.yml up -d --build web api
+            docker compose up -d --build web api
+            ./scripts/connect-shared-network.sh
             # --build sem limpeza deixa imagem/camada órfã a cada deploy.
             docker image prune -f
       - name: Wait for the API to answer /health
