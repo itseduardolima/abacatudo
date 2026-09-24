@@ -55,9 +55,10 @@ Checklist completo em [`docs/specs/09-operacao.md`](./docs/specs/09-operacao.md)
 3. `./scripts/deploy-check.sh && docker compose up -d --build` (o `env-check`
    do compose já roda o `deploy-check.sh` de novo sozinho, mas rodar antes
    falha mais cedo com mensagem melhor).
-4. Seed do primeiro usuário: `docker compose exec api pnpm db:seed:prod`
+4. Seed do primeiro usuário: `docker compose exec api node dist/seed/prisma/seed.js`
    (lê `SEED_USER_EMAIL`/`SEED_USER_PASSWORD`/`SEED_USER_NAME` do `.env` —
-   idempotente, pode rodar de novo).
+   idempotente, pode rodar de novo; a imagem final não tem `pnpm`, por isso
+   é `node` direto no arquivo compilado, não `pnpm db:seed:prod`).
 5. Crontab: backup diário e checagem de disco:
 
 ```cron
