@@ -789,6 +789,21 @@ type="date">`.
   placeholder — antes dependia do operador lembrar de rodar o script à parte
   antes do `docker compose up`. Verificado: `docker compose config` válido,
   e `docker compose run --rm env-check` sem `.env` falha como esperado.
+- **Meu perfil + esqueci minha senha (2026-09-23)**, seguindo o mesmo padrão
+  do `pdv-web` (token opaco de uso único, só o hash SHA-256 persistido, TTL
+  curto, nunca revela se o e-mail existe). Novo `MailService` (nodemailer,
+  transporte `log` por padrão — só escreve no console — ou `smtp` de
+  verdade); `MAIL_HOST`/`MAIL_AUTH_USER`/`MAIL_AUTH_PASS` obrigatórios em
+  produção (env.ts + deploy-check.sh), senão `docker compose up` nunca
+  ficaria de pé sem enviar e-mail de verdade. Tela "Meu perfil" (nome +
+  e-mail num form, senha com a atual obrigatória noutro); trocar senha
+  derruba toda sessão aberta em outro dispositivo, mantendo só a atual.
+  Model `PasswordResetToken` (sem RLS, mesma exceção de User/Session).
+  Verificado ao vivo de ponta a ponta com e-mail real via SMTP (Hostinger):
+  pedido de reset → e-mail chegou → link abriu a tela certa com o e-mail da
+  conta → senha trocada → login com a senha nova funcionou → editar nome em
+  Meu perfil → trocar senha com a atual errada (rejeitou) e depois certa
+  (funcionou, sessão atual não caiu).
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou seguir
   no backend (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de
   movimentação, 8.4's job/e-mail).
