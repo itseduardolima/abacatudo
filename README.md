@@ -52,10 +52,13 @@ Checklist completo em [`docs/specs/09-operacao.md`](./docs/specs/09-operacao.md)
 
 1. DNS A/AAAA de `APP_DOMAIN` para a VPS; firewall 22/80/443; SSH só por chave.
 2. `cp .env.example .env`, preencher com segredos reais (`openssl rand -hex 32`).
-3. `./scripts/deploy-check.sh && docker compose up -d --build`.
-4. Seed do primeiro usuário; ligar 2FA.
-5. Registrar o webhook no Pluggy: `https://APP_DOMAIN/api/banking/webhooks/pluggy`.
-6. Crontab: backup diário e checagem de disco:
+3. `./scripts/deploy-check.sh && docker compose up -d --build` (o `env-check`
+   do compose já roda o `deploy-check.sh` de novo sozinho, mas rodar antes
+   falha mais cedo com mensagem melhor).
+4. Seed do primeiro usuário: `docker compose exec api pnpm db:seed:prod`
+   (lê `SEED_USER_EMAIL`/`SEED_USER_PASSWORD`/`SEED_USER_NAME` do `.env` —
+   idempotente, pode rodar de novo).
+5. Crontab: backup diário e checagem de disco:
 
 ```cron
 0 3 * * * BACKUP_AGE_RECIPIENT=age1... BACKUP_S3_BUCKET=... /opt/gastos-web/scripts/backup-db.sh
@@ -66,5 +69,9 @@ Checklist completo em [`docs/specs/09-operacao.md`](./docs/specs/09-operacao.md)
 `age-keygen`; a privada nunca vai para a VPS). Credenciais do bucket **só de
 escrita**; retenção por lifecycle do bucket (spec 09 § 4).
 
-7. Uptime externo em `/api/health`. Um backup nunca restaurado não é backup:
+6. Uptime externo em `/api/health`. Um backup nunca restaurado não é backup:
    faça o drill de restore mensal.
+
+Ainda não construídos (fora de escopo deste primeiro deploy): 2FA e webhook
+do Pluggy — o Meu Pluggy (único conector usado hoje, spec 07) não tem
+webhook, o sync é por polling/manual (`POST /banking/items/:id/sync`).

@@ -83,11 +83,14 @@ Backup nunca restaurado é esperança, não backup.
   os containers de app mesmo que esse passo seja esquecido.
 - **Primeiro deploy** (checklist em `README.md`): DNS A/AAAA de `APP_DOMAIN`;
   `.env` real validado por `scripts/deploy-check.sh`; `docker compose up -d
---build`; seed do primeiro User (`SEED_USER_*`); ligar 2FA; registrar o
-  webhook no Pluggy apontando para
-  `https://APP_DOMAIN/api/banking/webhooks/pluggy` com o segredo;
-  configurar cron de backup e de disco; configurar uptime externo.
-- **Deploy contínuo**: push na `main` → GitHub Actions (`ci` + `e2e`) → SSH na
+--build`; seed do primeiro User (`docker compose exec api pnpm
+db:seed:prod`, lê `SEED_USER_*` do `.env`); configurar cron de backup e de
+  disco; configurar uptime externo. 2FA e webhook do Pluggy ainda não
+  existem no código (o Meu Pluggy não tem webhook — sync é por
+  polling/manual), então não entram nesse checklist ainda.
+- **Deploy contínuo** (ainda não configurado — não existe `.github/workflows/deploy.yml`
+  neste repo hoje; até lá, deploy é manual via SSH seguindo os passos do
+  README): push na `main` → GitHub Actions (`ci` + `e2e`) → SSH na
   VPS → `git reset --hard origin/main` → `deploy-check.sh` → `docker compose
 up -d --build` → `docker image prune -f` → espera `/health` (mesmo
   desenho do `pdv-web`, secrets `DEPLOY_HOST`/`DEPLOY_USER`/`DEPLOY_SSH_KEY`).
