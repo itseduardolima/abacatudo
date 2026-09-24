@@ -18,6 +18,7 @@ import { FixedExpenseModule } from './modules/fixed-expense/fixed-expense.module
 import { HealthModule } from './modules/health/health.module'
 import { InsightModule } from './modules/insight/insight.module'
 import { InvoiceModule } from './modules/invoice/invoice.module'
+import { MailModule } from './modules/mail/mail.module'
 import { PersonModule } from './modules/person/person.module'
 import { TransactionModule } from './modules/transaction/transaction.module'
 import { PrismaModule } from './prisma/prisma.module'
@@ -35,6 +36,7 @@ import { PrismaModule } from './prisma/prisma.module'
       },
     }),
     PrismaModule,
+    MailModule,
     AuthModule,
     AccountModule,
     PersonModule,

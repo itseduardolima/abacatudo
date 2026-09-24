@@ -1,10 +1,15 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import argon2 from 'argon2'
-import type { CurrentUser, LoginInput } from '@gastos/shared'
-import { DomainError, NotFoundError, UnauthorizedError } from '../../common/errors/domain.error'
+import { Prisma } from '@prisma/client'
+import type { ChangePasswordInput, CurrentUser, LoginInput, UpdateProfileInput } from '@gastos/shared'
+import { ConflictError, DomainError, NotFoundError, UnauthorizedError } from '../../common/errors/domain.error'
+import { assertStrongPassword } from '../../common/security/password-policy'
+import { runAsUser } from '../../common/user-context'
+import { PersonRepository } from '../person/person.repository'
 import { AuthRepository, type SessionRow } from './auth.repository'
 import { LoginAttemptTracker } from './login-attempt.tracker'
+import { PasswordResetService } from './password-reset.service'
 import { generateSessionToken, hashSessionToken } from './token.util'
 
 export interface LoginResult {
@@ -30,6 +35,13 @@ export class TooManyAttemptsError extends DomainError {
 
 // Mensagem sempre genérica — nunca diferenciar "e-mail não existe" de "senha errada" (08-seguranca § 4).
 const INVALID_CREDENTIALS = () => new UnauthorizedError('INVALID_CREDENTIALS', 'E-mail ou senha incorretos.')
+const EMAIL_IN_USE = () => new ConflictError('EMAIL_IN_USE', 'Já existe uma conta com esse e-mail.')
+const INVALID_CURRENT_PASSWORD = () =>
+  new UnauthorizedError('INVALID_CURRENT_PASSWORD', 'A senha atual está incorreta.')
+
+function isUniqueViolation(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'
+}
 
 @Injectable()
 export class AuthService implements OnModuleInit {
@@ -41,6 +53,8 @@ export class AuthService implements OnModuleInit {
   constructor(
     private readonly repo: AuthRepository,
     private readonly attempts: LoginAttemptTracker,
+    private readonly people: PersonRepository,
+    private readonly passwordReset: PasswordResetService,
     config: ConfigService,
   ) {
     this.idleDays = config.get<number>('SESSION_IDLE_DAYS', 30)
@@ -72,7 +86,10 @@ export class AuthService implements OnModuleInit {
 
     const { token, tokenHash } = generateSessionToken()
     await this.repo.createSession({ userId: user.id, tokenHash, userAgent: meta.userAgent })
-    return { token, user: { id: user.id, email: user.email } }
+    // Sem sessão ainda no AsyncLocalStorage neste ponto (é o login que está criando ela) — Person tem RLS,
+    // então precisa declarar o usuário explicitamente pra essa leitura, mesmo padrão do seed/jobs.
+    const name = await runAsUser(user.id, () => this.selfName(user.id))
+    return { token, user: { id: user.id, email: user.email, name } }
   }
 
   // Chamado pelo SessionMiddleware a cada request; nunca lança — sessão inválida só significa "sem
@@ -91,7 +108,7 @@ export class AuthService implements OnModuleInit {
   async me(userId: string): Promise<CurrentUser> {
     const user = await this.repo.findUserById(userId)
     if (!user) throw new UnauthorizedError('INVALID_SESSION', 'Sessão inválida. Faça login novamente.')
-    return user
+    return { ...user, name: await this.selfName(userId) }
   }
 
   listSessions(userId: string): Promise<SessionRow[]> {
@@ -101,6 +118,59 @@ export class AuthService implements OnModuleInit {
   async revokeSession(userId: string, sessionId: string): Promise<void> {
     const result = await this.repo.revokeSessionForUser(sessionId, userId)
     if (result.count === 0) throw new NotFoundError('SESSION_NOT_FOUND', 'Sessão não encontrada.')
+  }
+
+  // "Meu perfil": nome (Person isSelf) + e-mail (User) num formulário só, mas duas fontes por baixo —
+  // AuthRepository.updateProfile já cobre as duas na mesma transação.
+  async updateProfile(userId: string, input: UpdateProfileInput): Promise<CurrentUser> {
+    const existing = await this.repo.findUserByEmail(input.email)
+    if (existing && existing.id !== userId) throw EMAIL_IN_USE()
+
+    try {
+      const user = await this.repo.updateProfile(userId, { email: input.email, name: input.name })
+      return { ...user, name: input.name }
+    } catch (error) {
+      // Corrida: dois updates concorrentes pro mesmo e-mail passam pela checagem acima antes de um dos
+      // dois gravar — quem perde a corrida esbarra na constraint única do banco, não num 500.
+      if (isUniqueViolation(error)) throw EMAIL_IN_USE()
+      throw error
+    }
+  }
+
+  // Trocar senha exige a atual (formulário/endpoint separado do perfil — regra de segurança diferente) e
+  // derruba toda sessão aberta em outro dispositivo, mantendo só a de quem trocou (sessionId da própria
+  // request, nunca escolhido pelo cliente — mesma garantia de logout/revokeSession).
+  async changePassword(userId: string, sessionId: string, input: ChangePasswordInput): Promise<void> {
+    const user = await this.repo.findUserWithPasswordById(userId)
+    if (!user) throw new UnauthorizedError('INVALID_SESSION', 'Sessão inválida. Faça login novamente.')
+
+    const currentMatches = await argon2.verify(user.passwordHash, input.currentPassword)
+    if (!currentMatches) throw INVALID_CURRENT_PASSWORD()
+
+    assertStrongPassword(input.newPassword)
+    const passwordHash = await argon2.hash(input.newPassword, { type: argon2.argon2id })
+    await this.repo.updatePassword(userId, passwordHash)
+    await this.repo.revokeAllSessions(userId, sessionId)
+  }
+
+  // Sempre resolve, exista ou não a conta — nunca revela se o e-mail existe (08-seguranca § 4).
+  async forgotPassword(email: string): Promise<void> {
+    const user = await this.repo.findUserForLogin(email)
+    if (!user) return
+    await this.passwordReset.sendResetLink({ id: user.id, email: user.email })
+  }
+
+  inspectResetToken(token: string) {
+    return this.passwordReset.inspect(token)
+  }
+
+  resetPassword(token: string, newPassword: string): Promise<void> {
+    return this.passwordReset.resetPassword(token, newPassword)
+  }
+
+  private async selfName(userId: string): Promise<string> {
+    const self = await this.people.findSelf(userId)
+    return self?.name ?? 'Eu'
   }
 
   private idleCutoff(): Date {

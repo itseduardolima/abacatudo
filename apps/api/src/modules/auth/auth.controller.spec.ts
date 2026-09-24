@@ -11,6 +11,11 @@ function authMock() {
     me: jest.fn(),
     listSessions: jest.fn(),
     revokeSession: jest.fn(),
+    updateProfile: jest.fn(),
+    changePassword: jest.fn(),
+    forgotPassword: jest.fn(),
+    inspectResetToken: jest.fn(),
+    resetPassword: jest.fn(),
   } as unknown as jest.Mocked<AuthService>
 }
 
@@ -25,14 +30,14 @@ function responseMock() {
 describe('AuthController', () => {
   it('login: seta o cookie de sessão e devolve o usuário, nunca o token no corpo', async () => {
     const auth = authMock()
-    auth.login.mockResolvedValue({ token: 'tok-123', user: { id: 'user-1', email: 'a@b.com' } })
+    auth.login.mockResolvedValue({ token: 'tok-123', user: { id: 'user-1', email: 'a@b.com', name: 'Eduardo' } })
     const response = responseMock()
     const request = { ip: '203.0.113.5', get: () => 'jest-agent' } as unknown as Request
     const controller = new AuthController(auth, configMock())
 
     const result = await controller.login({ email: 'a@b.com', password: 'x' }, request, response)
 
-    expect(result).toEqual({ id: 'user-1', email: 'a@b.com' })
+    expect(result).toEqual({ id: 'user-1', email: 'a@b.com', name: 'Eduardo' })
     expect(JSON.stringify(result)).not.toContain('tok-123')
     expect(response.cookie).toHaveBeenCalledWith(
       '__Host-gastos_session',
@@ -70,9 +75,9 @@ describe('AuthController', () => {
 
   it('me repassa o userId do decorator para o Service', async () => {
     const auth = authMock()
-    auth.me.mockResolvedValue({ id: 'user-1', email: 'a@b.com' })
+    auth.me.mockResolvedValue({ id: 'user-1', email: 'a@b.com', name: 'Eduardo' })
     const controller = new AuthController(auth, configMock())
-    await expect(controller.me('user-1')).resolves.toEqual({ id: 'user-1', email: 'a@b.com' })
+    await expect(controller.me('user-1')).resolves.toEqual({ id: 'user-1', email: 'a@b.com', name: 'Eduardo' })
     expect(auth.me).toHaveBeenCalledWith('user-1')
   })
 
@@ -81,5 +86,37 @@ describe('AuthController', () => {
     const controller = new AuthController(auth, configMock())
     await controller.revokeSession('user-1', '11111111-1111-1111-1111-111111111111')
     expect(auth.revokeSession).toHaveBeenCalledWith('user-1', '11111111-1111-1111-1111-111111111111')
+  })
+
+  it('updateProfile repassa userId e o corpo pro Service', async () => {
+    const auth = authMock()
+    const controller = new AuthController(auth, configMock())
+    await controller.updateProfile('user-1', { name: 'Novo', email: 'novo@b.com' })
+    expect(auth.updateProfile).toHaveBeenCalledWith('user-1', { name: 'Novo', email: 'novo@b.com' })
+  })
+
+  it('changePassword usa o sessionId do request (nunca do body) pra manter a sessão atual viva', async () => {
+    const auth = authMock()
+    const controller = new AuthController(auth, configMock())
+    const request = { sessionId: 'session-atual' } as unknown as RequestWithUser
+    await controller.changePassword('user-1', request, { currentPassword: 'x', newPassword: 'y' })
+    expect(auth.changePassword).toHaveBeenCalledWith('user-1', 'session-atual', {
+      currentPassword: 'x',
+      newPassword: 'y',
+    })
+  })
+
+  it('forgotPassword/inspectResetToken/resetPassword repassam pro Service, sem exigir sessão', async () => {
+    const auth = authMock()
+    auth.inspectResetToken.mockResolvedValue({ email: 'a@b.com' })
+    const controller = new AuthController(auth, configMock())
+
+    await controller.forgotPassword({ email: 'a@b.com' })
+    expect(auth.forgotPassword).toHaveBeenCalledWith('a@b.com')
+
+    await expect(controller.inspectResetToken('tok')).resolves.toEqual({ email: 'a@b.com' })
+
+    await controller.resetPassword({ token: 'tok', newPassword: 'nova-senha-123456' })
+    expect(auth.resetPassword).toHaveBeenCalledWith('tok', 'nova-senha-123456')
   })
 })

@@ -22,6 +22,11 @@ export default [
             "MemberExpression[property.name='session'][object.property.name='prisma'], MemberExpression[property.name='session'][object.name='prisma']",
           message: 'Session não tem RLS — acesso só pelo AuthRepository (08-seguranca § 1).',
         },
+        {
+          selector:
+            "MemberExpression[property.name='passwordResetToken'][object.property.name='prisma'], MemberExpression[property.name='passwordResetToken'][object.name='prisma']",
+          message: 'PasswordResetToken não tem RLS — acesso só pelo AuthRepository (08-seguranca § 1).',
+        },
       ],
     },
   },

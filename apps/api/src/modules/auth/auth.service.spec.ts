@@ -1,22 +1,42 @@
 import type { ConfigService } from '@nestjs/config'
 import argon2 from 'argon2'
-import { NotFoundError, UnauthorizedError } from '../../common/errors/domain.error'
+import { Prisma } from '@prisma/client'
+import { ConflictError, NotFoundError, UnauthorizedError } from '../../common/errors/domain.error'
+import type { PersonRepository } from '../person/person.repository'
 import type { AuthRepository } from './auth.repository'
 import { AuthService, TooManyAttemptsError } from './auth.service'
 import { LoginAttemptTracker } from './login-attempt.tracker'
+import type { PasswordResetService } from './password-reset.service'
 import { hashSessionToken } from './token.util'
 
 function repoMock() {
   return {
     findUserForLogin: jest.fn(),
     findUserById: jest.fn(),
+    findUserWithPasswordById: jest.fn(),
+    findUserByEmail: jest.fn(),
+    updateProfile: jest.fn(),
+    updatePassword: jest.fn(),
     createSession: jest.fn(),
     findValidSession: jest.fn(),
     touchSession: jest.fn(),
     revokeSession: jest.fn(),
     revokeSessionForUser: jest.fn(),
+    revokeAllSessions: jest.fn(),
     listActiveSessions: jest.fn(),
   } as unknown as jest.Mocked<AuthRepository>
+}
+
+function peopleMock() {
+  return { findSelf: jest.fn() } as unknown as jest.Mocked<PersonRepository>
+}
+
+function passwordResetMock() {
+  return {
+    sendResetLink: jest.fn(),
+    inspect: jest.fn(),
+    resetPassword: jest.fn(),
+  } as unknown as jest.Mocked<PasswordResetService>
 }
 
 function configMock(idleDays = 30) {
@@ -25,29 +45,58 @@ function configMock(idleDays = 30) {
 
 const META = { ip: '203.0.113.10', userAgent: 'jest' }
 
-async function service(repo = repoMock(), attempts = new LoginAttemptTracker(), idleDays = 30) {
-  const svc = new AuthService(repo, attempts, configMock(idleDays))
+async function service(
+  repo = repoMock(),
+  attempts = new LoginAttemptTracker(),
+  idleDays = 30,
+  people = peopleMock(),
+  passwordReset = passwordResetMock(),
+) {
+  const svc = new AuthService(repo, attempts, people, passwordReset, configMock(idleDays))
   await svc.onModuleInit()
-  return { svc, repo, attempts }
+  return { svc, repo, attempts, people, passwordReset }
 }
 
 describe('AuthService.login', () => {
-  it('com credenciais corretas, cria a sessão e devolve token + usuário (sem passwordHash)', async () => {
+  it('com credenciais corretas, cria a sessão e devolve token + usuário (sem passwordHash), com o nome da Person isSelf', async () => {
     const passwordHash = await argon2.hash('correct horse battery staple', { type: argon2.argon2id })
     const repo = repoMock()
     repo.findUserForLogin.mockResolvedValue({ id: 'user-1', email: 'a@b.com', passwordHash })
     repo.createSession.mockResolvedValue({ id: 'session-1' })
-    const { svc } = await service(repo)
+    const people = peopleMock()
+    people.findSelf.mockResolvedValue({
+      id: 'person-1',
+      userId: 'user-1',
+      name: 'Eduardo',
+      isSelf: true,
+      archivedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    const { svc } = await service(repo, undefined, undefined, people)
 
     const result = await svc.login({ email: 'a@b.com', password: 'correct horse battery staple' }, META)
 
-    expect(result.user).toEqual({ id: 'user-1', email: 'a@b.com' })
+    expect(result.user).toEqual({ id: 'user-1', email: 'a@b.com', name: 'Eduardo' })
     expect(result.token).toHaveLength(43) // 32 bytes em base64url
     expect(repo.createSession).toHaveBeenCalledWith({
       userId: 'user-1',
       tokenHash: hashSessionToken(result.token),
       userAgent: 'jest',
     })
+  })
+
+  it('sem Person isSelf (nunca deveria acontecer, mas não quebra o login), cai no nome "Eu"', async () => {
+    const passwordHash = await argon2.hash('correct horse battery staple', { type: argon2.argon2id })
+    const repo = repoMock()
+    repo.findUserForLogin.mockResolvedValue({ id: 'user-1', email: 'a@b.com', passwordHash })
+    repo.createSession.mockResolvedValue({ id: 'session-1' })
+    const people = peopleMock()
+    people.findSelf.mockResolvedValue(null)
+    const { svc } = await service(repo, undefined, undefined, people)
+
+    const result = await svc.login({ email: 'a@b.com', password: 'correct horse battery staple' }, META)
+    expect(result.user.name).toBe('Eu')
   })
 
   it('senha errada: erro genérico, sem dizer que o e-mail existe', async () => {
@@ -187,11 +236,21 @@ describe('AuthService.logout/me/sessions', () => {
     expect(repo.revokeSession).toHaveBeenCalledWith('session-1')
   })
 
-  it('me devolve o usuário sem passwordHash', async () => {
+  it('me devolve o usuário com nome (Person isSelf) e sem passwordHash', async () => {
     const repo = repoMock()
     repo.findUserById.mockResolvedValue({ id: 'user-1', email: 'a@b.com' })
-    const { svc } = await service(repo)
-    await expect(svc.me('user-1')).resolves.toEqual({ id: 'user-1', email: 'a@b.com' })
+    const people = peopleMock()
+    people.findSelf.mockResolvedValue({
+      id: 'p1',
+      userId: 'user-1',
+      name: 'Eduardo',
+      isSelf: true,
+      archivedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    const { svc } = await service(repo, undefined, undefined, people)
+    await expect(svc.me('user-1')).resolves.toEqual({ id: 'user-1', email: 'a@b.com', name: 'Eduardo' })
   })
 
   it('me lança se o usuário sumiu (ex.: excluído entre requests)', async () => {
@@ -222,5 +281,124 @@ describe('AuthService.logout/me/sessions', () => {
     const { svc } = await service(repo)
     await svc.listSessions('user-1')
     expect(repo.listActiveSessions).toHaveBeenCalledWith('user-1', expect.any(Date))
+  })
+})
+
+describe('AuthService.updateProfile', () => {
+  it('atualiza e-mail (User) e nome (Person isSelf) numa chamada só', async () => {
+    const repo = repoMock()
+    repo.findUserByEmail.mockResolvedValue(null)
+    repo.updateProfile.mockResolvedValue({ id: 'user-1', email: 'novo@b.com' })
+    const { svc } = await service(repo)
+
+    const result = await svc.updateProfile('user-1', { name: 'Novo Nome', email: 'novo@b.com' })
+
+    expect(result).toEqual({ id: 'user-1', email: 'novo@b.com', name: 'Novo Nome' })
+    expect(repo.updateProfile).toHaveBeenCalledWith('user-1', { email: 'novo@b.com', name: 'Novo Nome' })
+  })
+
+  it('e-mail já em uso por outro usuário: 409, nunca grava', async () => {
+    const repo = repoMock()
+    repo.findUserByEmail.mockResolvedValue({ id: 'outro-user' })
+    const { svc } = await service(repo)
+
+    await expect(svc.updateProfile('user-1', { name: 'X', email: 'jauso@b.com' })).rejects.toBeInstanceOf(ConflictError)
+    expect(repo.updateProfile).not.toHaveBeenCalled()
+  })
+
+  it('e-mail já é o mesmo do próprio usuário: não é conflito', async () => {
+    const repo = repoMock()
+    repo.findUserByEmail.mockResolvedValue({ id: 'user-1' })
+    repo.updateProfile.mockResolvedValue({ id: 'user-1', email: 'a@b.com' })
+    const { svc } = await service(repo)
+
+    await expect(svc.updateProfile('user-1', { name: 'X', email: 'a@b.com' })).resolves.toMatchObject({
+      email: 'a@b.com',
+    })
+  })
+
+  it('corrida (dois updates concorrentes pro mesmo e-mail): P2002 também vira 409', async () => {
+    const repo = repoMock()
+    repo.findUserByEmail.mockResolvedValue(null)
+    repo.updateProfile.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('duplicate', { code: 'P2002', clientVersion: 'x' }),
+    )
+    const { svc } = await service(repo)
+
+    await expect(svc.updateProfile('user-1', { name: 'X', email: 'corrida@b.com' })).rejects.toBeInstanceOf(
+      ConflictError,
+    )
+  })
+})
+
+describe('AuthService.changePassword', () => {
+  it('senha atual certa: grava a nova e derruba as outras sessões, mantendo a atual', async () => {
+    const currentHash = await argon2.hash('senha-atual-12345', { type: argon2.argon2id })
+    const repo = repoMock()
+    repo.findUserWithPasswordById.mockResolvedValue({ id: 'user-1', email: 'a@b.com', passwordHash: currentHash })
+    const { svc } = await service(repo)
+
+    await svc.changePassword('user-1', 'session-atual', {
+      currentPassword: 'senha-atual-12345',
+      newPassword: 'senha-nova-123456',
+    })
+
+    expect(repo.updatePassword).toHaveBeenCalledWith('user-1', expect.any(String))
+    expect(repo.revokeAllSessions).toHaveBeenCalledWith('user-1', 'session-atual')
+  })
+
+  it('senha atual errada: 401, nunca grava nem derruba sessão', async () => {
+    const currentHash = await argon2.hash('senha-atual-12345', { type: argon2.argon2id })
+    const repo = repoMock()
+    repo.findUserWithPasswordById.mockResolvedValue({ id: 'user-1', email: 'a@b.com', passwordHash: currentHash })
+    const { svc } = await service(repo)
+
+    await expect(
+      svc.changePassword('user-1', 'session-atual', { currentPassword: 'errada', newPassword: 'senha-nova-123456' }),
+    ).rejects.toMatchObject({ code: 'INVALID_CURRENT_PASSWORD' })
+    expect(repo.updatePassword).not.toHaveBeenCalled()
+    expect(repo.revokeAllSessions).not.toHaveBeenCalled()
+  })
+
+  it('senha nova fraca: rejeita antes de gravar (mesma regra do seed)', async () => {
+    const currentHash = await argon2.hash('senha-atual-12345', { type: argon2.argon2id })
+    const repo = repoMock()
+    repo.findUserWithPasswordById.mockResolvedValue({ id: 'user-1', email: 'a@b.com', passwordHash: currentHash })
+    const { svc } = await service(repo)
+
+    await expect(
+      svc.changePassword('user-1', 'session-atual', { currentPassword: 'senha-atual-12345', newPassword: 'curta' }),
+    ).rejects.toMatchObject({ code: 'WEAK_PASSWORD' })
+    expect(repo.updatePassword).not.toHaveBeenCalled()
+  })
+})
+
+describe('AuthService.forgotPassword/resetPassword', () => {
+  it('e-mail existente: manda o link pelo PasswordResetService', async () => {
+    const repo = repoMock()
+    repo.findUserForLogin.mockResolvedValue({ id: 'user-1', email: 'a@b.com', passwordHash: 'x' })
+    const { svc, passwordReset } = await service(repo)
+
+    await svc.forgotPassword('a@b.com')
+
+    expect(passwordReset.sendResetLink).toHaveBeenCalledWith({ id: 'user-1', email: 'a@b.com' })
+  })
+
+  it('e-mail inexistente: resolve sem lançar e sem mandar e-mail (nunca revela se existe)', async () => {
+    const repo = repoMock()
+    repo.findUserForLogin.mockResolvedValue(null)
+    const { svc, passwordReset } = await service(repo)
+
+    await expect(svc.forgotPassword('nao-existe@b.com')).resolves.toBeUndefined()
+    expect(passwordReset.sendResetLink).not.toHaveBeenCalled()
+  })
+
+  it('inspectResetToken/resetPassword repassam pro PasswordResetService', async () => {
+    const { svc, passwordReset } = await service()
+    passwordReset.inspect.mockResolvedValue({ email: 'a@b.com' })
+
+    await expect(svc.inspectResetToken('token')).resolves.toEqual({ email: 'a@b.com' })
+    await svc.resetPassword('token', 'senha-nova-123456')
+    expect(passwordReset.resetPassword).toHaveBeenCalledWith('token', 'senha-nova-123456')
   })
 })

@@ -37,6 +37,7 @@ model User {
   budgetMonthAlerts BudgetMonthAlert[]
   cardHolderHints   CardHolderHint[]
   fixedExpenses     FixedExpense[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 /// Sem RLS: resolvida pelo hash do token do cookie, antes de existir userId no contexto (mesma exceção
@@ -49,6 +50,23 @@ model Session {
   createdAt  DateTime  @default(now())
   lastUsedAt DateTime  @default(now())
   revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Sem RLS: resolvida pelo hash do token do link, antes de existir userId no contexto (mesma exceção de
+/// User/Session). tokenHash é o SHA-256 de um token opaco de 32 bytes — o valor em si nunca é persistido
+/// nem loga (08-seguranca § 4). usedAt null = ainda válido; emitir um link novo invalida qualquer token
+/// anterior não usado do mesmo User (ver AuthRepository.createResetToken).
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

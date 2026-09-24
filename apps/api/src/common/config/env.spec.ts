@@ -1,7 +1,15 @@
 import { validateEnv } from './env'
 
 const dev = { DATABASE_URL: 'postgresql://u:p@localhost:5432/db', SESSION_SECRET: 'x'.repeat(40) }
-const prod = { ...dev, NODE_ENV: 'production', DATA_ENCRYPTION_KEY: 'ab'.repeat(32) }
+const prod = {
+  ...dev,
+  NODE_ENV: 'production',
+  DATA_ENCRYPTION_KEY: 'ab'.repeat(32),
+  MAIL_TRANSPORT: 'smtp',
+  MAIL_HOST: 'smtp.example.com',
+  MAIL_AUTH_USER: 'user@example.com',
+  MAIL_AUTH_PASS: 'secret',
+}
 
 describe('validateEnv', () => {
   it('aplica os padrões: 30 dias de sessão, rate limit ligado, porta 3001', () => {
@@ -43,5 +51,16 @@ describe('validateEnv', () => {
 
   it('em produção o rate limit nunca pode estar desligado', () => {
     expect(() => validateEnv({ ...prod, RATE_LIMIT_ENABLED: 'false' })).toThrow('rate limit')
+  })
+
+  it('em produção exige MAIL_TRANSPORT=smtp com credenciais completas', () => {
+    expect(() => validateEnv({ ...prod, MAIL_TRANSPORT: 'log' })).toThrow('MAIL_TRANSPORT')
+    expect(() => validateEnv({ ...prod, MAIL_HOST: undefined })).toThrow('MAIL_HOST')
+    expect(() => validateEnv({ ...prod, MAIL_AUTH_USER: undefined })).toThrow('MAIL_AUTH_USER')
+    expect(() => validateEnv({ ...prod, MAIL_AUTH_PASS: undefined })).toThrow('MAIL_AUTH_PASS')
+  })
+
+  it('em desenvolvimento, sem nenhuma variável de e-mail, cai no transporte log', () => {
+    expect(validateEnv(dev)).toMatchObject({ MAIL_TRANSPORT: 'log' })
   })
 })

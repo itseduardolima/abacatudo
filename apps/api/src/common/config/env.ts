@@ -15,6 +15,19 @@ const baseSchema = z.object({
   // Opcionais: sem eles, o PluggyClient recusa chamadas com PLUGGY_NOT_CONFIGURED em vez de travar o boot.
   PLUGGY_CLIENT_ID: z.string().optional(),
   PLUGGY_CLIENT_SECRET: z.string().optional(),
+  // Base do link de "esqueci minha senha" (WEB_ORIGIN já é setada pelo docker-compose.yml em produção).
+  // Sem ela, cai no dev local (Next.js na 3000).
+  WEB_ORIGIN: z.string().url().default('http://localhost:3000'),
+  // 'log' (padrão) só escreve o e-mail no console — sem credencial nenhuma, serve pra dev/teste ver o
+  // link de reset. 'smtp' exige MAIL_HOST/MAIL_AUTH_USER/MAIL_AUTH_PASS de verdade (MailService valida na
+  // hora de montar o transporte, não aqui — mesmo padrão do PluggyClient).
+  MAIL_TRANSPORT: z.enum(['log', 'smtp']).default('log'),
+  MAIL_HOST: z.string().optional(),
+  MAIL_PORT: z.coerce.number().int().positive().optional(),
+  MAIL_SECURE: z.enum(['true', 'false']).optional(),
+  MAIL_AUTH_USER: z.string().optional(),
+  MAIL_AUTH_PASS: z.string().optional(),
+  MAIL_FROM: z.string().optional(),
 })
 
 export const envSchema = baseSchema.superRefine((env, ctx) => {
@@ -27,6 +40,12 @@ export const envSchema = baseSchema.superRefine((env, ctx) => {
   }
   if (env.RATE_LIMIT_ENABLED === 'false')
     fail('RATE_LIMIT_ENABLED', 'O rate limit nunca pode ficar desligado em produção.')
+  // 'log' em produção significaria "esqueci minha senha" nunca chega em lugar nenhum de verdade — só no
+  // log do container, que ninguém lê pra pegar o próprio link de reset.
+  if (env.MAIL_TRANSPORT !== 'smtp') fail('MAIL_TRANSPORT', 'Em produção precisa ser "smtp" — "log" não envia nada.')
+  if (!env.MAIL_HOST) fail('MAIL_HOST', 'Obrigatório em produção (MAIL_TRANSPORT=smtp).')
+  if (!env.MAIL_AUTH_USER) fail('MAIL_AUTH_USER', 'Obrigatório em produção (MAIL_TRANSPORT=smtp).')
+  if (!env.MAIL_AUTH_PASS) fail('MAIL_AUTH_PASS', 'Obrigatório em produção (MAIL_TRANSPORT=smtp).')
 })
 
 export type Env = z.infer<typeof envSchema>
