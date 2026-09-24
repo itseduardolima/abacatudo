@@ -9,6 +9,7 @@ import { useLogout } from '@/hooks/queries/use-logout'
 // Mesma lista que antes vivia solta no rodapé da Início ("Configurar") — motivo de mudar pra cá: precisa
 // caber tanto no shell mobile (BottomNav) quanto no desktop (TopNav), sem duplicar o menu em cada tela.
 const SETTINGS_LINKS = [
+  { href: '/settings/profile', label: 'Meu perfil' },
   { href: '/accounts', label: 'Contas' },
   { href: '/settings/people', label: 'Pessoas' },
   { href: '/settings/categories', label: 'Categorias' },
