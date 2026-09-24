@@ -39,6 +39,12 @@ services:
     restart: unless-stopped
     environment:
       API_INTERNAL_URL: http://api:3001
+      # O Docker seta HOSTNAME sozinho pro id do container, e o server.js standalone do Next usa
+      # `process.env.HOSTNAME` como endereço de bind quando ela existe — sem isto, o Next escuta só no IP
+      # daquela rede específica (a que o hostname resolve primeiro), nunca em 0.0.0.0. Passa despercebido
+      # com um Caddy só (mesma rede do web), mas quebra (502) assim que o proxy reverso está numa rede
+      # diferente — como no docker-compose.shared-caddy.yml, achado ao vivo no primeiro deploy.
+      HOSTNAME: '0.0.0.0'
     depends_on:
       - api
 
