@@ -58,7 +58,7 @@ na verdade, "atualizar o spec" (avisar o usuário).
   com dois Users. Nunca query Prisma em `Controller`, nunca banco em
   `apps/web`. (spec 08 § 1)
 - **Dinheiro é inteiro em centavos (`...Cents`), nunca `number` decimal.**
-  Mês e dia sempre em `America/Sao_Paulo`.
+  Mês e dia sempre em `America/Manaus`.
 - **Dinheiro nunca é calculado no frontend nem pela IA.** Soma, saldo, limite,
   rateio, percentual de orçamento: backend, código determinístico, testado.
   A IA só classifica texto e narra números já prontos. (spec 10)
