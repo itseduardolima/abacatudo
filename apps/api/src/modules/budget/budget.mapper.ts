@@ -3,7 +3,6 @@ import type { BudgetMonth } from '@gastos/shared'
 
 // teto variável = renda + benefício − gastos fixos − meta de poupança (03-regras-negocio § Orçamento
 // mensal). Pode dar negativo (o User se comprometeu além da renda) — mostrar isso é o ponto, não esconder.
-// Exportado à parte porque envelope também precisa dele pra calcular capCents de percentual.
 export function computeVariableCapCents(values: {
   incomeCents: number
   benefitCents: number

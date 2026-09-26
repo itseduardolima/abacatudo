@@ -13,7 +13,6 @@ import { AuthModule } from './modules/auth/auth.module'
 import { BankingModule } from './modules/banking/banking.module'
 import { BudgetModule } from './modules/budget/budget.module'
 import { CategoryModule } from './modules/category/category.module'
-import { EnvelopeModule } from './modules/envelope/envelope.module'
 import { FixedExpenseModule } from './modules/fixed-expense/fixed-expense.module'
 import { HealthModule } from './modules/health/health.module'
 import { InsightModule } from './modules/insight/insight.module'
@@ -45,7 +44,6 @@ import { PrismaModule } from './prisma/prisma.module'
     TransactionModule,
     InvoiceModule,
     BudgetModule,
-    EnvelopeModule,
     FixedExpenseModule,
     InsightModule,
     HealthModule,

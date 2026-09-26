@@ -2,8 +2,6 @@ import { Module } from '@nestjs/common'
 import { FixedExpenseModule } from '../fixed-expense/fixed-expense.module'
 import { InvoiceModule } from '../invoice/invoice.module'
 import { PersonModule } from '../person/person.module'
-import { AlertRepository } from './alert.repository'
-import { AlertService } from './alert.service'
 import { BudgetMonthController } from './budget-month.controller'
 import { BudgetMonthRepository } from './budget-month.repository'
 import { BudgetMonthService } from './budget-month.service'
@@ -13,7 +11,7 @@ import { BudgetPaceService } from './budget-pace.service'
 @Module({
   imports: [PersonModule, InvoiceModule, FixedExpenseModule],
   controllers: [BudgetMonthController, BudgetPaceController],
-  providers: [BudgetMonthService, BudgetMonthRepository, AlertService, AlertRepository, BudgetPaceService],
-  exports: [BudgetMonthService, BudgetMonthRepository, AlertService],
+  providers: [BudgetMonthService, BudgetMonthRepository, BudgetPaceService],
+  exports: [BudgetMonthService, BudgetMonthRepository],
 })
 export class BudgetModule {}

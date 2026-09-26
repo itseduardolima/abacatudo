@@ -4,7 +4,7 @@ import type { BudgetMonth, UpdateBudgetMonthInput } from '@gastos/shared'
 import { monthKey } from '../../common/date/timezone'
 import { DomainError } from '../../common/errors/domain.error'
 import { BudgetMonthRepository } from './budget-month.repository'
-import { computeVariableCapCents, toBudgetMonthDto } from './budget.mapper'
+import { toBudgetMonthDto } from './budget.mapper'
 
 const MONTH_KEY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
 const ZERO = { incomeCents: 0, benefitCents: 0, fixedExpensesCents: 0, savingsGoalCents: 0 }
@@ -21,17 +21,6 @@ export class BudgetMonthService {
     const key = resolveKey(month)
     const row = await this.resolveRow(userId, key)
     return row ? toBudgetMonthDto(row) : { month: key, ...ZERO, variableCapCents: 0 }
-  }
-
-  // Pra quem precisa do id de verdade (Envelope, por FK) e do teto já calculado — rejeita se o mês nunca
-  // foi configurado e está fora da janela de auto-create (não dá pra pendurar envelope em nada).
-  async requireId(userId: string, month?: string): Promise<{ id: string; month: string; variableCapCents: number }> {
-    const key = resolveKey(month)
-    const row = await this.resolveRow(userId, key)
-    if (!row) {
-      throw new DomainError('BUDGET_MONTH_NOT_CONFIGURED', 'Configure a renda desse mês antes de criar envelopes.', 422)
-    }
-    return { id: row.id, month: key, variableCapCents: computeVariableCapCents(row) }
   }
 
   // Mês fechado é imutável: editar a renda de hoje nunca reescreve o passado.
@@ -69,8 +58,7 @@ function isPast(month: string): boolean {
   return month < monthKey(new Date())
 }
 
-// Exportada porque o "mês fechado é imutável" também vale pra tudo que pendura em BudgetMonth (Envelope
-// inclusive) — não só pra editar a renda direto.
+// Mês fechado é imutável: editar a renda de hoje nunca reescreve o passado.
 export function assertMonthOpen(month: string): void {
   if (isPast(month)) {
     throw new DomainError('BUDGET_MONTH_CLOSED', 'Mês fechado não pode ser editado.', 422)
