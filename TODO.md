@@ -863,6 +863,16 @@ type="date">`.
   `America/Sao_Paulo` mas o fuso do produto é `America/Manaus` desde a 3.5 — corrigido. **Limitação
   conhecida**: estorno não anula a cobrança original nas assinaturas (o spec não pede), então uma cobrança
   estornada ainda conta como ocorrência; o valor mensal não é afetado (vem da última cobrança).
+- **Front: aba Assinaturas em Relatórios (2026-09-25)** — `reports` ganhou abas "Para onde vai | Assinaturas"
+  (`16-relatorio-assinaturas`): total por mês, "em N assinaturas", total por ano e a lista com "todo dia N ·
+  última em DD/MM" (a data da última cobrança ajuda a notar assinatura que parou). O seletor de mês só
+  aparece em "Para onde vai" (assinaturas são um retrato de agora). `formatDisplayName` novo: nomes do Pluggy
+  vêm em CAIXA ALTA e agora saem em caixa mista (só quando o nome inteiro está em maiúsculas), aplicado nas
+  assinaturas, nas linhas de relatório e no Extrato. Backend: o nome vindo da descrição do cartão perde a
+  cidade colada depois de um bloco de espaços ("PG *NIO FIBRA RIO DE JANEIR BR" → "PG *NIO FIBRA").
+  Verificado ao vivo no Chrome: R$ 308,41/mês em 7 assinaturas, R$ 3.700,92/ano. 369 testes da API.
+  **Falta**: aba "Economizar" (9.3, 9.5, sem backend), versão desktop (`d06`/`d07`), aviso "X e Y somam R$
+  por mês" (depende de 9.5).
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou seguir
   no backend (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de
   movimentação, 8.4's job/e-mail).
