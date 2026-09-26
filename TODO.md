@@ -804,6 +804,22 @@ type="date">`.
   conta → senha trocada → login com a senha nova funcionou → editar nome em
   Meu perfil → trocar senha com a atual errada (rejeitou) e depois certa
   (funcionou, sessão atual não caiu).
+- **Front: tela de Extrato (2026-09-25)** — `app/(app)/movements` (5.2/5.3, fiel a `19-extrato`): fundo Fog
+  com folha branca, "Entrou/Saiu" do mês (`GET /movements/totals`), filtros por conta, Entradas/Saídas e
+  busca com debounce, navegação de mês, lista agrupada por dia. Topo redesenhado a pedido do usuário
+  ("horrível, quero mais profissional, mobile, clean"): cabeçalho de uma linha (título + `MonthStepper`),
+  `StatementSummary` em card, busca, `SegmentedControl` Tudo/Entradas/Saídas e chips de conta com rolagem
+  horizontal (`AccountFilter`, só com 2+ contas) — dropdown e pílulas soltas saíram; `MonthStepper` e
+  `SegmentedControl` são componentes compartilhados com teste Cypress. Sinal (+/−) e rótulos ("entre suas contas",
+  "fatura do cartão") saem só do `kind` que a API já classificou (`lib/utils/movement-kind.ts`); TRANSFER não
+  leva sinal porque não diz o lado. Sem categoria, pessoa nem divisão (só cartão). O segmentado
+  "Cartão | Extrato" virou o componente `CardStatementSwitch` (Início e Extrato), com teste Cypress; o
+  "Extrato" da Início deixou de ser inerte. Novos: hooks `use-movements`/`use-movement-totals`,
+  `use-debounced-value`, `shiftMonthKey`, `formatTime`. Verificado ao vivo no Chrome com dado real
+  (InfinitePay/PicPay/Banco do Brasil): filtro de entradas, busca "cofrinho" combinada com o filtro, mês
+  anterior. Typecheck/lint/Prettier limpos, 17 testes de componente. **Falta**: rótulo "transferência entre
+  suas contas" só aparece se o sync classificar como TRANSFER (5.4 do backend ainda não detecta), nota por
+  movimentação (5.5), versão desktop (`d09-extrato`).
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou seguir
   no backend (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de
   movimentação, 8.4's job/e-mail).
