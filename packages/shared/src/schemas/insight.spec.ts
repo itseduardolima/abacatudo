@@ -1,4 +1,9 @@
-import { spendingBreakdownItemSchema, spendingReportSchema } from './insight'
+import {
+  spendingBreakdownItemSchema,
+  spendingReportSchema,
+  subscriptionItemSchema,
+  subscriptionReportSchema,
+} from './insight'
 
 function item(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -55,5 +60,35 @@ describe('spendingReportSchema', () => {
       extra: 1,
     })
     expect(result.success).toBe(false)
+  })
+})
+
+describe('subscriptionReportSchema', () => {
+  const sub = (overrides: Partial<Record<string, unknown>> = {}) => ({
+    key: 'netflix',
+    label: 'Netflix',
+    monthlyCents: 5590,
+    yearlyCents: 67080,
+    chargeDay: 8,
+    lastChargeAt: '2026-09-08T15:00:00.000Z',
+    occurrences: 3,
+    ...overrides,
+  })
+
+  it('aceita a forma completa', () => {
+    const result = subscriptionReportSchema.safeParse({
+      totalMonthlyCents: 5590,
+      totalYearlyCents: 67080,
+      items: [sub()],
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('exige pelo menos 3 ocorrências', () => {
+    expect(subscriptionItemSchema.safeParse(sub({ occurrences: 2 })).success).toBe(false)
+  })
+
+  it('rejeita campo extra', () => {
+    expect(subscriptionItemSchema.safeParse(sub({ extra: 1 })).success).toBe(false)
   })
 })

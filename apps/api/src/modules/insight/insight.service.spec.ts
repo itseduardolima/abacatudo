@@ -1,4 +1,5 @@
 import type { Person } from '@prisma/client'
+import { monthRange } from '../../common/date/timezone'
 import type { PersonRepository } from '../person/person.repository'
 import { InsightRepository } from './insight.repository'
 import { InsightService } from './insight.service'
@@ -8,7 +9,10 @@ const SELF = 'self-1'
 const at = (date: string) => new Date(`${date}T15:00:00.000Z`)
 
 function repoMock() {
-  return { findRows: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<InsightRepository>
+  return {
+    findRows: jest.fn().mockResolvedValue([]),
+    findSubscriptionRows: jest.fn().mockResolvedValue([]),
+  } as unknown as jest.Mocked<InsightRepository>
 }
 
 function peopleMock(self: Partial<Person> | null = { id: SELF }) {
@@ -173,6 +177,40 @@ describe('InsightService', () => {
         expect(result.byMerchant[0]?.aboveNormal).toBe(false)
         expect(result.byPerson[0]?.aboveNormal).toBe(false)
       })
+    })
+  })
+
+  describe('subscriptions', () => {
+    const monthlyCharge = (date: string) => ({
+      kind: 'EXPENSE' as const,
+      amountCents: 5590,
+      occurredAt: at(date),
+      merchant: 'Netflix',
+      description: 'NETFLIX.COM',
+      personId: SELF,
+      splits: [],
+    })
+
+    it('busca desde 12 meses atrás e devolve as assinaturas detectadas', async () => {
+      const repo = repoMock()
+      repo.findSubscriptionRows.mockResolvedValue([
+        monthlyCharge('2026-07-08'),
+        monthlyCharge('2026-08-08'),
+        monthlyCharge('2026-09-08'),
+      ])
+      const service = new InsightService(repo, peopleMock())
+
+      const result = await service.subscriptions('user-1')
+
+      expect(repo.findSubscriptionRows).toHaveBeenCalledWith('user-1', monthRange('2025-09').start)
+      expect(result.items).toHaveLength(1)
+      expect(result.totalMonthlyCents).toBe(5590)
+      expect(result.totalYearlyCents).toBe(5590 * 12)
+    })
+
+    it('500 quando a pessoa "Eu" não existe', async () => {
+      const service = new InsightService(repoMock(), peopleMock(null))
+      await expect(service.subscriptions('user-1')).rejects.toThrow('Pessoa "Eu" não encontrada.')
     })
   })
 })

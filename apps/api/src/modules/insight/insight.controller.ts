@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common'
-import type { SpendingReport } from '@gastos/shared'
+import type { SpendingReport, SubscriptionReport } from '@gastos/shared'
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import { InsightService } from './insight.service'
 
@@ -10,5 +10,10 @@ export class InsightController {
   @Get('spending')
   spendingReport(@CurrentUser() userId: string, @Query('month') month?: string): Promise<SpendingReport> {
     return this.insights.spendingReport(userId, month)
+  }
+
+  @Get('subscriptions')
+  subscriptions(@CurrentUser() userId: string): Promise<SubscriptionReport> {
+    return this.insights.subscriptions(userId)
   }
 }

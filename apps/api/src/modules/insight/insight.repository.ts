@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common'
 import { monthRange, shiftMonthKey } from '../../common/date/timezone'
 import { PRISMA, type PrismaService } from '../../prisma/prisma.client'
 import type { SpendingRow } from './insight.mapper'
+import type { SubscriptionRow } from './subscription.mapper'
 
 // Compra parcelada em até 48x: uma parcela pode cair até 47 meses depois do mês da compra (occurredAt).
 const MAX_INSTALLMENT_LOOKBACK_MONTHS = 47
@@ -52,6 +53,33 @@ export class InsightRepository {
       merchant: row.merchant,
       personId: row.personId,
       personName: row.person?.name ?? null,
+      splits: row.splits.map((split) => ({
+        personId: split.personId,
+        personName: split.person.name,
+        amountCents: split.amountCents,
+      })),
+    }))
+  }
+
+  // Base das assinaturas (9.2): compra à vista no cartão desde `since` (parcela nunca é assinatura).
+  async findSubscriptionRows(userId: string, since: Date): Promise<SubscriptionRow[]> {
+    const rows = await this.prisma.transaction.findMany({
+      where: {
+        userId,
+        kind: 'EXPENSE',
+        installmentTotal: null,
+        occurredAt: { gte: since },
+        account: { type: 'CREDIT_CARD' },
+      },
+      include: { splits: { select: { personId: true, amountCents: true, person: { select: { name: true } } } } },
+    })
+    return rows.map((row) => ({
+      kind: 'EXPENSE' as const,
+      amountCents: row.amountCents,
+      occurredAt: row.occurredAt,
+      merchant: row.merchant,
+      description: row.description,
+      personId: row.personId,
       splits: row.splits.map((split) => ({
         personId: split.personId,
         personName: split.person.name,

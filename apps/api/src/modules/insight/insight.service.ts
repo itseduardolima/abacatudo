@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
-import type { SpendingReport } from '@gastos/shared'
-import { dayOfMonth, monthKey, shiftMonthKey } from '../../common/date/timezone'
+import type { SpendingReport, SubscriptionReport } from '@gastos/shared'
+import { dayOfMonth, monthKey, monthRange, shiftMonthKey } from '../../common/date/timezone'
 import { DomainError } from '../../common/errors/domain.error'
 import { PersonRepository } from '../person/person.repository'
 import {
@@ -13,8 +13,11 @@ import {
   totalCents,
 } from './insight.mapper'
 import { InsightRepository } from './insight.repository'
+import { detectSubscriptions } from './subscription.mapper'
 
 const MONTH_KEY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
+// Meses de histórico olhados pra achar recorrência (>= 3 cobranças, com folga).
+const SUBSCRIPTION_LOOKBACK_MONTHS = 12
 
 @Injectable()
 export class InsightService {
@@ -68,6 +71,16 @@ export class InsightService {
         last3Months.map((monthRows) => sumByPerson(monthRows)),
       ),
     }
+  }
+
+  // Assinaturas ativas (HU 9.2): recorrência de cobrança mensal no cartão, olhando os últimos meses. É um
+  // retrato de agora — não tem "mês" pra escolher.
+  async subscriptions(userId: string): Promise<SubscriptionReport> {
+    const today = new Date()
+    const selfId = await this.selfPersonId(userId)
+    const since = monthRange(shiftMonthKey(monthKey(today), -SUBSCRIPTION_LOOKBACK_MONTHS)).start
+    const rows = await this.repo.findSubscriptionRows(userId, since)
+    return detectSubscriptions(rows, selfId, today)
   }
 
   private async selfPersonId(userId: string): Promise<string> {

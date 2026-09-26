@@ -34,3 +34,29 @@ export const spendingReportSchema = z
   })
   .strict()
 export type SpendingReport = z.infer<typeof spendingReportSchema>
+
+// HU 9.2 — assinaturas e recorrências (03-regras-negocio § Relatórios e insights): mesmo estabelecimento,
+// valor semelhante (±10%), intervalo ~30 dias (±4), >= 3 ocorrências, só a parte do dono. O total anual é
+// sempre 12x o mensal, calculado no backend.
+export const subscriptionItemSchema = z
+  .object({
+    key: z.string(),
+    label: z.string(),
+    monthlyCents: centsSchema,
+    yearlyCents: centsSchema,
+    // Dia do mês da última cobrança ("todo dia 8").
+    chargeDay: z.number().int().min(1).max(31),
+    lastChargeAt: z.string().datetime(),
+    occurrences: z.number().int().min(3),
+  })
+  .strict()
+export type SubscriptionItem = z.infer<typeof subscriptionItemSchema>
+
+export const subscriptionReportSchema = z
+  .object({
+    totalMonthlyCents: centsSchema,
+    totalYearlyCents: centsSchema,
+    items: z.array(subscriptionItemSchema),
+  })
+  .strict()
+export type SubscriptionReport = z.infer<typeof subscriptionReportSchema>

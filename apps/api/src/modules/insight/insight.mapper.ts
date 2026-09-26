@@ -71,7 +71,10 @@ function sign(row: Pick<SpendingRow, 'kind'>): 1 | -1 {
 
 // Fatia do dono, igual à fatura (computeInvoice): dividida = só a fatia dele; sem divisão, tudo ou nada pela
 // pessoa da transação. REFUND reduz, nunca é uma linha à parte.
-function selfShareCents(row: SpendingRow, selfPersonId: string): number {
+export function selfShareCents(
+  row: Pick<SpendingRow, 'kind' | 'amountCents' | 'personId' | 'splits'>,
+  selfPersonId: string,
+): number {
   const share =
     row.splits.length > 0
       ? (row.splits.find((split) => split.personId === selfPersonId)?.amountCents ?? 0)
