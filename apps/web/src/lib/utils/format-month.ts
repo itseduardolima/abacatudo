@@ -37,3 +37,10 @@ export function formatLastDayOfMonth(monthKeyValue: string): string {
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate()
   return DAY_MONTH_FORMATTER.format(new Date(Date.UTC(year, month - 1, lastDay, 12))).replace('.', '')
 }
+
+// Desloca um "AAAA-MM" por N meses (negativo = passado). Só aritmética de calendário, sem fuso.
+export function shiftMonthKey(monthKeyValue: string, delta: number): string {
+  const { year, month } = parseMonthKey(monthKeyValue)
+  const shifted = new Date(Date.UTC(year, month - 1 + delta, 1))
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, '0')}`
+}
