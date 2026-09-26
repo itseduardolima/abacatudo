@@ -5,9 +5,9 @@ import { useAccounts } from '@/hooks/queries/use-accounts'
 import { useMovementTotals } from '@/hooks/queries/use-movement-totals'
 import { useMovements } from '@/hooks/queries/use-movements'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
+import { useMonthNavigation } from '@/hooks/use-month-navigation'
 import { ApiClientError } from '@/lib/api-client'
 import { dayGroupLabel } from '@/lib/utils/format-day-group'
-import { currentMonthKey, shiftMonthKey } from '@/lib/utils/format-month'
 
 export type DirectionFilter = 'ALL' | 'IN' | 'OUT'
 
@@ -15,7 +15,7 @@ export type DirectionFilter = 'ALL' | 'IN' | 'OUT'
 // direto pra API; totais e "o que é entrada/saída" também vêm dela — aqui nenhuma conta de dinheiro.
 export function useMovementsPage() {
   const accounts = useAccounts()
-  const [month, setMonth] = useState(currentMonthKey)
+  const { month, goToPreviousMonth, goToNextMonth } = useMonthNavigation()
   const [accountId, setAccountId] = useState('')
   const [direction, setDirection] = useState<DirectionFilter>('ALL')
   const [searchInput, setSearchInput] = useState('')
@@ -44,8 +44,8 @@ export function useMovementsPage() {
 
   return {
     month,
-    goToPreviousMonth: () => setMonth((current) => shiftMonthKey(current, -1)),
-    goToNextMonth: () => setMonth((current) => shiftMonthKey(current, 1)),
+    goToPreviousMonth,
+    goToNextMonth,
     statementAccounts,
     accountNameById,
     accountId,
