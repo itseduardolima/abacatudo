@@ -820,6 +820,19 @@ type="date">`.
   anterior. Typecheck/lint/Prettier limpos, 17 testes de componente. **Falta**: rótulo "transferência entre
   suas contas" só aparece se o sync classificar como TRANSFER (5.4 do backend ainda não detecta), nota por
   movimentação (5.5), versão desktop (`d09-extrato`).
+- **Backend: `insight` (9.1) corrigido + 9.4 (2026-09-25)**, a pedido do usuário, antes de fazer a tela
+  "Para onde vai" (o front não pode consertar dinheiro). `GET /insights/spending` agora: (1) só a parte do
+  dono em total/categoria/estabelecimento (`byPerson` continua com todas); (2) parcela conta no mês em que
+  cai, não tudo no mês da compra; (3) mês corrente compara até o mesmo dia (`throughDay`, `null` = mês
+  inteiro); (4) `aboveNormal` por categoria (> 140% da média dos 3 meses, exige os 3 meses com dado);
+  (5) grupo com líquido zero some. Um repositório, uma consulta (`findRows`), sem 4 idas ao banco.
+  Verificado ao vivo com dado real: `throughDay` 25 em setembro e `null` em agosto; total de setembro
+  (R$ 3.933,45) = linha "Eduardo" de `byPerson` = soma das categorias = soma dos estabelecimentos;
+  achou e corrigiu "UBER R$ 0" (compra + estorno). 346 testes da API. **Achado de dado**: quase tudo está
+  "Sem categoria" (R$ 3.803 de R$ 3.933) e ~47% "Sem estabelecimento" — o Pluggy nem sempre manda
+  `merchant` e o sync só categoriza via `Rule`; o relatório por categoria vai parecer vazio até isso melhorar
+  (categorização automática, 4.5, ou IA, 10.1). Limite: a "parcela k cai (k−1) meses depois da compra" é
+  aproximação — o banco não dá a data de lançamento por parcela.
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou seguir
   no backend (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de
   movimentação, 8.4's job/e-mail).

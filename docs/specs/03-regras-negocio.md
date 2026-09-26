@@ -292,7 +292,14 @@ Todos calculados em código, testados, sem LLM ([10-ia](./10-ia.md) só narra),
 e **só sobre compras no cartão** (Pix e contas ficam de fora):
 
 - **Por categoria / por estabelecimento / por pessoa**, mês a mês, com
-  variação vs. mês anterior e vs. média dos 3 meses anteriores.
+  variação vs. mês anterior e vs. média dos 3 meses anteriores. Total,
+  categoria e estabelecimento são **só a parte do dono** (mesma regra da
+  fatura: divisão = a fatia dele); "por pessoa" mostra todas. Cada **parcela
+  conta no mês em que cai** (mês da compra + nº da parcela − 1, aproximação),
+  não tudo no mês da compra. No **mês corrente**, os meses de comparação só
+  contam **até o mesmo dia** (compra à vista; parcela conta inteira); mês
+  passado compara mês inteiro. Grupo com líquido zero (compra e estorno) não
+  aparece.
 - **Assinaturas e recorrências**: mesmo `merchant` normalizado, valor
   semelhante (±10%), intervalo ~30 dias (±4), >= 3 ocorrências. Lista com
   total mensal e total anual.
