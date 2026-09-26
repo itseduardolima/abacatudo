@@ -9,6 +9,7 @@ function item(overrides: Partial<Record<string, unknown>> = {}) {
     vsPreviousMonthPercent: 20,
     averageLast3MonthsCents: 8000,
     vsAverageLast3MonthsPercent: 50,
+    aboveNormal: false,
     ...overrides,
   }
 }
@@ -35,6 +36,7 @@ describe('spendingReportSchema', () => {
     const result = spendingReportSchema.safeParse({
       month: '2026-09',
       totalCents: 50000,
+      throughDay: 21,
       byCategory: [item()],
       byMerchant: [item({ key: 'loja-x', label: 'Loja X' })],
       byPerson: [item({ key: 'person-1', label: 'Eu' })],
@@ -46,6 +48,7 @@ describe('spendingReportSchema', () => {
     const result = spendingReportSchema.safeParse({
       month: '2026-09',
       totalCents: 0,
+      throughDay: null,
       byCategory: [],
       byMerchant: [],
       byPerson: [],

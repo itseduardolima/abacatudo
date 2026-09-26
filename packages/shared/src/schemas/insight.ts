@@ -11,16 +11,23 @@ export const spendingBreakdownItemSchema = z
     vsPreviousMonthPercent: z.number().int().nullable(),
     averageLast3MonthsCents: centsSchema,
     vsAverageLast3MonthsPercent: z.number().int().nullable(),
+    // Só é true na lista por categoria: gasto > 140% da média dos 3 meses anteriores, com histórico dos 3
+    // meses (03-regras-negocio § Relatórios e insights).
+    aboveNormal: z.boolean(),
   })
   .strict()
 export type SpendingBreakdownItem = z.infer<typeof spendingBreakdownItemSchema>
 
 // HU 9.1 — "para onde vai o dinheiro": só compra no cartão (03-regras-negocio § Relatórios e insights).
-// Cada lista só traz os agrupamentos com gasto no mês pedido, ordenados do maior pro menor.
+// totalCents, byCategory e byMerchant são só a parte do dono (mesma regra da fatura); byPerson mostra todas as
+// pessoas. Cada lista só traz os agrupamentos com gasto no mês pedido, ordenados do maior pro menor.
+// throughDay: no mês corrente, os meses de comparação só contam até esse dia (mesmo período); null quando a
+// comparação é de mês inteiro.
 export const spendingReportSchema = z
   .object({
     month: z.string(),
     totalCents: centsSchema,
+    throughDay: z.number().int().min(1).max(31).nullable(),
     byCategory: z.array(spendingBreakdownItemSchema),
     byMerchant: z.array(spendingBreakdownItemSchema),
     byPerson: z.array(spendingBreakdownItemSchema),
