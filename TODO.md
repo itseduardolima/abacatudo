@@ -859,6 +859,10 @@ type="date">`.
   ("todo dia N"). Verificado ao vivo com dado real: 7 assinaturas plausíveis (internet, Prime Video, Spotify,
   Uber, Amazon, Apple, Best Laser), R$ 308,41/mês e R$ 3.700,92/ano. 367 testes da API. **Falta**: aba
   Assinaturas no front (`16-relatorio-assinaturas`); 9.3 (cobrança duplicada) e 9.5 (onde economizar).
+  Code review: cobrança com data futura passou a ser ignorada (teste); `CLAUDE.md` dizia
+  `America/Sao_Paulo` mas o fuso do produto é `America/Manaus` desde a 3.5 — corrigido. **Limitação
+  conhecida**: estorno não anula a cobrança original nas assinaturas (o spec não pede), então uma cobrança
+  estornada ainda conta como ocorrência; o valor mensal não é afetado (vem da última cobrança).
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou seguir
   no backend (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de
   movimentação, 8.4's job/e-mail).
