@@ -850,6 +850,15 @@ type="date">`.
   Lugares e Pessoas, mês anterior sem "até o dia" (mês fechado). Achou e corrigiu: barras com escalas
   diferentes por causa da largura do selo (coluna de variação agora fixa). **Falta**: versão desktop
   (`d06-relatorios`, duas colunas com "Onde economizar").
+- **Backend: assinaturas (9.2) (2026-09-25)** — `GET /insights/subscriptions` (sem parâmetro de mês: é um
+  retrato de agora, olhando 12 meses). Detector puro em `subscription.mapper.ts`: mesmo estabelecimento (ou
+  descrição normalizada, com espaços colapsados), valor ±10%, intervalo 26–34 dias, >= 3 ocorrências, só a
+  parte do dono, sem parcela e sem estorno, ativa = última cobrança há <= 40 dias. Tenta cada cobrança como
+  âncora (da mais recente pra trás), então uma compra avulsa depois da última mensalidade não esconde a
+  assinatura. Devolve `totalMonthlyCents`, `totalYearlyCents` (12x, no backend) e itens com `chargeDay`
+  ("todo dia N"). Verificado ao vivo com dado real: 7 assinaturas plausíveis (internet, Prime Video, Spotify,
+  Uber, Amazon, Apple, Best Laser), R$ 308,41/mês e R$ 3.700,92/ano. 367 testes da API. **Falta**: aba
+  Assinaturas no front (`16-relatorio-assinaturas`); 9.3 (cobrança duplicada) e 9.5 (onde economizar).
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou seguir
   no backend (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de
   movimentação, 8.4's job/e-mail).
@@ -1085,7 +1094,7 @@ typecheck/lint/build limpos).
 
 ## Sprint 7 — Insights e IA
 
-- [ ] 9.2 — Assinaturas
+- [x] 9.2 — Assinaturas: `GET /insights/subscriptions`, testado ao vivo (só backend; falta a aba no front)
 - [ ] 9.3 — Cobrança duplicada
 - [ ] 9.4 — Categoria acima do normal
 - [ ] 9.5 — Onde economizar

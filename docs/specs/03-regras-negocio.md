@@ -302,7 +302,11 @@ e **só sobre compras no cartão** (Pix e contas ficam de fora):
   aparece.
 - **Assinaturas e recorrências**: mesmo `merchant` normalizado, valor
   semelhante (±10%), intervalo ~30 dias (±4), >= 3 ocorrências. Lista com
-  total mensal e total anual.
+  total mensal e total anual (12x o mensal). Só compra à vista (parcela
+  nunca é assinatura) e só a parte do dono; sem `merchant`, agrupa pela
+  descrição normalizada. Uma compra avulsa de outro valor no meio não quebra
+  a sequência, e cobrança colada (< 26 dias) não conta como ocorrência. Só
+  lista a **ativa**: última cobrança há até 40 dias.
 - **Cobrança duplicada**: mesmo `merchant` + valor em janela de 24h.
 - **Categoria acima do normal**: gasto do mês > 140% da média dos 3 meses
   anteriores (mínimo de 3 meses de histórico).
