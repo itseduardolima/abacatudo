@@ -106,15 +106,20 @@ describe('detectSubscriptions', () => {
     expect(detectSubscriptions(rows, SELF, TODAY).items[0]).toMatchObject({ label: 'PG *NIO FIBRA' })
   })
 
-  it('colapsa espaços de preenchimento no nome e no agrupamento', () => {
+  it('descarta a cidade que o cartão cola depois do nome (bloco de espaços) no nome e no agrupamento', () => {
     const rows = [
       charge('2026-07-08', { merchant: null, description: 'PG *NIO FIBRA          RIO DE JANEIR BR' }),
-      charge('2026-08-08', { merchant: null, description: 'PG *NIO FIBRA    RIO DE JANEIR BR' }),
-      charge('2026-09-08', { merchant: null, description: 'PG *NIO FIBRA RIO DE JANEIR BR' }),
+      charge('2026-08-08', { merchant: null, description: 'PG *NIO FIBRA    SAO PAULO BR' }),
+      charge('2026-09-08', { merchant: null, description: 'PG *NIO FIBRA          RIO DE JANEIR BR' }),
     ]
     const report = detectSubscriptions(rows, SELF, TODAY)
     expect(report.items).toHaveLength(1)
-    expect(report.items[0]?.label).toBe('PG *NIO FIBRA RIO DE JANEIR BR')
+    expect(report.items[0]?.label).toBe('PG *NIO FIBRA')
+  })
+
+  it('apara espaços nas pontas e mantém o espaço simples entre as palavras', () => {
+    const rows = monthly('08', ['2026-07', '2026-08', '2026-09'], { merchant: '  Loja X  ' })
+    expect(detectSubscriptions(rows, SELF, TODAY).items[0]?.label).toBe('Loja X')
   })
 
   it('só conta a parte do dono: cobrança de outra pessoa não é assinatura sua', () => {

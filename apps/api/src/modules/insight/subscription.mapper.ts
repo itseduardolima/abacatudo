@@ -34,6 +34,13 @@ function daysBetween(from: string, to: string): number {
   return Math.round((toUtc(to) - toUtc(from)) / 86_400_000)
 }
 
+// A descrição do cartão separa o nome da cidade por um bloco de espaços ("PG *NIO FIBRA     RIO DE JANEIR
+// BR"): fica só o nome, e espaços soltos viram um só.
+function cleanName(raw: string): string {
+  const name = (raw.trim().split(/\s{2,}/)[0] ?? '').replace(/\s+/g, ' ').trim()
+  return name === '' ? raw.replace(/\s+/g, ' ').trim() : name
+}
+
 function isSimilarAmount(cents: number, anchorCents: number): boolean {
   return Math.abs(cents - anchorCents) * 100 <= anchorCents * AMOUNT_TOLERANCE_PERCENT
 }
@@ -66,8 +73,7 @@ export function detectSubscriptions(rows: SubscriptionRow[], selfPersonId: strin
     if (daysBetween(dateKey(row.occurredAt), todayKey) < 0) continue
     const cents = selfShareCents(row, selfPersonId)
     if (cents <= 0) continue
-    // A descrição do cartão vem com espaços de preenchimento ("PG *NIO FIBRA     RIO DE JANEIR BR").
-    const name = (row.merchant ?? row.description).replace(/\s+/g, ' ').trim()
+    const name = cleanName(row.merchant ?? row.description)
     const key = normalizeMerchant(name)
     const group = groups.get(key) ?? { label: name, charges: [] }
     group.charges.push({ at: row.occurredAt, day: dateKey(row.occurredAt), cents })
