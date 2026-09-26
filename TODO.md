@@ -840,6 +840,16 @@ type="date">`.
   "de verdade". Serviu para exercitar `aboveNormal` (Saúde, Assinaturas e Alimentação fora saíram
   sinalizadas em setembro). Para desfazer: `UPDATE ... SET categoryId = NULL` na janela de `updatedAt` dessa
   operação (172 linhas, 2026-09-26 03:09 UTC).
+- **Front: Relatórios — "Para onde vai" (2026-09-25)** — `app/(app)/reports` (9.1, `15-relatorio-categorias`):
+  título + `MonthStepper`, total "na sua parte, até o dia N" (`throughDay` da API), `SegmentedControl`
+  Categorias/Lugares/Pessoas e linhas com barra proporcional, valor e variação vs. média dos 3 meses; o selo
+  de alerta só aparece quando a API marca `aboveNormal` (regra do backend). "Relatórios" saiu do estado
+  "em breve" nas duas navegações. Extraído `useMonthNavigation` (Extrato e Relatórios). Só a aba "Para onde
+  vai": Assinaturas e Economizar ficam sem botão até existir backend (9.2, 9.3, 9.5). Verificado ao vivo no
+  Chrome com dado real: total R$ 3.933,45 (setembro, até o dia 25), selo em Saúde/Assinaturas, visões
+  Lugares e Pessoas, mês anterior sem "até o dia" (mês fechado). Achou e corrigiu: barras com escalas
+  diferentes por causa da largura do selo (coluna de variação agora fixa). **Falta**: versão desktop
+  (`d06-relatorios`, duas colunas com "Onde economizar").
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou seguir
   no backend (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de
   movimentação, 8.4's job/e-mail).
