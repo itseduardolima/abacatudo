@@ -15,6 +15,7 @@ import { SettingsMenu } from './SettingsMenu'
 const LINKS = [
   { href: '/', label: 'Início', icon: Home },
   { href: '/transactions', label: 'Fatura', icon: Receipt },
+  { href: '/reports', label: 'Relatórios', icon: BarChart3 },
 ] as const
 
 export function BottomNav() {
@@ -43,12 +44,6 @@ export function BottomNav() {
           </Link>
         )
       })}
-      <span
-        className="flex h-12 flex-1 items-center justify-center rounded-pill text-border"
-        title="Relatórios (em breve)"
-      >
-        <BarChart3 size={22} strokeWidth={1.8} />
-      </span>
       <SettingsMenu triggerClassName="flex h-12 flex-1 items-center justify-center rounded-pill text-text" />
     </nav>
   )

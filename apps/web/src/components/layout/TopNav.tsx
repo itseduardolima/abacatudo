@@ -12,8 +12,8 @@ import { Logo } from '@/components/ui/Logo'
 const LINKS = [
   { href: '/', label: 'Início' },
   { href: '/transactions', label: 'Fatura' },
+  { href: '/reports', label: 'Relatórios' },
 ] as const
-const SOON = ['Relatórios'] as const
 
 export function TopNav() {
   const pathname = usePathname()
@@ -37,11 +37,6 @@ export function TopNav() {
             </Link>
           )
         })}
-        {SOON.map((label) => (
-          <span key={label} className="rounded-pill px-4 py-1.5 text-sm text-border" title={`${label} (em breve)`}>
-            {label}
-          </span>
-        ))}
       </div>
       <SettingsMenu triggerClassName="flex h-9 w-9 items-center justify-center rounded-full text-text" />
     </nav>
