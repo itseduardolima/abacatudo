@@ -810,6 +810,17 @@ type="date">`.
 
 ## Decisões já tomadas (2026-09-21)
 
+- **2026-09-25 — Envelopes, alertas 70/90/100 e a tela Orçamento descartados.** Continuam: teto (renda),
+  ritmo, gastos fixos, o card principal da Início (soma dos cartões + gastos fixos) e a tela Renda.
+  Removidos da API o módulo `envelope` e o `AlertService`, e de `packages/shared` o schema de envelope;
+  migration `20260926030000_drop_envelopes_and_alerts` apaga só `Envelope`, `EnvelopeAlert` e
+  `BudgetMonthAlert`. Um primeiro corte apagou orçamento demais (ritmo, renda, gastos fixos e o card da
+  Início) e foi desfeito: no banco de dev, `BudgetMonth` e `FixedExpense` foram recriadas vazias (os
+  dados que havia nelas se perderam — renda e gastos fixos precisam ser cadastrados de novo). Lições:
+  recriar tabela com `psql` como superusuário deixa o dono errado (o papel da API é `gastos`; `ALTER
+TABLE ... OWNER TO gastos`), e o `migrate dev` acusa "drift" nesse caso — usar `migrate diff` +
+  `migrate deploy`, nunca `migrate reset`.
+
 - **Cartão = só cartão de crédito.** Débito, Pix, TED, boleto e saldo de
   benefício (VR/VA) são movimentações: só consulta, área separada.
 - **Benefício (VR/VA) é renda informada** no orçamento; Bee Vale e InfinitePay
@@ -967,8 +978,8 @@ Escopo mudou a pedido do usuário (2026-09-22): toda transação nasce "Meu", se
 ## Sprint 5 — Orçamento e relatórios
 
 - [x] 7.1 — Renda, fixos, poupança → teto variável: `GET`/`PUT /budget/month`, testado ao vivo
-- [x] 7.2 — Envelopes: `GET/POST/PATCH/DELETE /budget/envelopes`, testado ao vivo
-- [x] 7.3 — Alertas 70/90/100, testado ao vivo
+- [x] ~~7.2 — Envelopes: `GET/POST/PATCH/DELETE /budget/envelopes`, testado ao vivo~~ descartado (2026-09-25)
+- [x] ~~7.3 — Alertas 70/90/100, testado ao vivo~~ descartado (2026-09-25)
 - [x] 8.6 — "Última atualização" por conta, testado ao vivo
 - [x] 9.1 — Para onde vai o dinheiro, testado ao vivo
 

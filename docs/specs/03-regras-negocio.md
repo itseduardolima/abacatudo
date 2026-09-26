@@ -271,17 +271,14 @@ teto variável = renda mensal (fixa + benefícios)
   User move o valor livremente entre contas.
 - **Gastos fixos previstos** (aluguel, contas pagas por Pix/boleto) também são
   informados: o sistema não os enxerga como compra no cartão.
-- **Envelopes**: o teto variável é dividido em envelopes por categoria
-  (valor em centavos ou percentual). Sobra não alocada fica em "Livre".
+- **Sem envelopes nem alertas de limite** (descartados em 2026-09-25): o orçamento é só o teto e o ritmo.
 - Só entra no orçamento: **compra no cartão de crédito** (conta `CREDIT_CARD`,
   `kind = EXPENSE`), com `personId` = self (ou split de self), no mês de
   `occurredAt`. Não entram: nada que não seja cartão de crédito (débito, Pix
   etc.), a linha `CARD_PAYMENT` e gastos de outras Persons.
-- **Alertas**: 70%, 90% e 100% do envelope e do teto total. Cada limiar
-  dispara **uma vez** por mês por envelope (não repete a cada sync).
-- **Ritmo**: para cada envelope, `restante ÷ dias restantes` = valor por
-  dia; se o gasto acumulado passa do esperado linear do mês, sinaliza. Vale
-  especialmente para Mercado e Combustível (gastos frequentes).
+- **Ritmo**: compara o gasto do mês (fatura aberta somada em todos os
+  cartões + gastos fixos ativos) com o esperado linear até hoje, sobre o
+  teto; sinaliza se está acima.
 - **Compras parceladas**: cada parcela conta no mês em que o banco a lança.
   O total de parcelas futuras já comprometidas é mostrado à parte ("já
   comprometido nos próximos meses"); não é somado ao mês corrente.
@@ -304,7 +301,7 @@ e **só sobre compras no cartão** (Pix e contas ficam de fora):
   anteriores (mínimo de 3 meses de histórico).
 - **Parcelas futuras**: soma por mês dos `installment` restantes.
 - **Onde economizar**: ranking por potencial = variação para cima +
-  recorrências candidatas a cancelar + categorias acima do envelope; cada
+  recorrências candidatas a cancelar + categorias acima do normal; cada
   item traz o cálculo por trás (nunca só um texto).
 
 ## Sincronização bancária
