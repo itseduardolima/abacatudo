@@ -133,6 +133,11 @@ describe('detectSubscriptions', () => {
     expect(detectSubscriptions(rows, SELF, TODAY).items[0]).toMatchObject({ monthlyCents: 2000 })
   })
 
+  it('cobrança com data futura não conta como recente nem como ocorrência', () => {
+    const rows = [...monthly('08', ['2026-07', '2026-08']), charge('2026-10-08')]
+    expect(detectSubscriptions(rows, SELF, TODAY).items).toEqual([])
+  })
+
   it('estorno nunca é cobrança de assinatura', () => {
     const rows = [...monthly('08', ['2026-07', '2026-08']), charge('2026-09-08', { kind: 'REFUND' as never })]
     expect(detectSubscriptions(rows, SELF, TODAY).items).toEqual([])

@@ -58,9 +58,12 @@ function chainFrom(charges: Charge[], anchorIndex: number): Charge[] {
 }
 
 export function detectSubscriptions(rows: SubscriptionRow[], selfPersonId: string, today: Date): SubscriptionReport {
+  const todayKey = dateKey(today)
   const groups = new Map<string, { label: string; charges: Charge[] }>()
   for (const row of rows) {
     if (row.kind !== 'EXPENSE') continue
+    // Lançamento com data futura (manual, por exemplo) ainda não é uma cobrança: contaria como "recente".
+    if (daysBetween(dateKey(row.occurredAt), todayKey) < 0) continue
     const cents = selfShareCents(row, selfPersonId)
     if (cents <= 0) continue
     // A descrição do cartão vem com espaços de preenchimento ("PG *NIO FIBRA     RIO DE JANEIR BR").
@@ -71,7 +74,6 @@ export function detectSubscriptions(rows: SubscriptionRow[], selfPersonId: strin
     groups.set(key, group)
   }
 
-  const todayKey = dateKey(today)
   const items: SubscriptionItem[] = []
   for (const [key, group] of groups) {
     const charges = group.charges.sort((a, b) => a.at.getTime() - b.at.getTime())
