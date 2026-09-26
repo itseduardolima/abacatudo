@@ -833,6 +833,13 @@ type="date">`.
   `merchant` e o sync só categoriza via `Rule`; o relatório por categoria vai parecer vazio até isso melhorar
   (categorização automática, 4.5, ou IA, 10.1). Limite: a "parcela k cai (k−1) meses depois da compra" é
   aproximação — o banco não dá a data de lançamento por parcela.
+- **Dados de teste no banco de dev (2026-09-25)**, a pedido do usuário: 172 despesas de cartão dos últimos
+  meses foram categorizadas por padrão de nome (Saúde, Alimentação fora, Assinaturas, Lazer, Combustível,
+  Transporte, Compras, Contas fixas) via `PATCH /transactions/:id/category`, **sem** criar `Rule` (nada muda
+  em futuros syncs) e sem tocar em lançamento já categorizado. Só o banco de dev; não vale como categoria
+  "de verdade". Serviu para exercitar `aboveNormal` (Saúde, Assinaturas e Alimentação fora saíram
+  sinalizadas em setembro). Para desfazer: `UPDATE ... SET categoryId = NULL` na janela de `updatedAt` dessa
+  operação (172 linhas, 2026-09-26 03:09 UTC).
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou seguir
   no backend (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de
   movimentação, 8.4's job/e-mail).
