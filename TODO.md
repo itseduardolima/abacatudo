@@ -1171,7 +1171,8 @@ typecheck/lint/build limpos).
 
 ## Sprint 8 — Segurança reforçada, convite, PWA, produção
 
-- [ ] 1.4 — Convidar uma pessoa
+- [ ] ~~1.4 — Convidar uma pessoa~~ — fora do escopo (docs/scrum/BACKLOG.md, decisão de 2026-09-21: uso
+      individual; se voltar, exige que a pessoa tenha o próprio Meu Pluggy)
 - [x] 1.5 — Redefinir senha: `POST /auth/forgot-password`/`reset-password`, telas `(public)/forgot-password`
       e `/reset-password`, 7 testes (só falta configurar o provedor SMTP de verdade em produção — hoje usa
       `MAIL_TRANSPORT=log`, ver pendência em "Provedor de SMTP e domínio final")
