@@ -31,7 +31,7 @@ const baseSchema = z.object({
   // Sem ela, o GroqClient recusa chamadas (categorização cai para regras, o app funciona inteiro — 10-ia
   // § "recurso desligável"). Groq: camada gratuita, formato compatível com OpenAI.
   GROQ_API_KEY: z.string().optional(),
-  AI_MODEL: z.string().default('llama-3.1-8b-instant'),
+  AI_MODEL: z.string().default('openai/gpt-oss-20b'),
   AI_MONTHLY_TOKEN_BUDGET: z.coerce.number().int().positive().default(200_000),
 })
 

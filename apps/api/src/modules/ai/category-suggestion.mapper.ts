@@ -18,6 +18,12 @@ const rawItemSchema = z.object({
   confidence: z.number().int().min(0).max(100),
 })
 const rawArraySchema = z.array(z.unknown())
+const CODE_FENCE = /^```(?:json)?\s*([\s\S]*?)\s*```$/
+
+function stripCodeFence(text: string): string {
+  const match = CODE_FENCE.exec(text.trim())
+  return match?.[1] ?? text
+}
 
 export function parseAiCategorySuggestions(
   text: string,
@@ -26,7 +32,7 @@ export function parseAiCategorySuggestions(
 ): CategorySuggestionResult[] {
   let parsed: unknown
   try {
-    parsed = JSON.parse(text)
+    parsed = JSON.parse(stripCodeFence(text))
   } catch {
     return []
   }

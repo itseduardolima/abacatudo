@@ -20,6 +20,13 @@ describe('parseAiCategorySuggestions', () => {
     expect(parseAiCategorySuggestions('não é json', VALID_INDEXES, VALID_CATEGORY_IDS)).toEqual([])
   })
 
+  it('aceita o array embrulhado em bloco de código (```json ... ```), comum em modelo raciocinante', () => {
+    const text = '```json\n[{"index": 0, "categoryId": "cat-1", "confidence": 90}]\n```'
+    expect(parseAiCategorySuggestions(text, VALID_INDEXES, VALID_CATEGORY_IDS)).toEqual([
+      { index: 0, categoryId: 'cat-1', confidence: 90 },
+    ])
+  })
+
   it('não é um array vira lista vazia', () => {
     expect(parseAiCategorySuggestions(JSON.stringify({ index: 0 }), VALID_INDEXES, VALID_CATEGORY_IDS)).toEqual([])
   })

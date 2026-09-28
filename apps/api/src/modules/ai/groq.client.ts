@@ -44,7 +44,7 @@ export class GroqClient {
   constructor(config: ConfigService) {
     this.apiKey = config.get<string>('GROQ_API_KEY')
     this.enabled = !!this.apiKey
-    this.model = config.get<string>('AI_MODEL', 'llama-3.1-8b-instant')
+    this.model = config.get<string>('AI_MODEL', 'openai/gpt-oss-20b')
   }
 
   async suggestCategories(
@@ -73,6 +73,7 @@ export class GroqClient {
         body: JSON.stringify({
           model: this.model,
           max_tokens: MAX_TOKENS,
+          ...(this.model.startsWith('openai/gpt-oss') ? { reasoning_effort: 'low' } : {}),
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'user', content: userPrompt },
