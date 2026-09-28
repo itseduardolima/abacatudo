@@ -11,6 +11,9 @@ const nextConfig = {
     const apiUrl = process.env.API_INTERNAL_URL ?? 'http://localhost:3001'
     return [{ source: '/api/:path*', destination: `${apiUrl}/:path*` }]
   },
+  async headers() {
+    return [{ source: '/sw.js', headers: [{ key: 'cache-control', value: 'no-cache' }] }]
+  },
 }
 
 export default nextConfig

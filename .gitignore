@@ -12,8 +12,6 @@ coverage/
 **/cypress/videos/
 **/cypress/screenshots/
 apps/api/generated/
-apps/web/public/sw.js
-apps/web/public/sw.js.map
 apps/web/public/swe-worker-*.js
 apps/web/public/swe-worker-*.js.map
 next-env.d.ts
