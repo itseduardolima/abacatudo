@@ -43,6 +43,7 @@ export default function TransactionsPage() {
     setAlwaysForMerchant,
     selectCategory,
     selectPerson,
+    acceptSuggestedCategory,
     isSaving,
     ruleError,
     openSplit,
@@ -181,11 +182,23 @@ export default function TransactionsPage() {
             >
               <div className="min-w-0">
                 <p className="truncate font-semibold text-ink">{tx.merchant ?? tx.description}</p>
-                <p className="mt-0.5 text-sm text-muted">
-                  {/* Pagamento de fatura nunca é gasto (03-regras-negocio § Movimentações) — nem categoria,
-                  nem "dono" fazem sentido pra essa linha, então nunca mostra "Sem categoria"/"Sem dono". */}
-                  {tx.kind === 'CARD_PAYMENT' ? 'Pagamento da fatura' : (tx.categoryName ?? 'Sem categoria')}
-                </p>
+                {tx.kind !== 'CARD_PAYMENT' && !tx.categoryName && tx.categorySuggestedName ? (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      void acceptSuggestedCategory(tx.id, tx.categorySuggestedId as string)
+                    }}
+                    className="mt-1 inline-flex items-center gap-1 rounded-pill bg-tint px-2 py-0.5 text-xs font-medium text-primary-ink"
+                  >
+                    Sugestão: {tx.categorySuggestedName} · toque para aceitar
+                  </span>
+                ) : (
+                  <p className="mt-0.5 text-sm text-muted">
+                    {tx.kind === 'CARD_PAYMENT' ? 'Pagamento da fatura' : (tx.categoryName ?? 'Sem categoria')}
+                  </p>
+                )}
               </div>
               <div className="flex flex-shrink-0 items-center gap-2">
                 {tx.kind === 'CARD_PAYMENT' ? (

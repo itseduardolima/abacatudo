@@ -8,6 +8,7 @@ import { useInvoice } from '@/hooks/queries/use-invoice'
 import { usePeople } from '@/hooks/queries/use-people'
 import { usePreviewSplit } from '@/hooks/queries/use-preview-split'
 import { useReplaceSplit } from '@/hooks/queries/use-replace-split'
+import { useSuggestCategories } from '@/hooks/queries/use-suggest-categories'
 import { useTransactions } from '@/hooks/queries/use-transactions'
 import { useUpdateTransactionCategory } from '@/hooks/queries/use-update-transaction-category'
 import { useUpdateTransactionPerson } from '@/hooks/queries/use-update-transaction-person'
@@ -40,6 +41,15 @@ export function useTransactionsPage() {
   const previewSplit = usePreviewSplit()
   const replaceSplit = useReplaceSplit()
   const clearSplit = useClearSplit()
+  const suggestCategories = useSuggestCategories()
+
+  const suggestCategoriesFired = useRef(false)
+  useEffect(() => {
+    if (suggestCategoriesFired.current) return
+    suggestCategoriesFired.current = true
+    suggestCategories.mutate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só dispara uma vez por sessão de página
+  }, [])
 
   const cardAccounts = (accounts.data ?? []).filter((a) => a.type === 'CREDIT_CARD' && !a.archivedAt)
   const [selectedAccountId, setSelectedAccountId] = useState<string | undefined>(undefined)
@@ -81,6 +91,7 @@ export function useTransactionsPage() {
       return {
         ...tx,
         categoryName: tx.categoryId ? (categoryNameById.get(tx.categoryId) ?? null) : null,
+        categorySuggestedName: tx.categorySuggestedId ? (categoryNameById.get(tx.categorySuggestedId) ?? null) : null,
         personName: person?.name ?? null,
         personIsSelf: person?.isSelf ?? false,
         personOthersIndex: person ? othersOrder.indexOf(person.id) : -1,
@@ -136,6 +147,9 @@ export function useTransactionsPage() {
 
   const selectCategory = (transactionId: string, categoryId: string) =>
     runUpdate(() => updateCategory.mutateAsync({ id: transactionId, input: { categoryId, alwaysForMerchant } }))
+
+  const acceptSuggestedCategory = (transactionId: string, categoryId: string) =>
+    updateCategory.mutateAsync({ id: transactionId, input: { categoryId, alwaysForMerchant: false } })
 
   const selectPerson = (transactionId: string, personId: string) =>
     runUpdate(() =>
@@ -238,6 +252,7 @@ export function useTransactionsPage() {
     setAlwaysForMerchant,
     selectCategory,
     selectPerson,
+    acceptSuggestedCategory,
     isSaving: updateCategory.isPending || updatePerson.isPending,
     ruleError,
     openSplit,
