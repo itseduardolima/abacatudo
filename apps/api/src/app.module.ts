@@ -9,6 +9,7 @@ import { AuthGuard } from './common/guards/auth.guard'
 import { RequestIdMiddleware } from './common/middlewares/request-id.middleware'
 import { SessionMiddleware } from './common/middlewares/session.middleware'
 import { AccountModule } from './modules/account/account.module'
+import { AiModule } from './modules/ai/ai.module'
 import { AuthModule } from './modules/auth/auth.module'
 import { BankingModule } from './modules/banking/banking.module'
 import { BudgetModule } from './modules/budget/budget.module'
@@ -46,6 +47,7 @@ import { PrismaModule } from './prisma/prisma.module'
     BudgetModule,
     FixedExpenseModule,
     InsightModule,
+    AiModule,
     HealthModule,
   ],
   providers: [
