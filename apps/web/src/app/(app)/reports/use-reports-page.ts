@@ -6,7 +6,7 @@ import { useMonthNavigation } from '@/hooks/use-month-navigation'
 import { ApiClientError } from '@/lib/api-client'
 
 export type ReportView = 'category' | 'merchant' | 'person'
-export type ReportTab = 'spending' | 'subscriptions'
+export type ReportTab = 'spending' | 'subscriptions' | 'savings'
 
 // Hook de página: só orquestração (04-padroes-codigo). Todos os números (total, variações, "acima do
 // normal") vêm prontos da API; aqui só escolhe qual lista mostrar.

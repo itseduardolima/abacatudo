@@ -1,6 +1,7 @@
 'use client'
 
 import { BreakdownRow } from './breakdown-row'
+import { SavingsSection } from './savings-section'
 import { SubscriptionsSection } from './subscriptions-section'
 import { useReportsPage, type ReportTab, type ReportView } from './use-reports-page'
 import { MoneyText } from '@/components/finance/MoneyText'
@@ -13,6 +14,7 @@ import { formatMonthName } from '@/lib/utils/format-month'
 const TAB_OPTIONS: { value: ReportTab; label: string }[] = [
   { value: 'spending', label: 'Para onde vai' },
   { value: 'subscriptions', label: 'Assinaturas' },
+  { value: 'savings', label: 'Economizar' },
 ]
 
 const VIEW_OPTIONS: { value: ReportView; label: string }[] = [
@@ -51,7 +53,7 @@ export default function ReportsPage() {
     <main className="mx-auto flex min-h-screen max-w-[420px] flex-col gap-5 px-4 pb-28 pt-8 md:pb-10">
       <div className="flex items-center justify-between gap-3">
         <h1 className="display-number text-[2rem] text-ink">Relatórios</h1>
-        {tab === 'spending' && (
+        {(tab === 'spending' || tab === 'savings') && (
           <MonthStepper
             label={`${formatMonthName(month)} ${month.slice(0, 4)}`}
             onPrevious={goToPreviousMonth}
@@ -63,6 +65,8 @@ export default function ReportsPage() {
       <SegmentedControl label="Relatório" options={TAB_OPTIONS} value={tab} onChange={setTab} />
 
       {tab === 'subscriptions' && <SubscriptionsSection />}
+
+      {tab === 'savings' && <SavingsSection month={month} />}
 
       {tab === 'spending' && (
         <>
