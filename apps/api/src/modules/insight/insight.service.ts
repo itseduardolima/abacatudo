@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common'
-import type { SpendingReport, SubscriptionReport } from '@gastos/shared'
+import type { SavingsReport, SpendingReport, SubscriptionReport } from '@gastos/shared'
 import { dayOfMonth, monthKey, monthRange, shiftMonthKey } from '../../common/date/timezone'
 import { DomainError } from '../../common/errors/domain.error'
 import { PersonRepository } from '../person/person.repository'
+import { detectDuplicateCharges } from './duplicate-charge.mapper'
 import {
   bucketByMonth,
   buildBreakdown,
@@ -13,6 +14,7 @@ import {
   totalCents,
 } from './insight.mapper'
 import { InsightRepository } from './insight.repository'
+import { buildSavingsReport } from './savings.mapper'
 import { detectSubscriptions } from './subscription.mapper'
 
 const MONTH_KEY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
@@ -81,6 +83,24 @@ export class InsightService {
     const since = monthRange(shiftMonthKey(monthKey(today), -SUBSCRIPTION_LOOKBACK_MONTHS)).start
     const rows = await this.repo.findSubscriptionRows(userId, since)
     return detectSubscriptions(rows, selfId, today)
+  }
+
+  // "Onde economizar" (HU 9.5): junta os três sinais já calculados — categoria acima do normal (do mês
+  // pedido), assinatura ativa e cobrança duplicada (no mês pedido) — num ranking só, cada item com o cálculo
+  // à mostra.
+  async savings(userId: string, month?: string): Promise<SavingsReport> {
+    const key = month ?? monthKey(new Date())
+    const [spending, subscriptionReport] = await Promise.all([
+      this.spendingReport(userId, key),
+      this.subscriptions(userId),
+    ])
+
+    const selfId = await this.selfPersonId(userId)
+    const rows = await this.repo.findRows(userId, key)
+    const currentMonthRows = bucketByMonth(rows, [key], null).get(key) ?? []
+    const duplicateCharges = detectDuplicateCharges(currentMonthRows, selfId)
+
+    return { items: buildSavingsReport(spending.byCategory, subscriptionReport.items, duplicateCharges) }
   }
 
   private async selfPersonId(userId: string): Promise<string> {
