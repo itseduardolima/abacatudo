@@ -149,7 +149,7 @@ export function useTransactionsPage() {
     runUpdate(() => updateCategory.mutateAsync({ id: transactionId, input: { categoryId, alwaysForMerchant } }))
 
   const acceptSuggestedCategory = (transactionId: string, categoryId: string) =>
-    updateCategory.mutateAsync({ id: transactionId, input: { categoryId, alwaysForMerchant: false } })
+    runUpdate(() => updateCategory.mutateAsync({ id: transactionId, input: { categoryId, alwaysForMerchant: false } }))
 
   const selectPerson = (transactionId: string, personId: string) =>
     runUpdate(() =>

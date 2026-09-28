@@ -182,13 +182,17 @@ export default function TransactionsPage() {
             >
               <div className="min-w-0">
                 <p className="truncate font-semibold text-ink">{tx.merchant ?? tx.description}</p>
-                {tx.kind !== 'CARD_PAYMENT' && !tx.categoryName && tx.categorySuggestedName ? (
+                {tx.kind !== 'CARD_PAYMENT' &&
+                !tx.categoryName &&
+                tx.categorySuggestedName &&
+                tx.categorySuggestedId ? (
                   <span
                     role="button"
                     tabIndex={0}
                     onClick={(event) => {
                       event.stopPropagation()
-                      void acceptSuggestedCategory(tx.id, tx.categorySuggestedId as string)
+                      const categorySuggestedId = tx.categorySuggestedId
+                      if (categorySuggestedId) void acceptSuggestedCategory(tx.id, categorySuggestedId)
                     }}
                     className="mt-1 inline-flex items-center gap-1 rounded-pill bg-tint px-2 py-0.5 text-xs font-medium text-primary-ink"
                   >
