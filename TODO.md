@@ -924,8 +924,24 @@ type="date">`.
   de tentativa anterior) — corrigido, senão o arquivo nunca seria commitado. Verificado ao vivo no Chrome:
   SW registrado e ativo, cache de API populado, `caches.keys()` esvaziado depois do "logout" simulado.
   typecheck/lint/Prettier limpos, 19 testes de componente passando.
+- **2FA TOTP (1.6) (2026-09-28)** — `apps/api/src/common/security/{encryption,totp}.ts`: AES-256-GCM (chave
+  `DATA_ENCRYPTION_KEY`, primeiro uso de verdade dessa variável no projeto) e TOTP RFC 6238 implementado na
+  mão com `node:crypto` (sem dependência nova; vetor de referência do RFC bate no teste). `User` ganhou
+  `totpSecret`/`totpEnabledAt`/`totpLastUsedStep`; `TwoFactorRecoveryCode` (10 códigos, hash argon2, uso
+  único) e `TwoFactorChallenge` (ponte "senha confirmada" → "sessão criada" quando 2FA ligado, 5 min, mesmo
+  formato de token opaco do reset de senha) — as duas sem RLS, mesma exceção de User/Session (guarda de
+  lint em `eslint.config.mjs`). Login vira `LoginResult` discriminado (`OK` | `MFA_REQUIRED`); token nunca
+  no corpo da resposta, só no cookie (achado e corrigido no teste: o helper `applySessionCookie`
+  centraliza isso pras duas rotas de login). Reuso do mesmo código TOTP dentro da janela ±1 é recusado
+  (`totpLastUsedStep`). Front: `/settings/security` (QR via `qrcode`, código manual, confirmação, códigos
+  de recuperação mostrados uma vez, desligar com senha) e o passo de código no `/login`. **Testado ao vivo
+  com chave `DATA_ENCRYPTION_KEY` real**: liguei o 2FA de verdade (QR escaneado via código calculado à
+  mão), login completo com código TOTP real, login com código de recuperação (e reuso corretamente
+  recusado), desligar com senha errada recusado e com senha certa funcionando. 432 testes da API (73 só
+  de auth/2FA), 19 de componente, typecheck/lint/Prettier limpos.
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou pendências (5.4/5.5 rótulos de
-  movimentação, 8.4's job/e-mail, resto da Sprint 8), ou revisitar 10.2/10.3 se fizer falta na prática.
+  movimentação, 8.4's job/e-mail, resto da Sprint 8: 1.7/1.8, 7.5/7.6, 11.2/11.3, 12.x), ou revisitar
+  10.2/10.3 se fizer falta na prática.
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -1176,7 +1192,8 @@ typecheck/lint/build limpos).
 - [x] 1.5 — Redefinir senha: `POST /auth/forgot-password`/`reset-password`, telas `(public)/forgot-password`
       e `/reset-password`, 7 testes (só falta configurar o provedor SMTP de verdade em produção — hoje usa
       `MAIL_TRANSPORT=log`, ver pendência em "Provedor de SMTP e domínio final")
-- [ ] 1.6 — 2FA TOTP
+- [x] 1.6 — 2FA TOTP: setup (QR + segredo), confirmação, 10 códigos de recuperação, desafio no login,
+      desligar com senha — testado ao vivo com chave real
 - [ ] 1.7 — Reautenticação em ação sensível
 - [ ] 1.8 — Exportar e excluir conta
 - [x] 7.4 — Ritmo (por dia): `GET /budget/pace?month=`, testado ao vivo
