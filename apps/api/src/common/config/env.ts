@@ -28,6 +28,12 @@ const baseSchema = z.object({
   MAIL_AUTH_USER: z.string().optional(),
   MAIL_AUTH_PASS: z.string().optional(),
   MAIL_FROM: z.string().optional(),
+  // Sem ela, o ClaudeClient recusa chamadas (categorização cai para regras, o app funciona inteiro — 10-ia
+  // § "recurso desligável"). Modelo pequeno por padrão: sugestão de categoria é lote, não precisa do mais
+  // capaz.
+  ANTHROPIC_API_KEY: z.string().optional(),
+  AI_MODEL: z.string().default('claude-haiku-4-5-20251001'),
+  AI_MONTHLY_TOKEN_BUDGET: z.coerce.number().int().positive().default(200_000),
 })
 
 export const envSchema = baseSchema.superRefine((env, ctx) => {

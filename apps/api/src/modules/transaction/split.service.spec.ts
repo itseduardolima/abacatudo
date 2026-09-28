@@ -33,6 +33,8 @@ function row(
     description: 'PAG*LOJA',
     merchant: null,
     categoryId: null,
+    categorySuggestedId: null,
+    categorySuggestionConfidence: null,
     personId: 'self-1',
     note: null,
     cardLast4: null,
