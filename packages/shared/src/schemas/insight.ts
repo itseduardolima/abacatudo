@@ -60,3 +60,36 @@ export const subscriptionReportSchema = z
   })
   .strict()
 export type SubscriptionReport = z.infer<typeof subscriptionReportSchema>
+
+// HU 9.3 — cobrança duplicada: mesmo estabelecimento + valor em janela de 24h.
+export const duplicateChargeSchema = z
+  .object({
+    key: z.string(),
+    label: z.string(),
+    amountCents: centsSchema,
+    firstChargeAt: z.string().datetime(),
+    secondChargeAt: z.string().datetime(),
+  })
+  .strict()
+export type DuplicateCharge = z.infer<typeof duplicateChargeSchema>
+
+// HU 9.5 — "onde economizar": ranking por potencial (03-regras-negocio § Relatórios e insights), juntando
+// cobrança duplicada, categoria acima do normal e assinatura ativa. Cada item traz o cálculo por trás e a
+// chave de origem (categoria ou assinatura) pra linkar ao relatório.
+export const savingsItemSchema = z
+  .object({
+    type: z.enum(['DUPLICATE_CHARGE', 'ABOVE_NORMAL_CATEGORY', 'SUBSCRIPTION']),
+    label: z.string(),
+    amountCents: centsSchema,
+    calculation: z.string(),
+    sourceKey: z.string(),
+  })
+  .strict()
+export type SavingsItem = z.infer<typeof savingsItemSchema>
+
+export const savingsReportSchema = z
+  .object({
+    items: z.array(savingsItemSchema),
+  })
+  .strict()
+export type SavingsReport = z.infer<typeof savingsReportSchema>
