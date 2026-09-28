@@ -989,6 +989,13 @@ TABLE ... OWNER TO gastos`), e o `migrate dev` acusa "drift" nesse caso — usar
 
 - [ ] **Girar o Client Secret do Pluggy**: ele foi colado numa conversa (fica no histórico dela). Gerar um
       novo no painel do Pluggy antes de usar em produção. A API Key colada expira sozinha em 2 horas.
+- [x] **Auditoria de segurança (2026-09-28)** — 5 categorias (isolamento/RLS, permissão no front, IDOR,
+      segredo exposto, XSS): só 1 achado real, corrigido — `docker-compose.yml` tinha fallback
+      `${POSTGRES_PASSWORD:-postgres}`/`${APP_DB_PASSWORD:-gastos}` que o `deploy-check.sh` não detectava
+      (só checava placeholder tipo `gere-`, não o valor literal do fallback); `deploy-check.sh` agora
+      recusa esses dois valores especificamente. RLS, IDOR e XSS sem achado (confirmado sistematicamente,
+      não amostra) — ver detalhe na conversa. Sem exposição de rede (Postgres não publica porta em
+      produção), por isso severidade média, não crítica.
 - [x] **Colocar `PLUGGY_CLIENT_ID`/`PLUGGY_CLIENT_SECRET` novos direto em `apps/api/.env`** — feito pelo
       usuário em 2026-09-22; usado pra testar `connect` contra a API real (achou e corrigiu 1 bug, ver
       Sprint 6). Falta só autorizar de verdade (o usuário loga no banco) pra testar `checkStatus`/sync.
