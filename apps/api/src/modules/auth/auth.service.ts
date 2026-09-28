@@ -11,11 +11,10 @@ import { AuthRepository, type SessionRow } from './auth.repository'
 import { LoginAttemptTracker } from './login-attempt.tracker'
 import { PasswordResetService } from './password-reset.service'
 import { generateSessionToken, hashSessionToken } from './token.util'
+import { TwoFactorService } from './two-factor.service'
 
-export interface LoginResult {
-  token: string
-  user: CurrentUser
-}
+export type LoginResult =
+  { status: 'OK'; token: string; user: CurrentUser } | { status: 'MFA_REQUIRED'; mfaToken: string }
 
 export interface LoginMeta {
   ip: string
@@ -55,6 +54,7 @@ export class AuthService implements OnModuleInit {
     private readonly attempts: LoginAttemptTracker,
     private readonly people: PersonRepository,
     private readonly passwordReset: PasswordResetService,
+    private readonly twoFactor: TwoFactorService,
     config: ConfigService,
   ) {
     this.idleDays = config.get<number>('SESSION_IDLE_DAYS', 30)
@@ -84,12 +84,35 @@ export class AuthService implements OnModuleInit {
     // exigida por 03-regras-negocio.md § Autenticação. O contador do IP só expira pela janela de tempo.
     this.attempts.reset(emailKey)
 
+    // 2FA ligado: senha certa não basta — cria um desafio de curta duração em vez da Session de verdade
+    // (08-seguranca § 4, "o 2FA é pedido no login"). loginWithTwoFactor troca esse desafio por uma Session
+    // depois do código bater.
+    if (user.totpEnabledAt) {
+      const mfaToken = await this.twoFactor.createChallenge(user.id)
+      return { status: 'MFA_REQUIRED', mfaToken }
+    }
+
+    return { status: 'OK', ...(await this.createSessionResult(user.id, user.email, meta)) }
+  }
+
+  async loginWithTwoFactor(mfaToken: string, code: string, meta: LoginMeta): Promise<LoginResult> {
+    const userId = await this.twoFactor.verifyChallenge(mfaToken, code)
+    const user = await this.repo.findUserById(userId)
+    if (!user) throw new UnauthorizedError('INVALID_SESSION', 'Sessão inválida. Faça login novamente.')
+    return { status: 'OK', ...(await this.createSessionResult(user.id, user.email, meta)) }
+  }
+
+  private async createSessionResult(
+    userId: string,
+    email: string,
+    meta: LoginMeta,
+  ): Promise<{ token: string; user: CurrentUser }> {
     const { token, tokenHash } = generateSessionToken()
-    await this.repo.createSession({ userId: user.id, tokenHash, userAgent: meta.userAgent })
+    await this.repo.createSession({ userId, tokenHash, userAgent: meta.userAgent })
     // Sem sessão ainda no AsyncLocalStorage neste ponto (é o login que está criando ela) — Person tem RLS,
     // então precisa declarar o usuário explicitamente pra essa leitura, mesmo padrão do seed/jobs.
-    const name = await runAsUser(user.id, () => this.selfName(user.id))
-    return { token, user: { id: user.id, email: user.email, name } }
+    const name = await runAsUser(userId, () => this.selfName(userId))
+    return { token, user: { id: userId, email, name } }
   }
 
   // Chamado pelo SessionMiddleware a cada request; nunca lança — sessão inválida só significa "sem
@@ -166,6 +189,24 @@ export class AuthService implements OnModuleInit {
 
   resetPassword(token: string, newPassword: string): Promise<void> {
     return this.passwordReset.resetPassword(token, newPassword)
+  }
+
+  twoFactorStatus(userId: string) {
+    return this.twoFactor.status(userId)
+  }
+
+  async startTwoFactorSetup(userId: string) {
+    const user = await this.repo.findUserById(userId)
+    if (!user) throw new UnauthorizedError('INVALID_SESSION', 'Sessão inválida. Faça login novamente.')
+    return this.twoFactor.startSetup(userId, user.email)
+  }
+
+  confirmTwoFactorSetup(userId: string, code: string) {
+    return this.twoFactor.confirmSetup(userId, code)
+  }
+
+  disableTwoFactor(userId: string, password: string): Promise<void> {
+    return this.twoFactor.disable(userId, password)
   }
 
   private async selfName(userId: string): Promise<string> {

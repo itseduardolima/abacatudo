@@ -7,6 +7,7 @@ import type { AuthService } from './auth.service'
 function authMock() {
   return {
     login: jest.fn(),
+    loginWithTwoFactor: jest.fn(),
     logout: jest.fn(),
     me: jest.fn(),
     listSessions: jest.fn(),
@@ -16,6 +17,10 @@ function authMock() {
     forgotPassword: jest.fn(),
     inspectResetToken: jest.fn(),
     resetPassword: jest.fn(),
+    twoFactorStatus: jest.fn(),
+    startTwoFactorSetup: jest.fn(),
+    confirmTwoFactorSetup: jest.fn(),
+    disableTwoFactor: jest.fn(),
   } as unknown as jest.Mocked<AuthService>
 }
 
@@ -30,18 +35,60 @@ function responseMock() {
 describe('AuthController', () => {
   it('login: seta o cookie de sessão e devolve o usuário, nunca o token no corpo', async () => {
     const auth = authMock()
-    auth.login.mockResolvedValue({ token: 'tok-123', user: { id: 'user-1', email: 'a@b.com', name: 'Eduardo' } })
+    auth.login.mockResolvedValue({
+      status: 'OK',
+      token: 'tok-123',
+      user: { id: 'user-1', email: 'a@b.com', name: 'Eduardo' },
+    })
     const response = responseMock()
     const request = { ip: '203.0.113.5', get: () => 'jest-agent' } as unknown as Request
     const controller = new AuthController(auth, configMock())
 
     const result = await controller.login({ email: 'a@b.com', password: 'x' }, request, response)
 
-    expect(result).toEqual({ id: 'user-1', email: 'a@b.com', name: 'Eduardo' })
+    expect(result).toEqual({ status: 'OK', user: { id: 'user-1', email: 'a@b.com', name: 'Eduardo' } })
     expect(JSON.stringify(result)).not.toContain('tok-123')
     expect(response.cookie).toHaveBeenCalledWith(
       '__Host-gastos_session',
       'tok-123',
+      expect.objectContaining({ httpOnly: true }),
+    )
+  })
+
+  it('login com 2FA ligado: devolve MFA_REQUIRED, sem setar cookie nenhum', async () => {
+    const auth = authMock()
+    auth.login.mockResolvedValue({ status: 'MFA_REQUIRED', mfaToken: 'mfa-tok-123' })
+    const response = responseMock()
+    const request = { ip: '203.0.113.5', get: () => 'jest-agent' } as unknown as Request
+    const controller = new AuthController(auth, configMock())
+
+    const result = await controller.login({ email: 'a@b.com', password: 'x' }, request, response)
+
+    expect(result).toEqual({ status: 'MFA_REQUIRED', mfaToken: 'mfa-tok-123' })
+    expect(response.cookie).not.toHaveBeenCalled()
+  })
+
+  it('login/2fa: código certo seta o cookie de sessão', async () => {
+    const auth = authMock()
+    auth.loginWithTwoFactor.mockResolvedValue({
+      status: 'OK',
+      token: 'tok-456',
+      user: { id: 'user-1', email: 'a@b.com', name: 'Eduardo' },
+    })
+    const response = responseMock()
+    const request = { ip: '203.0.113.5', get: () => 'jest-agent' } as unknown as Request
+    const controller = new AuthController(auth, configMock())
+
+    const result = await controller.loginWithTwoFactor({ mfaToken: 'mfa-tok-123', code: '123456' }, request, response)
+
+    expect(auth.loginWithTwoFactor).toHaveBeenCalledWith('mfa-tok-123', '123456', {
+      ip: '203.0.113.5',
+      userAgent: 'jest-agent',
+    })
+    expect(result).toEqual({ status: 'OK', user: { id: 'user-1', email: 'a@b.com', name: 'Eduardo' } })
+    expect(response.cookie).toHaveBeenCalledWith(
+      '__Host-gastos_session',
+      'tok-456',
       expect.objectContaining({ httpOnly: true }),
     )
   })

@@ -2,7 +2,14 @@ import { Inject, Injectable } from '@nestjs/common'
 import type { Prisma } from '@prisma/client'
 import { PRISMA, type PrismaService, setUserInTransaction } from '../../prisma/prisma.client'
 
-export type UserForLogin = { id: string; email: string; passwordHash: string }
+export type UserForLogin = {
+  id: string
+  email: string
+  passwordHash: string
+  totpSecret: string | null
+  totpEnabledAt: Date | null
+  totpLastUsedStep: number | null
+}
 export type SessionRow = { id: string; userAgent: string | null; createdAt: Date; lastUsedAt: Date }
 export type ResetTokenRow = {
   id: string
@@ -11,6 +18,17 @@ export type ResetTokenRow = {
   usedAt: Date | null
   userEmail: string
 }
+export type ChallengeRow = { id: string; userId: string; expiresAt: Date; usedAt: Date | null }
+export type RecoveryCodeRow = { id: string; codeHash: string; usedAt: Date | null }
+
+const TOTP_SELECT = {
+  id: true,
+  email: true,
+  passwordHash: true,
+  totpSecret: true,
+  totpEnabledAt: true,
+  totpLastUsedStep: true,
+} as const
 
 // Único módulo que toca User e Session — as duas tabelas sem RLS (08-seguranca § 1). Reforçado por lint
 // (eslint.config.mjs). Todo método aqui existe porque o Service precisa, nada de acesso genérico.
@@ -19,7 +37,10 @@ export class AuthRepository {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaService) {}
 
   findUserForLogin(email: string): Promise<UserForLogin | null> {
-    return this.prisma.user.findUnique({ where: { email }, select: { id: true, email: true, passwordHash: true } })
+    return this.prisma.user.findUnique({
+      where: { email },
+      select: TOTP_SELECT,
+    })
   }
 
   findUserById(id: string): Promise<{ id: string; email: string } | null> {
@@ -27,7 +48,7 @@ export class AuthRepository {
   }
 
   findUserWithPasswordById(id: string): Promise<UserForLogin | null> {
-    return this.prisma.user.findUnique({ where: { id }, select: { id: true, email: true, passwordHash: true } })
+    return this.prisma.user.findUnique({ where: { id }, select: TOTP_SELECT })
   }
 
   findUserByEmail(email: string): Promise<{ id: string } | null> {
@@ -138,5 +159,74 @@ export class AuthRepository {
       select: { id: true, userAgent: true, createdAt: true, lastUsedAt: true },
       orderBy: { lastUsedAt: 'desc' },
     })
+  }
+
+  totpStatus(userId: string): Promise<{ totpEnabledAt: Date | null } | null> {
+    return this.prisma.user.findUnique({ where: { id: userId }, select: { totpEnabledAt: true } })
+  }
+
+  // Início do setup (ainda não confirmado): grava o segredo cifrado sem ligar o 2FA — `confirmTotpSetup`
+  // é quem marca `totpEnabledAt`. Sobrescrever aqui é seguro mesmo com um setup anterior pendente: só
+  // conta de verdade quando confirmado com um código válido.
+  async startTotpSetup(userId: string, encryptedSecret: string): Promise<void> {
+    await this.prisma.user.update({ where: { id: userId }, data: { totpSecret: encryptedSecret } })
+  }
+
+  // Confirma o setup e grava os 10 códigos de recuperação na mesma transação: nunca existe um User com
+  // `totpEnabledAt` preenchido e zero código de recuperação (ou vice-versa).
+  async confirmTotpSetup(userId: string, recoveryCodeHashes: string[]): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: userId }, data: { totpEnabledAt: new Date(), totpLastUsedStep: null } }),
+      this.prisma.twoFactorRecoveryCode.deleteMany({ where: { userId } }),
+      this.prisma.twoFactorRecoveryCode.createMany({
+        data: recoveryCodeHashes.map((codeHash) => ({ userId, codeHash })),
+      }),
+    ])
+  }
+
+  async disableTotp(userId: string): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { totpSecret: null, totpEnabledAt: null, totpLastUsedStep: null },
+      }),
+      this.prisma.twoFactorRecoveryCode.deleteMany({ where: { userId } }),
+    ])
+  }
+
+  async updateTotpLastUsedStep(userId: string, step: number): Promise<void> {
+    await this.prisma.user.update({ where: { id: userId }, data: { totpLastUsedStep: step } })
+  }
+
+  findRecoveryCodes(userId: string): Promise<RecoveryCodeRow[]> {
+    return this.prisma.twoFactorRecoveryCode.findMany({
+      where: { userId, usedAt: null },
+      select: { id: true, codeHash: true, usedAt: true },
+    })
+  }
+
+  async consumeRecoveryCode(id: string): Promise<void> {
+    await this.prisma.twoFactorRecoveryCode.update({ where: { id }, data: { usedAt: new Date() } })
+  }
+
+  // Um novo desafio invalida qualquer desafio anterior não usado do mesmo User — mesmo padrão do reset de
+  // senha (createResetToken), nunca dois desafios "vivos" ao mesmo tempo.
+  async createChallenge(data: { userId: string; tokenHash: string; expiresAt: Date }): Promise<{ id: string }> {
+    await this.prisma.twoFactorChallenge.updateMany({
+      where: { userId: data.userId, usedAt: null },
+      data: { usedAt: new Date() },
+    })
+    return this.prisma.twoFactorChallenge.create({ data, select: { id: true } })
+  }
+
+  findChallenge(tokenHash: string): Promise<ChallengeRow | null> {
+    return this.prisma.twoFactorChallenge.findUnique({
+      where: { tokenHash },
+      select: { id: true, userId: true, expiresAt: true, usedAt: true },
+    })
+  }
+
+  async consumeChallenge(id: string): Promise<void> {
+    await this.prisma.twoFactorChallenge.update({ where: { id }, data: { usedAt: new Date() } })
   }
 }

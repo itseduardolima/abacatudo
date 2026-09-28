@@ -5,6 +5,7 @@ import { AuthRepository } from './auth.repository'
 import { AuthService } from './auth.service'
 import { LoginAttemptTracker } from './login-attempt.tracker'
 import { PasswordResetService } from './password-reset.service'
+import { TwoFactorService } from './two-factor.service'
 
 // Exporta AuthService (não SessionMiddleware): o middleware é instanciado pelo AppModule via
 // consumer.apply(), que resolve o construtor dele a partir do que o AppModule enxerga — bastando
@@ -14,7 +15,7 @@ import { PasswordResetService } from './password-reset.service'
 @Module({
   imports: [PersonModule],
   controllers: [AuthController],
-  providers: [AuthService, AuthRepository, LoginAttemptTracker, PasswordResetService],
+  providers: [AuthService, AuthRepository, LoginAttemptTracker, PasswordResetService, TwoFactorService],
   exports: [AuthService],
 })
 export class AuthModule {}

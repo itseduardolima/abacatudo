@@ -21,6 +21,42 @@ export const currentUserSchema = z
   .strict()
 export type CurrentUser = z.infer<typeof currentUserSchema>
 
+// Login normal (status OK) x 2FA ligado (status MFA_REQUIRED, sem sessão ainda — precisa de
+// POST /auth/login/2fa com o mfaToken + o código) — 08-seguranca § 4, "2FA é pedido no login".
+export const loginResultSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('OK'), user: currentUserSchema }).strict(),
+  z.object({ status: z.literal('MFA_REQUIRED'), mfaToken: z.string() }).strict(),
+])
+export type LoginResult = z.infer<typeof loginResultSchema>
+
+export const verifyTwoFactorInputSchema = z
+  .object({
+    mfaToken: z.string().min(1),
+    code: z.string().min(1, 'Informe o código.'),
+  })
+  .strict()
+export type VerifyTwoFactorInput = z.infer<typeof verifyTwoFactorInputSchema>
+
+// Setup do 2FA (1.6): `secret` é o texto pra digitar manualmente (fallback de quem não consegue escanear o
+// QR) e `otpauthUri` é o que vira o QR na tela — os dois vêm juntos porque o front nunca monta a URI (a
+// formatação otpauth:// é regra do backend, não do frontend).
+export const twoFactorSetupSchema = z.object({ secret: z.string(), otpauthUri: z.string() }).strict()
+export type TwoFactorSetup = z.infer<typeof twoFactorSetupSchema>
+
+export const confirmTwoFactorInputSchema = z.object({ code: z.string().min(1, 'Informe o código.') }).strict()
+export type ConfirmTwoFactorInput = z.infer<typeof confirmTwoFactorInputSchema>
+
+// Só aparecem essa uma vez, na hora de confirmar o setup — o backend nunca devolve os códigos de novo
+// depois disso (só o hash fica guardado).
+export const twoFactorRecoveryCodesSchema = z.object({ recoveryCodes: z.array(z.string()) }).strict()
+export type TwoFactorRecoveryCodes = z.infer<typeof twoFactorRecoveryCodesSchema>
+
+export const twoFactorStatusSchema = z.object({ enabled: z.boolean() }).strict()
+export type TwoFactorStatus = z.infer<typeof twoFactorStatusSchema>
+
+export const disableTwoFactorInputSchema = z.object({ password: z.string().min(1, 'Informe a senha atual.') }).strict()
+export type DisableTwoFactorInput = z.infer<typeof disableTwoFactorInputSchema>
+
 // Nome + e-mail num formulário só (mesma tela "Meu perfil"); senha é outro formulário/endpoint — trocar
 // senha tem regra de segurança diferente (confirmar a atual), não faz sentido misturar payload.
 export const updateProfileInputSchema = z
