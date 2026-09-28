@@ -27,6 +27,16 @@ export default [
             "MemberExpression[property.name='passwordResetToken'][object.property.name='prisma'], MemberExpression[property.name='passwordResetToken'][object.name='prisma']",
           message: 'PasswordResetToken não tem RLS — acesso só pelo AuthRepository (08-seguranca § 1).',
         },
+        {
+          selector:
+            "MemberExpression[property.name='twoFactorRecoveryCode'][object.property.name='prisma'], MemberExpression[property.name='twoFactorRecoveryCode'][object.name='prisma']",
+          message: 'TwoFactorRecoveryCode não tem RLS — acesso só pelo AuthRepository (08-seguranca § 1).',
+        },
+        {
+          selector:
+            "MemberExpression[property.name='twoFactorChallenge'][object.property.name='prisma'], MemberExpression[property.name='twoFactorChallenge'][object.name='prisma']",
+          message: 'TwoFactorChallenge não tem RLS — acesso só pelo AuthRepository (08-seguranca § 1).',
+        },
       ],
     },
   },

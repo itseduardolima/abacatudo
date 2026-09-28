@@ -17,25 +17,35 @@ datasource db {
 /// Sem RLS (08-seguranca § 1, exceção documentada): resolvida pelo e-mail no login, antes de existir
 /// userId no contexto. Acesso só pelo AuthRepository — regra de lint em eslint.config.mjs.
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               String    @id @default(uuid())
+  email            String    @unique
+  passwordHash     String
+  // 2FA TOTP (1.6, 08-seguranca § 4): segredo cifrado (AES-256-GCM, DATA_ENCRYPTION_KEY), nunca em texto
+  // puro no banco. totpEnabledAt null = ligando ainda não confirmado ou nunca ligado; a distinção entre os
+  // dois é só "totpSecret preenchido e totpEnabledAt null" (setup pendente) — nunca uma tabela à parte.
+  totpSecret       String?
+  totpEnabledAt    DateTime?
+  // Último passo (janela de 30s) de código aceito — barra reusar o mesmo código dentro da janela de ±1
+  // (08-seguranca § 4: "proteção contra reuso do mesmo código").
+  totpLastUsedStep Int?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  sessions            Session[]
-  people              Person[]
-  categories          Category[]
-  accounts            Account[]
-  transactions        Transaction[]
-  pluggyItems         PluggyItem[]
-  rules               Rule[]
-  splits              Split[]
-  budgetMonths        BudgetMonth[]
-  cardHolderHints     CardHolderHint[]
-  fixedExpenses       FixedExpense[]
-  passwordResetTokens PasswordResetToken[]
-  aiUsages            AiUsage[]
+  sessions               Session[]
+  people                 Person[]
+  categories             Category[]
+  accounts               Account[]
+  transactions           Transaction[]
+  pluggyItems            PluggyItem[]
+  rules                  Rule[]
+  splits                 Split[]
+  budgetMonths           BudgetMonth[]
+  cardHolderHints        CardHolderHint[]
+  fixedExpenses          FixedExpense[]
+  passwordResetTokens    PasswordResetToken[]
+  aiUsages               AiUsage[]
+  twoFactorRecoveryCodes TwoFactorRecoveryCode[]
+  twoFactorChallenges    TwoFactorChallenge[]
 }
 
 /// Sem RLS: resolvida pelo hash do token do cookie, antes de existir userId no contexto (mesma exceção
@@ -59,6 +69,39 @@ model Session {
 /// nem loga (08-seguranca § 4). usedAt null = ainda válido; emitir um link novo invalida qualquer token
 /// anterior não usado do mesmo User (ver AuthRepository.createResetToken).
 model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Sem RLS (mesma exceção de User/Session/PasswordResetToken, 08-seguranca § 1 e § 4). Código de
+/// recuperação de uso único: hash argon2 (não SHA-256 — mesmo tratamento de senha, é um segredo curto e
+/// pode ser tentado por força bruta se vazar o dump). Confirmar o 2FA gera exatamente 10; usar um marca
+/// usedAt, nunca apaga (rastro de quantos já foram usados).
+model TwoFactorRecoveryCode {
+  id        String    @id @default(uuid())
+  userId    String
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Sem RLS (mesma exceção). Ponte entre "senha confirmada" e "sessão criada" quando o User tem 2FA ligado:
+/// o login normal cria isto em vez de uma Session; só vira Session depois do código TOTP (ou de recuperação)
+/// bater. Mesmo formato de token opaco do reset de senha (32 bytes, só o SHA-256 persistido), validade curta
+/// (5 min) — é um passo intermediário, não uma sessão de verdade.
+model TwoFactorChallenge {
   id        String    @id @default(uuid())
   userId    String
   tokenHash String    @unique
@@ -213,30 +256,30 @@ enum TransactionStatus {
 /// quando a transação está dividida — aí quem manda é a soma dos Split (03-regras-negocio § Atribuição de
 /// pessoa e § Só a minha parte).
 model Transaction {
-  id                String            @id @default(uuid())
-  userId            String
-  accountId         String
-  externalId        String?
-  kind              TransactionKind
-  status            TransactionStatus @default(POSTED)
-  amountCents       Int
-  occurredAt        DateTime
-  description       String
-  merchant          String?
-  categoryId        String?
+  id                           String            @id @default(uuid())
+  userId                       String
+  accountId                    String
+  externalId                   String?
+  kind                         TransactionKind
+  status                       TransactionStatus @default(POSTED)
+  amountCents                  Int
+  occurredAt                   DateTime
+  description                  String
+  merchant                     String?
+  categoryId                   String?
   // Sugestão da IA (10.1): nunca sobrescreve categoryId já preenchido. Some quando o User confirma (vira
   // categoryId) ou recusa. Confiança abaixo do limiar fica só como sugestão; acima, a própria categorização
   // já aplica e mantém os dois preenchidos (auditoria/selo "sugerido pela IA").
   categorySuggestedId          String?
   categorySuggestionConfidence Int?
-  personId          String?
-  note              String?
-  cardLast4         String?
-  installmentNumber Int?
-  installmentTotal  Int?
-  billId            String?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  personId                     String?
+  note                         String?
+  cardLast4                    String?
+  installmentNumber            Int?
+  installmentTotal             Int?
+  billId                       String?
+  createdAt                    DateTime          @default(now())
+  updatedAt                    DateTime          @updatedAt
 
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   account           Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
