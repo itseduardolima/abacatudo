@@ -881,9 +881,23 @@ type="date">`.
   da cobrança. Aba "Economizar" em Relatórios (protótipo 17): total do mês e a lista, sem o link "ver
   compras" do protótipo (falta navegação por transação). Verificado ao vivo no Chrome com dado real. 379
   testes da API, 19 de componente, typecheck/lint/Prettier limpos.
-- Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou seguir
-  no backend (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de
-  movimentação, 8.4's job/e-mail).
+- **Backend: sugestão de categoria por IA (10.1) (2026-09-28)** — decisão de escopo do Épico 10: só 10.1 por
+  ora (o resto — 10.2 resumo mensal e 10.3 chat — cortado do backlog ativo até haver sinal real de falta;
+  10.4 orçamento de tokens e 10.5 defesa contra injeção vieram embutidos na implementação, não como itens
+  separados). `ClaudeClient` (`apps/api/src/modules/ai`): chamada crua via fetch (mesmo padrão do
+  PluggyClient, sem SDK), sem chave configurada = recurso desligado (app funciona inteiro, categorização cai
+  pras regras). `category-suggestion.mapper.ts` valida a resposta (JSON inválido, categoria inexistente,
+  index fora do lote, confiança fora de 0-100 = descartado item a item, nunca a resposta inteira).
+  `CategorySuggestionService`: só busca transação sem `categoryId` e sem `categorySuggestedId` (nunca
+  sobrescreve confirmada); cache por estabelecimento normalizado (reaproveita sugestão já dada, sem nova
+  chamada); confiança >= 70 aplica a categoria direto, abaixo só fica como sugestão; `AiUsage` por
+  User/mês trava a chamada ao estourar `AI_MONTHLY_TOKEN_BUDGET`; falha da IA nunca quebra (degrada pra
+  "sem sugestão"). `POST /ai/suggest-categories`. Migration `add_ai_category_suggestion_and_usage` com RLS
+  na tabela nova. 403 testes da API, typecheck/lint/Prettier limpos. **Falta**: front (endpoint só existe
+  pro backend acionar por ora — decidir quando/como disparar: manual, após sync, ou os dois).
+- Próximo: front da sugestão de IA (chamar o endpoint e mostrar o selo/chip de sugestão na Fatura), ou
+  redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou pendências (5.4/5.5 rótulos de movimentação,
+  8.4's job/e-mail).
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -1121,10 +1135,10 @@ typecheck/lint/build limpos).
 - [x] 9.4 — Categoria acima do normal: já saía em `byCategory.aboveNormal` desde o fix do 9.1
 - [x] 9.5 — Onde economizar: `GET /insights/savings?month=AAAA-MM` e aba "Economizar" em Relatórios, testado
       ao vivo
-- [ ] 10.1 — Sugestão de categoria por IA
-- [ ] 10.2 — Resumo mensal
-- [ ] 10.4 — Orçamento de tokens e liga/desliga
-- [ ] 10.5 — Defesa contra injeção via descrição
+- [x] 10.1 — Sugestão de categoria por IA: `POST /ai/suggest-categories` (10.4/10.5 embutidos, só backend)
+- [ ] 10.2 — Resumo mensal (cortado do escopo ativo por ora — ver nota abaixo)
+- [x] 10.4 — Orçamento de tokens e liga/desliga: `AiUsage` por User/mês, embutido em 10.1
+- [x] 10.5 — Defesa contra injeção via descrição: dado delimitado por `<transaction>`, embutido em 10.1
 
 ## Sprint 8 — Segurança reforçada, convite, PWA, produção
 
