@@ -89,12 +89,20 @@ dist/seed/prisma/seed.js` — a imagem final não tem `pnpm`, lê `SEED_USER_*`
   disco; configurar uptime externo. 2FA e webhook do Pluggy ainda não
   existem no código (o Meu Pluggy não tem webhook — sync é por
   polling/manual), então não entram nesse checklist ainda.
-- **Deploy contínuo** (ainda não configurado — não existe `.github/workflows/deploy.yml`
-  neste repo hoje; até lá, deploy é manual via SSH seguindo os passos do
-  README): push na `main` → GitHub Actions (`ci` + `e2e`) → SSH na
-  VPS → `git reset --hard origin/main` → `deploy-check.sh` → `docker compose
-up -d --build` → `docker image prune -f` → espera `/health` (mesmo
-  desenho do `pdv-web`, secrets `DEPLOY_HOST`/`DEPLOY_USER`/`DEPLOY_SSH_KEY`).
+- **Deploy contínuo**: job `deploy` no próprio `.github/workflows/ci.yml`, só em push na `main` e
+  só depois de `ci`/`components`/`docker` passarem. Passos: SSH na VPS → `git reset --hard
+origin/main` → `deploy-check.sh` → `docker compose up -d --build web api` (nunca `caddy`: a VPS
+  de hoje já tem outro projeto, `pdv-web`, dono das portas 80/443) → `scripts/connect-shared-network.sh`
+  (anexa `web`/`api` na rede do Caddy do outro projeto — não dá pra fazer isso via `networks:` do
+  compose, ver comentário no script) → `docker image prune -f` → espera `/health` de dentro do
+  container. Secrets: `DEPLOY_HOST`/`DEPLOY_USER`/`DEPLOY_SSH_KEY`/`DEPLOY_PATH` (mesmo desenho do
+  `pdv-web`).
+- **Deploy manual na VPS** (ex.: só pra atualizar uma variável do `.env`, sem novo commit): rodar
+  `./scripts/deploy-manual.sh` em vez de `docker compose up -d --build` direto — ele encadeia
+  `deploy-check.sh` → `up --build web api` → `connect-shared-network.sh` → `image prune` → espera
+  `/health`, igual ao job do CI. **Nunca** rodar só `docker compose up --build` à mão: isso recria
+  os containers e derruba a conexão com a rede do Caddy compartilhado sem avisar (502 silencioso em
+  produção — achado ao vivo em 2026-09-28).
 - **Migrations**: `prisma migrate deploy` roda no boot da API. Toda migration
   que mexe em RLS ou em tabela com dado é testada no drill de restore antes.
   **Nunca** `migrate reset`/`db push` em produção.
