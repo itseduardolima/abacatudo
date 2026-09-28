@@ -871,8 +871,14 @@ type="date">`.
   assinaturas, nas linhas de relatório e no Extrato. Backend: o nome vindo da descrição do cartão perde a
   cidade colada depois de um bloco de espaços ("PG *NIO FIBRA RIO DE JANEIR BR" → "PG *NIO FIBRA").
   Verificado ao vivo no Chrome: R$ 308,41/mês em 7 assinaturas, R$ 3.700,92/ano. 369 testes da API.
-  **Falta**: aba "Economizar" (9.3, 9.5, sem backend), versão desktop (`d06`/`d07`), aviso "X e Y somam R$
-  por mês" (depende de 9.5).
+  **Falta**: aba "Economizar" (backend pronto, falta o front), versão desktop (`d06`/`d07`), aviso "X e Y
+  somam R$ por mês".
+- **Backend: onde economizar (9.3, 9.5) (2026-09-28)** — `duplicate-charge.mapper.ts` (mesmo estabelecimento
+  - valor em até 24h, só a fatia do dono) e `savings.mapper.ts` (junta cobrança duplicada + categoria acima
+    do normal + assinatura ativa num ranking por potencial, cada item com o cálculo em texto e a chave de
+    origem pra linkar ao relatório). `GET /insights/savings?month=AAAA-MM` reaproveita `spendingReport` e
+    `subscriptions` já existentes. 379 testes da API, typecheck/lint/Prettier limpos. **Falta**: aba
+    "Economizar" no front (`17-relatorio-economizar`).
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou seguir
   no backend (Sprint 7 Insights e IA, ou pendências: 5.4/5.5 rótulos de
   movimentação, 8.4's job/e-mail).
@@ -1109,9 +1115,10 @@ typecheck/lint/build limpos).
 ## Sprint 7 — Insights e IA
 
 - [x] 9.2 — Assinaturas: `GET /insights/subscriptions`, testado ao vivo (só backend; falta a aba no front)
-- [ ] 9.3 — Cobrança duplicada
-- [ ] 9.4 — Categoria acima do normal
-- [ ] 9.5 — Onde economizar
+- [x] 9.3 — Cobrança duplicada: mesmo estabelecimento + valor em 24h (`duplicate-charge.mapper.ts`, só backend)
+- [x] 9.4 — Categoria acima do normal: já saía em `byCategory.aboveNormal` desde o fix do 9.1
+- [x] 9.5 — Onde economizar: `GET /insights/savings?month=AAAA-MM` junta os 3 sinais num ranking com o
+      cálculo à mostra (só backend; falta a aba "Economizar" no front)
 - [ ] 10.1 — Sugestão de categoria por IA
 - [ ] 10.2 — Resumo mensal
 - [ ] 10.4 — Orçamento de tokens e liga/desliga
