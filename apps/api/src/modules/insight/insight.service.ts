@@ -97,7 +97,9 @@ export class InsightService {
 
     const selfId = await this.selfPersonId(userId)
     const rows = await this.repo.findRows(userId, key)
-    const currentMonthRows = bucketByMonth(rows, [key], null).get(key) ?? []
+    // Duplicidade olha a data real da cobrança (occurredAt), nunca o mês da parcela (effectiveMonthKey):
+    // bucketByMonth deslocaria parcela antiga pro mês em que ela cai, o que não faz sentido aqui.
+    const currentMonthRows = rows.filter((row) => monthKey(row.occurredAt) === key)
     const duplicateCharges = detectDuplicateCharges(currentMonthRows, selfId)
 
     return { items: buildSavingsReport(spending.byCategory, subscriptionReport.items, duplicateCharges) }
