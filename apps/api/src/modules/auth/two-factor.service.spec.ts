@@ -57,6 +57,15 @@ describe('TwoFactorService', () => {
       expect(repo.startTotpSetup).toHaveBeenCalledWith(USER_ID, expect.any(String))
       expect(repo.startTotpSetup.mock.calls[0]?.[1]).not.toBe(result.secret) // nunca em texto puro no banco
     })
+
+    it('2FA já ligado: recusa trocar o segredo sem passar por disable (senha)', async () => {
+      const repo = repoMock()
+      repo.totpStatus.mockResolvedValue({ totpEnabledAt: new Date() })
+      const service = new TwoFactorService(repo, config())
+
+      await expect(service.startSetup(USER_ID, EMAIL)).rejects.toMatchObject({ code: 'TWO_FACTOR_ALREADY_ENABLED' })
+      expect(repo.startTotpSetup).not.toHaveBeenCalled()
+    })
   })
 
   describe('confirmSetup', () => {

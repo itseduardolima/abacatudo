@@ -15,6 +15,8 @@ const NOT_CONFIGURED = () =>
   new DomainError('TWO_FACTOR_NOT_CONFIGURED', 'O 2FA não está disponível neste ambiente.', 501)
 const NO_PENDING_SETUP = () =>
   new DomainError('TWO_FACTOR_SETUP_NOT_STARTED', 'Comece o setup do 2FA antes de confirmar o código.', 400)
+const ALREADY_ENABLED = () =>
+  new DomainError('TWO_FACTOR_ALREADY_ENABLED', 'O 2FA já está ligado. Desligue antes de trocar o segredo.', 409)
 const INVALID_CODE = () => new UnauthorizedError('TWO_FACTOR_INVALID_CODE', 'Código inválido ou expirado.')
 const INVALID_PASSWORD = () => new UnauthorizedError('INVALID_CURRENT_PASSWORD', 'A senha atual está incorreta.')
 const INVALID_CHALLENGE = () =>
@@ -50,6 +52,10 @@ export class TwoFactorService {
 
   async startSetup(userId: string, email: string): Promise<{ secret: string; otpauthUri: string }> {
     if (!this.encryptionKey) throw NOT_CONFIGURED()
+    // Nunca troca o segredo de um 2FA já ligado sem passar por `disable` (que exige a senha) — senão uma
+    // sessão sequestrada assumia o 2FA da vítima só chamando o setup de novo, sem precisar da senha.
+    const status = await this.repo.totpStatus(userId)
+    if (status?.totpEnabledAt) throw ALREADY_ENABLED()
     const secret = generateTotpSecret()
     await this.repo.startTotpSetup(userId, encrypt(secret, this.encryptionKey))
     return { secret, otpauthUri: buildOtpauthUri(secret, email) }
