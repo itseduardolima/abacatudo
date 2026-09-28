@@ -37,7 +37,16 @@ async function networkFirst(request, cacheName) {
   const cache = await caches.open(cacheName)
   try {
     const response = await fetch(request)
-    if (response.ok) cache.put(request, response.clone())
+    if (response.ok) {
+      cache.put(request, response.clone())
+      return response
+    }
+    // 4xx é resposta válida da API (ex.: 401 precisa propagar pra app saber que a sessão caiu) — só um
+    // erro de servidor (5xx) tenta o cache antes de desistir.
+    if (response.status >= 500) {
+      const cached = await cache.match(request)
+      if (cached) return cached
+    }
     return response
   } catch {
     const cached = await cache.match(request)

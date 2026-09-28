@@ -12,9 +12,11 @@ export function useLogout() {
   return useMutation({
     // 204 sem corpo: api-client já normaliza pra `null`.
     mutationFn: async () => {
-      const result = await apiRequest('/auth/logout', { method: 'POST', schema: z.null() })
-      await clearAppCaches()
-      return result
+      try {
+        return await apiRequest('/auth/logout', { method: 'POST', schema: z.null() })
+      } finally {
+        await clearAppCaches()
+      }
     },
   })
 }
