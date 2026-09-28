@@ -196,7 +196,7 @@ Backend (`apps/api`), Jest:
 - **Teste de isolamento obrigatório por módulo**: cria dado para dois Users e
   prova que a query de um nunca devolve o do outro (08 § 1) — é Definition of
   Done, não opcional.
-- Clients externos (`PluggyClient`, `ClaudeClient`) sempre mockados nos
+- Clients externos (`PluggyClient`, `GroqClient`) sempre mockados nos
   testes; **nenhum teste chama serviço externo real**.
 - `*.controller.spec.ts`: integração leve (DTO + roteamento).
 

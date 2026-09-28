@@ -26,7 +26,7 @@ via Prisma. Nenhuma regra de negócio nem acesso a dado no Next.
                         └───────┬─────────────┬────────────┘
                                 │ Prisma      │ HTTPS (saída)
                     ┌───────────▼────────┐   ├──► Pluggy API (Open Finance)
-                    │ PostgreSQL (RLS    │   └──► Claude API (IA)
+                    │ PostgreSQL (RLS    │   └──► Groq API (IA)
                     │ por user_id)       │
                     └────────────────────┘
 ```

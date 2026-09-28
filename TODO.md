@@ -884,9 +884,10 @@ type="date">`.
 - **Backend: sugestão de categoria por IA (10.1) (2026-09-28)** — decisão de escopo do Épico 10: só 10.1 por
   ora (o resto — 10.2 resumo mensal e 10.3 chat — cortado do backlog ativo até haver sinal real de falta;
   10.4 orçamento de tokens e 10.5 defesa contra injeção vieram embutidos na implementação, não como itens
-  separados). `ClaudeClient` (`apps/api/src/modules/ai`): chamada crua via fetch (mesmo padrão do
+  separados). `GroqClient` (`apps/api/src/modules/ai`): chamada crua via fetch (mesmo padrão do
   PluggyClient, sem SDK), sem chave configurada = recurso desligado (app funciona inteiro, categorização cai
-  pras regras). `category-suggestion.mapper.ts` valida a resposta (JSON inválido, categoria inexistente,
+  pras regras). Trocado de Claude pra Groq em 2026-09-28 (camada gratuita; formato compatível com OpenAI,
+  `console.groq.com`) — decisão do usuário, spec 02/10 atualizados. `category-suggestion.mapper.ts` valida a resposta (JSON inválido, categoria inexistente,
   index fora do lote, confiança fora de 0-100 = descartado item a item, nunca a resposta inteira).
   `CategorySuggestionService`: só busca transação sem `categoryId` e sem `categorySuggestedId` (nunca
   sobrescreve confirmada); cache por estabelecimento normalizado (reaproveita sugestão já dada, sem nova
@@ -902,7 +903,7 @@ type="date">`.
   · toque para aceitar" no lugar de "Sem categoria" — um toque aplica direto, sem abrir a folha de edição
   (mesma filosofia de "toda transação nasce Meu, correção é 1 toque"). `Transaction` ganhou
   `categorySuggestedId`/`categorySuggestionConfidence` no schema compartilhado. Verificado ao vivo no Chrome
-  (sugestão simulada direto no banco de dev, já que a IA fica desligada sem `ANTHROPIC_API_KEY`): chip
+  (sugestão simulada direto no banco de dev, já que a IA fica desligada sem `GROQ_API_KEY`): chip
   apareceu, toque aplicou a categoria e sumiu o chip. 404 testes da API, 19 de componente, typecheck/lint/
   Prettier limpos. Épico 10 fechado por ora (só 10.1 — ver decisão de escopo acima).
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou pendências (5.4/5.5 rótulos de

@@ -6,7 +6,7 @@ import { normalizeMerchant } from '../rule/normalize-merchant'
 import { AiUsageRepository } from './ai-usage.repository'
 import { CategorySuggestionRepository, type UncategorizedTransaction } from './category-suggestion.repository'
 import { isConfidentEnough, parseAiCategorySuggestions } from './category-suggestion.mapper'
-import { ClaudeClient, type CategorySuggestionRequestItem } from './claude.client'
+import { GroqClient, type CategorySuggestionRequestItem } from './groq.client'
 
 export type SuggestCategoriesOutcome =
   | { status: 'DISABLED' | 'BUDGET_EXCEEDED' | 'NOTHING_TO_DO' }
@@ -19,7 +19,7 @@ export class CategorySuggestionService {
   private readonly monthlyBudget: number
 
   constructor(
-    private readonly claude: ClaudeClient,
+    private readonly groq: GroqClient,
     private readonly repo: CategorySuggestionRepository,
     private readonly categories: CategoryRepository,
     private readonly usage: AiUsageRepository,
@@ -29,7 +29,7 @@ export class CategorySuggestionService {
   }
 
   async suggestForUser(userId: string): Promise<SuggestCategoriesOutcome> {
-    if (!this.claude.enabled) return { status: 'DISABLED' }
+    if (!this.groq.enabled) return { status: 'DISABLED' }
 
     const month = monthKey(new Date())
     const used = await this.usage.tokensUsed(userId, month)
@@ -72,7 +72,7 @@ export class CategorySuggestionService {
     let text: string
     let tokensUsed: number
     try {
-      const response = await this.claude.suggestCategories(
+      const response = await this.groq.suggestCategories(
         items,
         categories.map((category) => ({ id: category.id, name: category.name })),
       )

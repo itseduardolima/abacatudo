@@ -3,7 +3,7 @@ import type { Category } from '@prisma/client'
 import type { AiUsageRepository } from './ai-usage.repository'
 import { CategorySuggestionService } from './category-suggestion.service'
 import type { CategorySuggestionRepository, UncategorizedTransaction } from './category-suggestion.repository'
-import type { ClaudeClient } from './claude.client'
+import type { GroqClient } from './groq.client'
 import type { CategoryRepository } from '../category/category.repository'
 
 const USER = 'user-1'
@@ -12,8 +12,8 @@ function config(values: Record<string, number> = {}): ConfigService {
   return { get: (key: string, fallback?: unknown) => values[key] ?? fallback } as unknown as ConfigService
 }
 
-function claudeMock(enabled = true) {
-  return { enabled, suggestCategories: jest.fn() } as unknown as jest.Mocked<ClaudeClient>
+function groqMock(enabled = true) {
+  return { enabled, suggestCategories: jest.fn() } as unknown as jest.Mocked<GroqClient>
 }
 
 function repoMock() {
@@ -59,20 +59,14 @@ function transaction(overrides: Partial<UncategorizedTransaction> = {}): Uncateg
 }
 
 describe('CategorySuggestionService', () => {
-  it('desligado sem ANTHROPIC_API_KEY', async () => {
-    const service = new CategorySuggestionService(
-      claudeMock(false),
-      repoMock(),
-      categoriesMock(),
-      usageMock(),
-      config(),
-    )
+  it('desligado sem GROQ_API_KEY', async () => {
+    const service = new CategorySuggestionService(groqMock(false), repoMock(), categoriesMock(), usageMock(), config())
     expect(await service.suggestForUser(USER)).toEqual({ status: 'DISABLED' })
   })
 
   it('pausa ao estourar o orçamento mensal de tokens', async () => {
     const service = new CategorySuggestionService(
-      claudeMock(),
+      groqMock(),
       repoMock(),
       categoriesMock(),
       usageMock(200_000),
@@ -82,21 +76,21 @@ describe('CategorySuggestionService', () => {
   })
 
   it('nada pra fazer quando não há transação sem categoria', async () => {
-    const service = new CategorySuggestionService(claudeMock(), repoMock(), categoriesMock(), usageMock(), config())
+    const service = new CategorySuggestionService(groqMock(), repoMock(), categoriesMock(), usageMock(), config())
     expect(await service.suggestForUser(USER)).toEqual({ status: 'NOTHING_TO_DO' })
   })
 
   it('reaproveita sugestão já dada pra outra transação do mesmo estabelecimento, sem chamar a IA', async () => {
-    const claude = claudeMock()
+    const groq = groqMock()
     const repo = repoMock()
     repo.findUncategorized.mockResolvedValue([transaction()])
     repo.findMerchantSuggestion.mockResolvedValue({ categoryId: 'cat-1', confidence: 90 })
 
-    const service = new CategorySuggestionService(claude, repo, categoriesMock([category()]), usageMock(), config())
+    const service = new CategorySuggestionService(groq, repo, categoriesMock([category()]), usageMock(), config())
     const outcome = await service.suggestForUser(USER)
 
     expect(outcome).toEqual({ status: 'DONE', suggested: 0, appliedFromCache: 1 })
-    expect(claude.suggestCategories).not.toHaveBeenCalled()
+    expect(groq.suggestCategories).not.toHaveBeenCalled()
     expect(repo.applySuggestion).toHaveBeenCalledWith(USER, 'tx-1', {
       categoryId: 'cat-1',
       categorySuggestedId: 'cat-1',
@@ -105,8 +99,8 @@ describe('CategorySuggestionService', () => {
   })
 
   it('confiança acima do limiar aplica a categoria direto', async () => {
-    const claude = claudeMock()
-    claude.suggestCategories.mockResolvedValue({
+    const groq = groqMock()
+    groq.suggestCategories.mockResolvedValue({
       text: JSON.stringify([{ index: 0, categoryId: 'cat-1', confidence: 90 }]),
       inputTokens: 100,
       outputTokens: 20,
@@ -115,7 +109,7 @@ describe('CategorySuggestionService', () => {
     repo.findUncategorized.mockResolvedValue([transaction()])
     const usage = usageMock()
 
-    const service = new CategorySuggestionService(claude, repo, categoriesMock([category()]), usage, config())
+    const service = new CategorySuggestionService(groq, repo, categoriesMock([category()]), usage, config())
     const outcome = await service.suggestForUser(USER)
 
     expect(outcome).toEqual({ status: 'DONE', suggested: 1, appliedFromCache: 0 })
@@ -128,8 +122,8 @@ describe('CategorySuggestionService', () => {
   })
 
   it('confiança abaixo do limiar fica só como sugestão, nunca vira categoria efetiva', async () => {
-    const claude = claudeMock()
-    claude.suggestCategories.mockResolvedValue({
+    const groq = groqMock()
+    groq.suggestCategories.mockResolvedValue({
       text: JSON.stringify([{ index: 0, categoryId: 'cat-1', confidence: 40 }]),
       inputTokens: 100,
       outputTokens: 20,
@@ -137,7 +131,7 @@ describe('CategorySuggestionService', () => {
     const repo = repoMock()
     repo.findUncategorized.mockResolvedValue([transaction()])
 
-    const service = new CategorySuggestionService(claude, repo, categoriesMock([category()]), usageMock(), config())
+    const service = new CategorySuggestionService(groq, repo, categoriesMock([category()]), usageMock(), config())
     await service.suggestForUser(USER)
 
     expect(repo.applySuggestion).toHaveBeenCalledWith(USER, 'tx-1', {
@@ -150,13 +144,7 @@ describe('CategorySuggestionService', () => {
   it('nunca sobrescreve categoria já confirmada: só busca transação sem categoryId', async () => {
     const repo = repoMock()
     repo.findUncategorized.mockResolvedValue([])
-    const service = new CategorySuggestionService(
-      claudeMock(),
-      repo,
-      categoriesMock([category()]),
-      usageMock(),
-      config(),
-    )
+    const service = new CategorySuggestionService(groqMock(), repo, categoriesMock([category()]), usageMock(), config())
 
     await service.suggestForUser(USER)
 
@@ -165,12 +153,12 @@ describe('CategorySuggestionService', () => {
   })
 
   it('falha da IA nunca quebra: degrada para "sem sugestão"', async () => {
-    const claude = claudeMock()
-    claude.suggestCategories.mockRejectedValue(new Error('timeout'))
+    const groq = groqMock()
+    groq.suggestCategories.mockRejectedValue(new Error('timeout'))
     const repo = repoMock()
     repo.findUncategorized.mockResolvedValue([transaction()])
 
-    const service = new CategorySuggestionService(claude, repo, categoriesMock([category()]), usageMock(), config())
+    const service = new CategorySuggestionService(groq, repo, categoriesMock([category()]), usageMock(), config())
     const outcome = await service.suggestForUser(USER)
 
     expect(outcome).toEqual({ status: 'AI_UNAVAILABLE', appliedFromCache: 0 })
@@ -178,8 +166,8 @@ describe('CategorySuggestionService', () => {
   })
 
   it('falha da IA não perde o progresso já aplicado pelo cache de estabelecimento', async () => {
-    const claude = claudeMock()
-    claude.suggestCategories.mockRejectedValue(new Error('timeout'))
+    const groq = groqMock()
+    groq.suggestCategories.mockRejectedValue(new Error('timeout'))
     const repo = repoMock()
     repo.findUncategorized.mockResolvedValue([
       transaction({ id: 'tx-1' }),
@@ -189,7 +177,7 @@ describe('CategorySuggestionService', () => {
       Promise.resolve(merchant === 'loja x' ? { categoryId: 'cat-1', confidence: 90 } : null),
     )
 
-    const service = new CategorySuggestionService(claude, repo, categoriesMock([category()]), usageMock(), config())
+    const service = new CategorySuggestionService(groq, repo, categoriesMock([category()]), usageMock(), config())
     const outcome = await service.suggestForUser(USER)
 
     expect(outcome).toEqual({ status: 'AI_UNAVAILABLE', appliedFromCache: 1 })
@@ -197,8 +185,8 @@ describe('CategorySuggestionService', () => {
   })
 
   it('descarta tool call com categoria de outro User: só usa as categorias que a própria consulta trouxe', async () => {
-    const claude = claudeMock()
-    claude.suggestCategories.mockResolvedValue({
+    const groq = groqMock()
+    groq.suggestCategories.mockResolvedValue({
       text: JSON.stringify([{ index: 0, categoryId: 'cat-de-outro-user', confidence: 90 }]),
       inputTokens: 100,
       outputTokens: 20,
@@ -206,7 +194,7 @@ describe('CategorySuggestionService', () => {
     const repo = repoMock()
     repo.findUncategorized.mockResolvedValue([transaction()])
 
-    const service = new CategorySuggestionService(claude, repo, categoriesMock([category()]), usageMock(), config())
+    const service = new CategorySuggestionService(groq, repo, categoriesMock([category()]), usageMock(), config())
     const outcome = await service.suggestForUser(USER)
 
     expect(outcome).toEqual({ status: 'DONE', suggested: 0, appliedFromCache: 0 })
