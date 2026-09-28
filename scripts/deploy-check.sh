@@ -13,5 +13,20 @@ for name in $required; do
       echo "ERRO: $name não preenchido no .env (valor atual: '${value:-vazio}')" >&2; fail=1 ;;
   esac
 done
+
+# Fallback do docker-compose.yml se a variável faltar (POSTGRES_PASSWORD:-postgres,
+# APP_DB_PASSWORD:-gastos) — deploy sem essas duas no .env sobe o banco com senha trivial, sem
+# nenhum erro visível (auditoria de segurança 2026-09-28).
+db_password_check() {
+  name=$1
+  weak=$2
+  value=$(grep -E "^${name}=" .env | tail -1 | cut -d= -f2- | sed 's/[[:space:]]*#.*$//')
+  if [ "$value" = "$weak" ]; then
+    echo "ERRO: $name está com o valor padrão inseguro do docker-compose.yml ('$weak')." >&2
+    fail=1
+  fi
+}
+db_password_check POSTGRES_PASSWORD postgres
+db_password_check APP_DB_PASSWORD gastos
 [ "$fail" -eq 0 ] && echo "OK: .env pronto para produção."
 exit $fail
