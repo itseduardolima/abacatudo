@@ -911,8 +911,21 @@ type="date">`.
   (sugestão simulada direto no banco de dev, já que a IA fica desligada sem `GROQ_API_KEY`): chip
   apareceu, toque aplicou a categoria e sumiu o chip. 404 testes da API, 19 de componente, typecheck/lint/
   Prettier limpos. Épico 10 fechado por ora (só 10.1 — ver decisão de escopo acima).
+- **Chave Groq real ligada + robots.txt + PWA (2026-09-28)** — usuário conseguiu a `GROQ_API_KEY` de
+  verdade. Achado testando: `llama-3.1-8b-instant` foi descontinuado pela Groq; troca pro
+  `openai/gpt-oss-20b` (raciocinante, precisa `reasoning_effort: low` e o mapper agora tolera JSON
+  embrulhado em ` ```json `). Rodado contra dado real: 40 transações categorizadas, ex.
+  "MERCADOLIVRE*MERCADOL" → Compras (90%). `robots.txt` (`app/robots.ts`, `Disallow: /`) — precisou liberar
+  a rota no middleware de auth, senão nem o robô conseguia ler o arquivo. **PWA instalável (11.1)**:
+  `app/manifest.ts` (ícones de `brand/` copiados pra `public/icons/`), `public/sw.js` hand-rolled (sem
+  next-pwa/workbox — só fetch + Cache API: cache-first pra `_next/static`/ícones, network-first pra `/api/*`,
+  o que naturalmente cacheia o último mês visto), registrado via componente client no layout raiz, limpo no
+  logout (`use-logout.ts`). `apps/web/public/sw.js` estava sendo ignorado à toa no `.gitignore` (resquício
+  de tentativa anterior) — corrigido, senão o arquivo nunca seria commitado. Verificado ao vivo no Chrome:
+  SW registrado e ativo, cache de API populado, `caches.keys()` esvaziado depois do "logout" simulado.
+  typecheck/lint/Prettier limpos, 19 testes de componente passando.
 - Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou pendências (5.4/5.5 rótulos de
-  movimentação, 8.4's job/e-mail), ou revisitar 10.2/10.3 se fizer falta na prática.
+  movimentação, 8.4's job/e-mail, resto da Sprint 8), ou revisitar 10.2/10.3 se fizer falta na prática.
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -1167,7 +1180,7 @@ typecheck/lint/build limpos).
 - [ ] 7.5 — Parcelas futuras
 - [ ] 7.6 — Congelar meses fechados
 - [ ] 10.3 — Chat com tool use
-- [ ] 11.1 — PWA instalável
+- [x] 11.1 — PWA instalável: manifest, service worker (cache de assets/API, limpa no logout), testado ao vivo
 - [ ] 11.2 — Ocultar valores (tema escuro é P2, precisa de desenho)
 - [ ] 11.3 — Estados vazios/carregando/erro
 - [ ] 12.1 — `/health` + uptime externo
