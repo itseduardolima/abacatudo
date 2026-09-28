@@ -887,7 +887,12 @@ type="date">`.
   separados). `GroqClient` (`apps/api/src/modules/ai`): chamada crua via fetch (mesmo padrão do
   PluggyClient, sem SDK), sem chave configurada = recurso desligado (app funciona inteiro, categorização cai
   pras regras). Trocado de Claude pra Groq em 2026-09-28 (camada gratuita; formato compatível com OpenAI,
-  `console.groq.com`) — decisão do usuário, spec 02/10 atualizados. `category-suggestion.mapper.ts` valida a resposta (JSON inválido, categoria inexistente,
+  `console.groq.com`) — decisão do usuário, spec 02/10 atualizados. Modelo padrão `openai/gpt-oss-20b`
+  (`llama-3.1-8b-instant` foi descontinuado pela Groq, achado testando com chave real): é raciocinante,
+  precisa de `reasoning_effort: low` (senão gasta todo `max_tokens` "pensando" e a resposta vem vazia) e
+  embrulha o JSON em bloco de código, tratado no mapper. **Testado com chave real**: 40 transações
+  categorizadas de verdade (ex.: "MERCADOLIVRE*MERCADOL" → Compras, 90% de confiança, aplicada direto),
+  4.361 tokens registrados em `AiUsage`. `category-suggestion.mapper.ts` valida a resposta (JSON inválido, categoria inexistente,
   index fora do lote, confiança fora de 0-100 = descartado item a item, nunca a resposta inteira).
   `CategorySuggestionService`: só busca transação sem `categoryId` e sem `categorySuggestedId` (nunca
   sobrescreve confirmada); cache por estabelecimento normalizado (reaproveita sugestão já dada, sem nova
