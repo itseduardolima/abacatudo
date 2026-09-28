@@ -893,11 +893,20 @@ type="date">`.
   chamada); confiança >= 70 aplica a categoria direto, abaixo só fica como sugestão; `AiUsage` por
   User/mês trava a chamada ao estourar `AI_MONTHLY_TOKEN_BUDGET`; falha da IA nunca quebra (degrada pra
   "sem sugestão"). `POST /ai/suggest-categories`. Migration `add_ai_category_suggestion_and_usage` com RLS
-  na tabela nova. 403 testes da API, typecheck/lint/Prettier limpos. **Falta**: front (endpoint só existe
-  pro backend acionar por ora — decidir quando/como disparar: manual, após sync, ou os dois).
-- Próximo: front da sugestão de IA (chamar o endpoint e mostrar o selo/chip de sugestão na Fatura), ou
-  redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou pendências (5.4/5.5 rótulos de movimentação,
-  8.4's job/e-mail).
+  na tabela nova. Code review: limite de tokens da resposta (1024) era baixo demais pra um lote de 40
+  transações e podia truncar o JSON e descartar o lote inteiro já cobrado do orçamento (subiu pra 4096);
+  falha da IA agora reporta o que já foi aplicado pelo cache em vez de esconder o progresso.
+- **Front: chip de sugestão na Fatura (2026-09-28)** — `useTransactionsPage` dispara
+  `POST /ai/suggest-categories` uma vez ao abrir a tela (fire-and-forget, backend decide sozinho se está
+  desligado/orçamento estourado/nada a fazer); linha sem categoria com sugestão mostra um chip "Sugestão: X
+  · toque para aceitar" no lugar de "Sem categoria" — um toque aplica direto, sem abrir a folha de edição
+  (mesma filosofia de "toda transação nasce Meu, correção é 1 toque"). `Transaction` ganhou
+  `categorySuggestedId`/`categorySuggestionConfidence` no schema compartilhado. Verificado ao vivo no Chrome
+  (sugestão simulada direto no banco de dev, já que a IA fica desligada sem `ANTHROPIC_API_KEY`): chip
+  apareceu, toque aplicou a categoria e sumiu o chip. 404 testes da API, 19 de componente, typecheck/lint/
+  Prettier limpos. Épico 10 fechado por ora (só 10.1 — ver decisão de escopo acima).
+- Próximo: redesenho por tela do desktop (grid 2 colunas, `d0X-*`), ou pendências (5.4/5.5 rótulos de
+  movimentação, 8.4's job/e-mail), ou revisitar 10.2/10.3 se fizer falta na prática.
 
 ## Decisões já tomadas (2026-09-21)
 
@@ -1135,7 +1144,8 @@ typecheck/lint/build limpos).
 - [x] 9.4 — Categoria acima do normal: já saía em `byCategory.aboveNormal` desde o fix do 9.1
 - [x] 9.5 — Onde economizar: `GET /insights/savings?month=AAAA-MM` e aba "Economizar" em Relatórios, testado
       ao vivo
-- [x] 10.1 — Sugestão de categoria por IA: `POST /ai/suggest-categories` (10.4/10.5 embutidos, só backend)
+- [x] 10.1 — Sugestão de categoria por IA: `POST /ai/suggest-categories` (10.4/10.5 embutidos) + chip na
+      Fatura, testado ao vivo
 - [ ] 10.2 — Resumo mensal (cortado do escopo ativo por ora — ver nota abaixo)
 - [x] 10.4 — Orçamento de tokens e liga/desliga: `AiUsage` por User/mês, embutido em 10.1
 - [x] 10.5 — Defesa contra injeção via descrição: dado delimitado por `<transaction>`, embutido em 10.1
