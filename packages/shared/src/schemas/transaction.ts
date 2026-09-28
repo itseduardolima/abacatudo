@@ -21,6 +21,8 @@ export const transactionSchema = z
     description: z.string(),
     merchant: z.string().nullable(),
     categoryId: idSchema.nullable(),
+    categorySuggestedId: idSchema.nullable(),
+    categorySuggestionConfidence: z.number().int().min(0).max(100).nullable(),
     personId: idSchema.nullable(),
     note: z.string().nullable(),
     cardLast4: z.string().nullable(),

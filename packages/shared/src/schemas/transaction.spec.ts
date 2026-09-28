@@ -15,6 +15,8 @@ const VALID = {
   description: 'PAG*LOJA',
   merchant: null,
   categoryId: null,
+  categorySuggestedId: null,
+  categorySuggestionConfidence: null,
   personId: null,
   note: null,
   cardLast4: null,

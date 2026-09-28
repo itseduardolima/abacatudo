@@ -15,6 +15,8 @@ export function toTransactionDto(
     description: row.description,
     merchant: row.merchant,
     categoryId: row.categoryId,
+    categorySuggestedId: row.categorySuggestedId,
+    categorySuggestionConfidence: row.categorySuggestionConfidence,
     personId: row.personId,
     note: row.note,
     cardLast4: row.cardLast4,
