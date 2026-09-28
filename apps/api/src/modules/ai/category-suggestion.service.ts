@@ -9,7 +9,8 @@ import { isConfidentEnough, parseAiCategorySuggestions } from './category-sugges
 import { ClaudeClient, type CategorySuggestionRequestItem } from './claude.client'
 
 export type SuggestCategoriesOutcome =
-  | { status: 'DISABLED' | 'BUDGET_EXCEEDED' | 'AI_UNAVAILABLE' | 'NOTHING_TO_DO' }
+  | { status: 'DISABLED' | 'BUDGET_EXCEEDED' | 'NOTHING_TO_DO' }
+  | { status: 'AI_UNAVAILABLE'; appliedFromCache: number }
   | { status: 'DONE'; suggested: number; appliedFromCache: number }
 
 @Injectable()
@@ -79,7 +80,7 @@ export class CategorySuggestionService {
       tokensUsed = response.inputTokens + response.outputTokens
     } catch (error) {
       this.logger.warn(`Falha ao chamar a IA para sugestão de categoria: ${(error as Error).message}`)
-      return { status: 'AI_UNAVAILABLE' }
+      return { status: 'AI_UNAVAILABLE', appliedFromCache }
     }
     await this.usage.addTokens(userId, month, tokensUsed)
 

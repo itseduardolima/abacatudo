@@ -173,8 +173,27 @@ describe('CategorySuggestionService', () => {
     const service = new CategorySuggestionService(claude, repo, categoriesMock([category()]), usageMock(), config())
     const outcome = await service.suggestForUser(USER)
 
-    expect(outcome).toEqual({ status: 'AI_UNAVAILABLE' })
+    expect(outcome).toEqual({ status: 'AI_UNAVAILABLE', appliedFromCache: 0 })
     expect(repo.applySuggestion).not.toHaveBeenCalled()
+  })
+
+  it('falha da IA não perde o progresso já aplicado pelo cache de estabelecimento', async () => {
+    const claude = claudeMock()
+    claude.suggestCategories.mockRejectedValue(new Error('timeout'))
+    const repo = repoMock()
+    repo.findUncategorized.mockResolvedValue([
+      transaction({ id: 'tx-1' }),
+      transaction({ id: 'tx-2', merchant: 'Loja Y' }),
+    ])
+    repo.findMerchantSuggestion.mockImplementation((_userId, merchant) =>
+      Promise.resolve(merchant === 'loja x' ? { categoryId: 'cat-1', confidence: 90 } : null),
+    )
+
+    const service = new CategorySuggestionService(claude, repo, categoriesMock([category()]), usageMock(), config())
+    const outcome = await service.suggestForUser(USER)
+
+    expect(outcome).toEqual({ status: 'AI_UNAVAILABLE', appliedFromCache: 1 })
+    expect(repo.applySuggestion).toHaveBeenCalledTimes(1)
   })
 
   it('descarta tool call com categoria de outro User: só usa as categorias que a própria consulta trouxe', async () => {

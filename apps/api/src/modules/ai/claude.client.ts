@@ -5,7 +5,9 @@ import { DomainError } from '../../common/errors/domain.error'
 const BASE_URL = 'https://api.anthropic.com/v1/messages'
 const ANTHROPIC_VERSION = '2023-06-01'
 const REQUEST_TIMEOUT_MS = 20_000
-const MAX_TOKENS = 1024
+// ~40 bytes por item (index + categoryId de 36 + confidence) e até MAX_BATCH=40 itens por lote — margem
+// generosa pra nunca truncar o array JSON no meio (se truncar, o lote inteiro é descartado no parse).
+const MAX_TOKENS = 4096
 
 export interface CategorySuggestionRequestItem {
   index: number
