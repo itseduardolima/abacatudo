@@ -10,6 +10,7 @@ import { useLogout } from '@/hooks/queries/use-logout'
 // caber tanto no shell mobile (BottomNav) quanto no desktop (TopNav), sem duplicar o menu em cada tela.
 const SETTINGS_LINKS = [
   { href: '/settings/profile', label: 'Meu perfil' },
+  { href: '/settings/security', label: 'Segurança' },
   { href: '/accounts', label: 'Contas' },
   { href: '/settings/people', label: 'Pessoas' },
   { href: '/settings/categories', label: 'Categorias' },
