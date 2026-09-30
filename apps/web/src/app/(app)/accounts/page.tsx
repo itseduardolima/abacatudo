@@ -1,7 +1,9 @@
 'use client'
 
 import type { Account, AccountType } from '@gastos/shared'
-import { AlertTriangle, Check, Wallet, X } from 'lucide-react'
+import { AlertTriangle, Check, EllipsisVertical } from 'lucide-react'
+import { AccountActionsSheet } from './account-actions-sheet'
+import { AccountNameSheet } from './account-name-sheet'
 import { BankLogoPicker } from './bank-logo-picker'
 import { Button } from '@/components/ui/Button'
 import { BackIcon, IconButton } from '@/components/ui/IconButton'
@@ -30,8 +32,6 @@ export default function AccountsPage() {
     isSubmitting,
     ruleError,
     toggleBenefitAccount,
-    isTogglingBenefitAccount,
-    togglingBenefitAccountId,
     onConnectBank,
     isConnectingBank,
     connectError,
@@ -39,46 +39,40 @@ export default function AccountsPage() {
     isSyncingBanks,
     syncError,
     archive,
-    isArchiving,
-    archivingId,
     pickingLogoForId,
     openLogoPicker,
     closeLogoPicker,
     selectBankLogo,
+    menuAccountId,
+    openMenu,
+    closeMenu,
+    renamingId,
+    renameDraft,
+    setRenameDraft,
+    renameError,
+    isRenaming,
+    openRename,
+    closeRename,
+    onSaveRename,
   } = useAccountsPage()
 
   const connectedAccounts = accounts.filter((account) => account.source === 'PLUGGY')
   const manualAccounts = accounts.filter((account) => account.source !== 'PLUGGY')
 
-  const benefitToggle = (account: Account) =>
-    account.type === 'CHECKING' ? (
-      <Button
-        type="button"
-        variant={account.isBenefitAccount ? 'primary' : 'outline'}
-        size="sm"
-        className="w-[34px] !px-0"
-        state={isTogglingBenefitAccount && togglingBenefitAccountId === account.id ? 'loading' : 'idle'}
-        onClick={() => toggleBenefitAccount(account.id, !account.isBenefitAccount)}
-        aria-label={account.isBenefitAccount ? 'Desmarcar como conta de benefício' : 'Marcar como conta de benefício'}
-        title={account.isBenefitAccount ? 'Conta de benefício' : 'Marcar como conta de benefício'}
-      >
-        <Wallet size={16} strokeWidth={1.8} />
-      </Button>
-    ) : null
-
-  const removeButton = (account: Account) => (
+  const moreButton = (account: Account) => (
     <Button
       type="button"
       variant="outline"
       size="sm"
       className="w-[34px] !px-0"
-      state={isArchiving && archivingId === account.id ? 'loading' : 'idle'}
-      onClick={() => archive(account.id)}
-      aria-label={`Remover ${account.name}`}
+      onClick={() => openMenu(account.id)}
+      aria-label={`Mais ações de ${account.name}`}
     >
-      <X size={18} strokeWidth={1.8} />
+      <EllipsisVertical size={18} strokeWidth={1.8} />
     </Button>
   )
+
+  const menuAccount = accounts.find((account) => account.id === menuAccountId)
 
   return (
     <main className="mx-auto flex min-h-screen max-w-[420px] flex-col gap-6 px-4 pb-28 md:pb-10 pt-8">
@@ -129,8 +123,7 @@ export default function AccountsPage() {
                     </p>
                     <p className="text-sm text-muted">{formatAccountType(account.type)}</p>
                   </div>
-                  {benefitToggle(account)}
-                  {removeButton(account)}
+                  {moreButton(account)}
                 </div>
 
                 <div className="ml-14 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -176,8 +169,7 @@ export default function AccountsPage() {
                   </p>
                   <p className="text-sm text-muted">{formatAccountType(account.type)}</p>
                 </div>
-                {benefitToggle(account)}
-                {removeButton(account)}
+                {moreButton(account)}
               </li>
             ))}
           </ul>
@@ -227,6 +219,40 @@ export default function AccountsPage() {
             </Button>
           </div>
         </form>
+      )}
+
+      {menuAccount && (
+        <AccountActionsSheet
+          account={menuAccount}
+          onRename={() => {
+            closeMenu()
+            openRename(menuAccount.id, menuAccount.name)
+          }}
+          onPickLogo={() => {
+            closeMenu()
+            openLogoPicker(menuAccount.id)
+          }}
+          onToggleBenefit={() => {
+            closeMenu()
+            toggleBenefitAccount(menuAccount.id, !menuAccount.isBenefitAccount)
+          }}
+          onRemove={() => {
+            closeMenu()
+            archive(menuAccount.id)
+          }}
+          onClose={closeMenu}
+        />
+      )}
+
+      {renamingId && (
+        <AccountNameSheet
+          name={renameDraft}
+          onChange={setRenameDraft}
+          onSave={onSaveRename}
+          onClose={closeRename}
+          isSaving={isRenaming}
+          error={renameError}
+        />
       )}
 
       {pickingLogoForId &&

@@ -27,6 +27,10 @@ export function useAccountsPage() {
   const [connectError, setConnectError] = useState<string | null>(null)
   const [syncError, setSyncError] = useState<string | null>(null)
   const [pickingLogoForId, setPickingLogoForId] = useState<string | null>(null)
+  const [menuAccountId, setMenuAccountId] = useState<string | null>(null)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameDraft, setRenameDraft] = useState('')
+  const [renameError, setRenameError] = useState<string | null>(null)
   const {
     register,
     handleSubmit,
@@ -98,6 +102,24 @@ export function useAccountsPage() {
     }
   }
 
+  const closeRename = () => {
+    setRenamingId(null)
+    setRenameError(null)
+  }
+
+  const onSaveRename = async () => {
+    if (!renamingId) return
+    setRenameError(null)
+    try {
+      await updateAccount.mutateAsync({ id: renamingId, input: { name: renameDraft } })
+      closeRename()
+    } catch (error) {
+      if (!(error instanceof ApiClientError)) throw error
+      const fieldErrors = error.error.details?.fieldErrors as Record<string, string[] | undefined> | undefined
+      setRenameError(fieldErrors?.name?.[0] ?? error.error.message)
+    }
+  }
+
   return {
     accounts: accounts.data ?? [],
     isLoadingAccounts: accounts.isPending,
@@ -119,8 +141,6 @@ export function useAccountsPage() {
     // Fase 4: marca/desmarca qual conta CHECKING alimenta "renda de benefícios" (/settings/income).
     toggleBenefitAccount: (id: string, isBenefitAccount: boolean) =>
       updateAccount.mutate({ id, input: { isBenefitAccount } }),
-    isTogglingBenefitAccount: updateAccount.isPending,
-    togglingBenefitAccountId: updateAccount.variables?.id ?? null,
     onConnectBank: () => void onConnectBank(),
     isConnectingBank: connectBank.isPending,
     connectError,
@@ -128,8 +148,21 @@ export function useAccountsPage() {
     isSyncingBanks: syncBankConnection.isPending,
     syncError,
     archive: (id: string) => archiveAccount.mutate(id),
-    isArchiving: archiveAccount.isPending,
-    archivingId: archiveAccount.variables ?? null,
+    menuAccountId,
+    openMenu: (id: string) => setMenuAccountId(id),
+    closeMenu: () => setMenuAccountId(null),
+    renamingId,
+    renameDraft,
+    setRenameDraft,
+    renameError,
+    isRenaming: updateAccount.isPending,
+    openRename: (id: string, currentName: string) => {
+      setRenamingId(id)
+      setRenameDraft(currentName)
+      setRenameError(null)
+    },
+    closeRename,
+    onSaveRename: () => void onSaveRename(),
     // Bandeira do banco (DESIGN_SYSTEM § Logos de bancos) — marca manual, nunca por heurística de nome.
     pickingLogoForId,
     openLogoPicker: (id: string) => setPickingLogoForId(id),
