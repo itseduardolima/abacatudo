@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useAccounts } from '@/hooks/queries/use-accounts'
+import { useMovementHabits } from '@/hooks/queries/use-movement-habits'
 import { useMovementReport } from '@/hooks/queries/use-movement-report'
 import { useMovements } from '@/hooks/queries/use-movements'
 import { usePixRecipients } from '@/hooks/queries/use-pix-recipients'
@@ -28,6 +29,7 @@ export function useBenefitPage() {
 
   const report = useMovementReport(accountId, month)
   const movements = useMovements({ month, accountId })
+  const habits = useMovementHabits(accountId, month)
   const pixRecipients = usePixRecipients(accountId, month, pixSearch)
   const recipientTransactions = usePixTransactions(accountId, month, openRecipient?.key ?? null)
 
@@ -46,6 +48,7 @@ export function useBenefitPage() {
       (report.error instanceof ApiClientError && report.error.error.message) ||
       (movements.error instanceof ApiClientError && movements.error.error.message) ||
       null,
+    habits: habits.data,
     pixRecipients: pixRecipients.data,
     pixSearchInput,
     setPixSearchInput,

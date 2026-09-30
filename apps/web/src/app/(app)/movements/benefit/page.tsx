@@ -2,6 +2,7 @@
 
 import { useBenefitPage, type BenefitTab } from './use-benefit-page'
 import { DailyExpenseChart } from './daily-expense-chart'
+import { HabitsSection } from './habits-section'
 import { PixRecipientSheet } from './pix-recipient-sheet'
 import { PixRecipientsSection } from './pix-recipients-section'
 import { MovementRow } from '../movement-row'
@@ -35,6 +36,7 @@ export default function BenefitPage() {
     groups,
     isLoadingMovements,
     errorMessage,
+    habits,
     pixRecipients,
     pixSearchInput,
     setPixSearchInput,
@@ -136,6 +138,7 @@ export default function BenefitPage() {
                 no orçamento.
               </p>
               <DailyExpenseChart daily={report.daily} />
+              <HabitsSection habits={habits} />
               <PixRecipientsSection
                 data={pixRecipients}
                 search={pixSearchInput}
