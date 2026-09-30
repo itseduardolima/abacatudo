@@ -8,6 +8,7 @@ import { PaceHeroCard } from './pace-hero-card'
 import { useHomePage } from './use-home-page'
 import { CardStatementSwitch } from '@/components/layout/CardStatementSwitch'
 import { Logo } from '@/components/ui/Logo'
+import { MonthStepper } from '@/components/ui/MonthStepper'
 import { formatMonthName } from '@/lib/utils/format-month'
 
 // Home fiel ao protótipo: sem cartão conectado mostra o convite pra conectar (03-inicio-vazio); com
@@ -19,6 +20,8 @@ export default function HomePage() {
     pace,
     isLoadingPace,
     cardAccounts,
+    invoiceByAccountId,
+    forecast,
     isLoadingAccounts,
     onConnectBank,
     isConnectingBank,
@@ -66,10 +69,25 @@ export default function HomePage() {
 
       {!isLoadingAccounts && cardAccounts.length > 0 && (
         <section>
-          <h2 className="text-lg font-bold text-ink">Faturas{pace ? ` de ${formatMonthName(pace.month)}` : ''}</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-lg font-bold text-ink">{forecast.isForecast ? 'Faturas previstas' : 'Faturas'}</h2>
+            <MonthStepper
+              label={formatMonthName(forecast.month)}
+              onPrevious={forecast.goToPreviousMonth}
+              onNext={forecast.goToNextMonth}
+              canGoPrevious={forecast.canGoPrevious}
+              canGoNext={forecast.canGoNext}
+            />
+          </div>
+          {forecast.isForecast && <p className="mt-2 text-xs text-muted">Só parcelas já lançadas pelo banco.</p>}
           <div className="mt-1">
             {cardAccounts.map((account) => (
-              <CardInvoiceRow key={account.id} account={account} />
+              <CardInvoiceRow
+                key={account.id}
+                account={account}
+                invoice={invoiceByAccountId.get(account.id)}
+                month={forecast.isForecast ? forecast.month : undefined}
+              />
             ))}
           </div>
         </section>
