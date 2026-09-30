@@ -84,5 +84,6 @@ function toDto(row: AccountWithPluggyItem): Account {
     createdAt: row.createdAt.toISOString(),
     lastSyncAt: row.pluggyItem?.lastSyncAt?.toISOString() ?? null,
     disconnected: row.pluggyItem?.status === 'DISCONNECTED',
+    bankConnectionId: row.pluggyItemId,
   }
 }

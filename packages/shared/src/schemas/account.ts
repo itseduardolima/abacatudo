@@ -39,6 +39,9 @@ export const accountSchema = z
     // Banco desconectado (8.5) — sempre false pra conta MANUAL/IMPORT, que nunca teve PluggyItem. Histórico
     // continua, só marca que não sincroniza mais.
     disconnected: z.boolean(),
+    // Conexão bancária (PluggyItem) por trás da conta — é o id que o "atualizar agora" usa. Null pra conta
+    // MANUAL/IMPORT.
+    bankConnectionId: idSchema.nullable(),
   })
   .strict()
 export type Account = z.infer<typeof accountSchema>

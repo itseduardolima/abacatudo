@@ -122,6 +122,17 @@ describe('AccountService', () => {
     expect(result.lastSyncAt).toBe('2026-09-22T10:00:00.000Z')
   })
 
+  it('bankConnectionId vem do pluggyItemId da conta e é null pra conta manual', async () => {
+    const repo = repoMock()
+    repo.findById
+      .mockResolvedValueOnce(row({ source: 'PLUGGY', pluggyItemId: 'item-1' }, { lastSyncAt: null, status: 'UPDATED' }))
+      .mockResolvedValueOnce(row())
+    const service = new AccountService(repo)
+
+    expect((await service.getById('user-1', 'acc-1')).bankConnectionId).toBe('item-1')
+    expect((await service.getById('user-1', 'acc-1')).bankConnectionId).toBeNull()
+  })
+
   it('lastSyncAt é null pra conta manual (nunca sincroniza)', async () => {
     const repo = repoMock()
     repo.findById.mockResolvedValue(row())
