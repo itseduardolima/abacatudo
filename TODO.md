@@ -1071,6 +1071,12 @@ TABLE ... OWNER TO gastos`), e o `migrate dev` acusa "drift" nesse caso — usar
 
 ### Bugs achados só ao rodar de verdade (e corrigidos)
 
+- Parcelas estimadas duplicadas no BB: a descrição do BB traz o marcador no meio (`RAMSONS STUDI PARC 05/12
+MANAUS      BR`) e a data da compra varia entre parcelas (17 e 18/02), então `installmentGroupKey` tratava
+  cada parcela como uma compra e a estimativa gerava 10 parcelas em outubro em vez de 3. Agora a chave tira o
+  marcador da própria parcela em qualquer posição, junta espaços e usa só o mês da compra (testes com as
+  descrições reais do BB e do Nubank). Afeta também a fatura atual e o nome na fatura do BB
+
 - Payload > 1 MB devolvia 500 em vez de 413; JSON malformado vazava a mensagem crua da biblioteca.
 - Container da API em loop de reinício: `prisma generate` na inicialização falha para usuário sem root.
 - Dependências transitivas com 6 vulnerabilidades altas (`multer`, `postcss`, `deepmerge-ts`), corrigidas via `overrides` no `pnpm-workspace.yaml` (remover quando as dependências diretas trouxerem a versão corrigida).
