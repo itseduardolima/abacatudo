@@ -251,6 +251,16 @@ API), mas a UI só expõe o benefício por enquanto.
   os Pix dele no mês. **Não classifica** favorecido como pessoa ou
   estabelecimento (sem heurística por nome ou CNPJ); marcar isso à mão é
   evolução futura.
+- **Gastos que se repetem** (só estabelecimentos; **Pix fica de fora**, repetição
+  de Pix é ruído e dado de terceiros):
+  - **Recorrentes**: o mesmo detector de assinaturas do cartão (valor ±10%,
+    ~30 dias, >= 3 ocorrências, ativa se a última cobrança tem até 40 dias), olhando
+    os últimos 4 meses, independente do mês escolhido. Mostra valor mensal, dia
+    da cobrança e quantas vezes.
+  - **Mais frequentes**: no mês escolhido, estabelecimentos com 2 ou mais
+    compras, ordenados por quantidade e depois por total, com a data da última.
+    Pega o que não é mensal (corrida, lanche), que o detector não pega.
+  - Sem categoria: só agrupa pelo nome do estabelecimento (sem a cidade).
 - **Privacidade**: o nome do favorecido aparece só aqui e no extrato, para o
   próprio User; nunca em relatório do cartão, insight, export, prompt ou log
   (08 § 13).
