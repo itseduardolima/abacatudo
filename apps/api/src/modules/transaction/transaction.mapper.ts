@@ -22,6 +22,7 @@ export function toTransactionDto(
     cardLast4: row.cardLast4,
     installmentNumber: row.installmentNumber,
     installmentTotal: row.installmentTotal,
+    installmentDueAt: row.installmentDueAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     splits,
   }

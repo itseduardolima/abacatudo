@@ -1,13 +1,15 @@
 'use client'
 
+import { Suspense } from 'react'
 import type { Segment } from './use-transactions-page'
 import { TransactionSheet } from './transaction-sheet'
 import { Button } from '@/components/ui/Button'
 import { BackIcon, IconButton } from '@/components/ui/IconButton'
+import { MonthStepper } from '@/components/ui/MonthStepper'
 import { BankAvatar } from '@/components/finance/BankAvatar'
 import { MoneyText } from '@/components/finance/MoneyText'
 import { formatAccountType } from '@/lib/utils/format-account-type'
-import { currentMonthKey, formatMonthName } from '@/lib/utils/format-month'
+import { formatMonthName } from '@/lib/utils/format-month'
 import { personAvatarClass, personInitial } from '@/lib/utils/person-avatar'
 import { useTransactionsPage } from './use-transactions-page'
 
@@ -21,13 +23,23 @@ const SEGMENTS: { value: Segment; label: string }[] = [
 // quebra "Fatura do banco / − Não é meu / = Meu". Sem a terceira faixa "A classificar" do protótipo nem
 // o chip "Sem dono" como estado pendente — decisão já tomada (TODO.md "Toda transação nasce Meu"): não
 // existe fila de classificação, só Meu e Não é meu (Fatura = Meu + Não é meu).
+// useSearchParams exige Suspense (Next.js) — sem isso o build falha.
 export default function TransactionsPage() {
+  return (
+    <Suspense>
+      <TransactionsContent />
+    </Suspense>
+  )
+}
+
+function TransactionsContent() {
   const {
     isLoading,
     cardAccounts,
     selectedAccountId,
     setSelectedAccountId,
     invoice,
+    forecast,
     segment,
     setSegment,
     groups,
@@ -105,11 +117,25 @@ export default function TransactionsPage() {
         </div>
       )}
 
+      {selectedAccount && (
+        <MonthStepper
+          label={formatMonthName(forecast.month)}
+          onPrevious={forecast.goToPreviousMonth}
+          onNext={forecast.goToNextMonth}
+          canGoPrevious={forecast.canGoPrevious}
+          canGoNext={forecast.canGoNext}
+        />
+      )}
+
+      {selectedAccount && forecast.isForecast && (
+        <p className="text-xs text-muted">Previsão: só as parcelas que o banco já lançou para este mês.</p>
+      )}
+
       {selectedAccount && invoice && (
         <>
           <div className="flex items-center justify-between gap-2">
             <span className="rounded-pill bg-tint px-3 py-1 text-xs font-medium text-primary-ink">
-              Fatura aberta de {formatMonthName(currentMonthKey())}
+              {forecast.isForecast ? 'Fatura prevista' : 'Fatura aberta'} de {formatMonthName(forecast.month)}
             </span>
             {(selectedAccount.closingDay || selectedAccount.dueDay) && (
               <span className="text-xs text-muted">
@@ -121,7 +147,9 @@ export default function TransactionsPage() {
           </div>
 
           <div className="rounded-card-lg bg-inverse px-5 py-6 text-on-inverse">
-            <p className="text-xs text-on-inverse-muted">Meu nesta fatura</p>
+            <p className="text-xs text-on-inverse-muted">
+              {forecast.isForecast ? 'Meu previsto nesta fatura' : 'Meu nesta fatura'}
+            </p>
             <p className="display-number mt-2.5 text-[3.25rem] text-on-inverse-accent">
               <MoneyText cents={invoice.mineCents} className="!text-on-inverse-accent" />
             </p>
@@ -167,7 +195,9 @@ export default function TransactionsPage() {
       )}
 
       {selectedAccount && groups.length === 0 && !isLoading && (
-        <p className="text-text">Nenhum lançamento neste mês.</p>
+        <p className="text-text">
+          {forecast.isForecast ? 'Nenhuma parcela prevista neste mês.' : 'Nenhum lançamento neste mês.'}
+        </p>
       )}
 
       {groups.map((group) => (

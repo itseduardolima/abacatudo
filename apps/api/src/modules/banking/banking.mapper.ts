@@ -49,6 +49,7 @@ export function mapTransaction(tx: PluggyTransaction, isCreditCard: boolean): Ma
     cardLast4: card?.cardNumber ?? null,
     installmentNumber: card?.installmentNumber ?? null,
     installmentTotal: card?.totalInstallments ?? null,
+    installmentDueAt: card?.installmentNumber != null ? dayFromDateString(tx.date) : null,
     billId: card?.billId ?? null,
   }
 }

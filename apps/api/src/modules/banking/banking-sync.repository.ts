@@ -42,6 +42,7 @@ export class BankingSyncRepository {
         cardLast4: data.cardLast4,
         installmentNumber: data.installmentNumber,
         installmentTotal: data.installmentTotal,
+        installmentDueAt: data.installmentDueAt,
         billId: data.billId,
       },
     })

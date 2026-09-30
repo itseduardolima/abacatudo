@@ -131,7 +131,7 @@ Detalhe e números em [07-integracao-bancaria](./07-integracao-bancaria.md) § F
 - **Cartão de crédito**: compra = `DEBIT` (valor positivo); pagamento de fatura e estorno = `CREDIT` (negativo).
   A regra vale pelo **tipo**, nunca pelo sinal.
 - **Parcelas futuras**: transação com `date` depois de hoje é **parcela futura** (vem `PENDING`): fica fora do
-  mês corrente e dos totais, e só aparece em "parcelas futuras".
+  mês corrente e dos totais, e só aparece em "parcelas futuras" e na **fatura prevista** (ver "Fatura prevista").
 - **Fatura**: agrupa por `billId`; as pendentes (sem `billId`) pertencem à fatura aberta.
 - **Cartão adicional**: o final do cartão de cada transação (`cardNumber`) já resolve a pessoa via
   `CardHolderHint`, antes de qualquer classificação manual.
@@ -245,6 +245,18 @@ que o User quer é enxergar **só o que é dele**.
 
 - Invariante testada: `Fatura = Meu + Não é meu`, para qualquer fatura e
   qualquer combinação de splits (centavo a centavo).
+
+- **Fatura prevista (meses futuros)**: a Home e a tela da Fatura navegam por mês (◀ ▶). Um mês **posterior ao
+  atual** mostra a fatura **prevista** daquele cartão:
+  - **Só parcelas já lançadas pelo banco** (`installment`, `PENDING`, `date` no mês), nunca estimativa: compra à
+    vista futura ainda não existe, e assinatura recorrente não é projetada.
+  - **Mês da parcela = mês de `date`** em `America/Manaus` (mesma regra de "Formato dos dados", spec 07); não
+    depende de `closingDay`/`dueDay`.
+  - Mesmo formato e mesma invariante da fatura atual (`Fatura = Meu + Não é meu`); a pessoa da compra vale para
+    todas as parcelas do grupo (ver "Atribuição de pessoa"). Sem saldo anterior, sem `CARD_PAYMENT`.
+  - Rotulada **"Prevista"**. **Nunca** entra no ritmo, no orçamento, no "Meu em [mês]" da Home nem em relatório.
+  - **Horizonte**: até o mês da última parcela existente; a seta ▶ só habilita até lá. A seta ◀ para no mês
+    atual (não guardamos histórico de faturas fechadas).
 - **Split** entre self e outras Persons conta para o "Meu" só a fatia do
   self.
 - `Person` continua existindo só como **rótulo de quem gastou** (para
@@ -310,7 +322,7 @@ e **só sobre compras no cartão** (Pix e contas ficam de fora):
 - **Cobrança duplicada**: mesmo `merchant` + valor em janela de 24h.
 - **Categoria acima do normal**: gasto do mês > 140% da média dos 3 meses
   anteriores (mínimo de 3 meses de histórico).
-- **Parcelas futuras**: soma por mês dos `installment` restantes.
+- **Parcelas futuras**: soma por mês dos `installment` restantes (é a mesma conta da fatura prevista).
 - **Onde economizar**: ranking por potencial = variação para cima +
   recorrências candidatas a cancelar + categorias acima do normal; cada
   item traz o cálculo por trás (nunca só um texto).

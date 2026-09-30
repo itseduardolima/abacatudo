@@ -40,6 +40,7 @@ function row(
     cardLast4: null,
     installmentNumber: null,
     installmentTotal: null,
+    installmentDueAt: null,
     billId: null,
     createdAt: new Date('2026-09-21T12:00:00.000Z'),
     updatedAt: new Date('2026-09-21T12:00:00.000Z'),

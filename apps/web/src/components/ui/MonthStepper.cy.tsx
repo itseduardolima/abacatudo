@@ -11,4 +11,22 @@ describe('MonthStepper', () => {
     cy.get('@onPrevious').should('have.been.calledOnce')
     cy.get('@onNext').should('have.been.calledOnce')
   })
+
+  it('desabilita a seta que não pode andar', () => {
+    const onPrevious = cy.stub().as('onPrevious')
+    const onNext = cy.stub().as('onNext')
+    cy.mount(
+      <MonthStepper
+        label="setembro 2026"
+        onPrevious={onPrevious}
+        onNext={onNext}
+        canGoPrevious={false}
+        canGoNext={false}
+      />,
+    )
+    cy.get('[aria-label="Mês anterior"]').should('be.disabled')
+    cy.get('[aria-label="Próximo mês"]').should('be.disabled')
+    cy.get('@onPrevious').should('not.have.been.called')
+    cy.get('@onNext').should('not.have.been.called')
+  })
 })

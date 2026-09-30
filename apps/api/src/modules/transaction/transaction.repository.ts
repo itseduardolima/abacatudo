@@ -40,6 +40,22 @@ export class TransactionRepository {
     return keepCurrentInstallmentsOnly(rows)
   }
 
+  // Fatura prevista (03-regras-negocio § Fatura prevista): só as parcelas ainda sem billId cuja data de
+  // vencimento (installmentDueAt) cai no mês futuro pedido. Sem keepCurrentInstallmentsOnly — aqui as
+  // parcelas seguintes de uma compra são justamente o que se quer ver, cada uma no seu mês.
+  findForecast(userId: string, range: { start: Date; end: Date }): Promise<TransactionWithSplits[]> {
+    return this.prisma.transaction.findMany({
+      where: {
+        userId,
+        billId: null,
+        installmentDueAt: { gte: range.start, lt: range.end },
+        account: { type: 'CREDIT_CARD', source: 'PLUGGY' },
+      },
+      orderBy: { installmentDueAt: 'desc' },
+      include: SPLITS_SELECT,
+    })
+  }
+
   findById(userId: string, id: string): Promise<TransactionWithSplits | null> {
     return this.prisma.transaction.findFirst({
       where: { userId, id, account: { type: 'CREDIT_CARD' } },

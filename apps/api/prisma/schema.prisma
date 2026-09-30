@@ -277,6 +277,7 @@ model Transaction {
   cardLast4                    String?
   installmentNumber            Int?
   installmentTotal             Int?
+  installmentDueAt             DateTime?
   billId                       String?
   createdAt                    DateTime          @default(now())
   updatedAt                    DateTime          @updatedAt

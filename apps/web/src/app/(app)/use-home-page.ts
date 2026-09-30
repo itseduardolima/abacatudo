@@ -2,9 +2,11 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useForecastMonth } from '@/hooks/use-forecast-month'
 import { useAccounts } from '@/hooks/queries/use-accounts'
 import { useBudgetPace } from '@/hooks/queries/use-budget-pace'
 import { useConnectBank } from '@/hooks/queries/use-connect-bank'
+import { useInvoices } from '@/hooks/queries/use-invoice'
 import { useMe } from '@/hooks/queries/use-me'
 import { ApiClientError } from '@/lib/api-client'
 
@@ -24,6 +26,20 @@ export function useHomePage() {
   }, [me.isError, router])
 
   const cardAccounts = (accounts.data ?? []).filter((account) => account.type === 'CREDIT_CARD' && !account.archivedAt)
+
+  const currentInvoices = useInvoices(cardAccounts.map((account) => account.id))
+  const lastForecastMonth =
+    currentInvoices
+      .map((query) => query.data?.lastForecastMonth ?? null)
+      .filter((month): month is string => month !== null)
+      .sort()
+      .at(-1) ?? null
+  const forecast = useForecastMonth(lastForecastMonth)
+  const invoiceMonth = forecast.isForecast ? forecast.month : undefined
+  const monthInvoices = useInvoices(
+    cardAccounts.map((account) => account.id),
+    invoiceMonth,
+  )
 
   // Fase 4: saldo real da conta de benefício (InfinitePay via Pluggy) — só existe card quando o usuário
   // marcou uma conta em /accounts e ela já sincronizou saldo. Sem isso, o hero fica sozinho, como antes.
@@ -49,6 +65,10 @@ export function useHomePage() {
     pace: pace.data,
     isLoadingPace: pace.isPending,
     cardAccounts,
+    invoiceByAccountId: new Map(
+      cardAccounts.map((account, index) => [account.id, monthInvoices[index]?.data] as const),
+    ),
+    forecast,
     isLoadingAccounts: accounts.isPending,
     onConnectBank,
     isConnectingBank: connectBank.isPending,

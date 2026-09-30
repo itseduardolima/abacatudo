@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
-import type { Invoice } from '@gastos/shared'
-import { resolveMonthRange } from '../../common/date/timezone'
+import type { AccountInvoice, Invoice } from '@gastos/shared'
+import { monthKey, resolveMonthRange } from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository, type AccountWithPluggyItem } from '../account/account.repository'
 import { PluggyClient } from '../banking/pluggy/pluggy.client'
@@ -24,7 +24,7 @@ export class InvoiceService {
     private readonly pluggy: PluggyClient,
   ) {}
 
-  async getForAccount(userId: string, accountId: string | undefined, month?: string): Promise<Invoice> {
+  async getForAccount(userId: string, accountId: string | undefined, month?: string): Promise<AccountInvoice> {
     if (!accountId) throw new DomainError('ACCOUNT_ID_REQUIRED', 'Informe accountId.', 400)
 
     const account = await this.accounts.findById(userId, accountId)
@@ -34,7 +34,14 @@ export class InvoiceService {
     }
 
     const selfId = await this.selfPersonId(userId)
-    return this.invoiceForAccount(account, selfId, month)
+    const lastForecastMonth = await this.lastForecastMonth(account)
+
+    if (account.source === 'PLUGGY' && month && resolveMonthKey(month) > monthKey(new Date())) {
+      const rows = await this.repo.findForecastRows(userId, account.id, resolveMonthRange(month))
+      return { ...computeInvoice(rows, selfId), isForecast: true, lastForecastMonth }
+    }
+
+    return { ...(await this.invoiceForAccount(account, selfId, month)), isForecast: false, lastForecastMonth }
   }
 
   // "Meu" da fatura aberta, somado em todos os cartões (03-regras-negocio § Só a minha parte) — é o
@@ -81,9 +88,20 @@ export class InvoiceService {
     }
   }
 
+  private async lastForecastMonth(account: AccountWithPluggyItem): Promise<string | null> {
+    if (account.source !== 'PLUGGY') return null
+    const last = await this.repo.findLastInstallmentDueAt(account.userId, account.id)
+    return last ? monthKey(last) : null
+  }
+
   private async selfPersonId(userId: string): Promise<string> {
     const self = await this.people.findSelf(userId)
     if (!self) throw new DomainError('SELF_PERSON_NOT_FOUND', 'Pessoa "Eu" não encontrada.', 500)
     return self.id
   }
+}
+
+function resolveMonthKey(month: string): string {
+  resolveMonthRange(month)
+  return month
 }
