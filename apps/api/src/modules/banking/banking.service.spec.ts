@@ -288,6 +288,23 @@ describe('BankingService', () => {
     expect(result).toEqual({ synced: 1, failed: 1 })
   })
 
+  it('manualSync: recusa com 429 se o último sync foi há menos de 15 min, e libera depois', async () => {
+    const items = itemsMock()
+    const pluggy = pluggyMock()
+    pluggy.listAccounts.mockResolvedValue([])
+    const service = newService({ items, pluggy })
+
+    items.findById.mockResolvedValue(itemRow({ lastSyncAt: new Date(Date.now() - 5 * 60 * 1000) }))
+    await expect(service.manualSync('user-1', 'item-1')).rejects.toMatchObject({
+      code: 'SYNC_TOO_RECENT',
+      statusCode: 429,
+    })
+    expect(pluggy.listAccounts).not.toHaveBeenCalled()
+
+    items.findById.mockResolvedValue(itemRow({ lastSyncAt: new Date(Date.now() - 16 * 60 * 1000) }))
+    await expect(service.manualSync('user-1', 'item-1')).resolves.toEqual({ accountsSynced: 0, transactionsSynced: 0 })
+  })
+
   it('manualSync: sincroniza conta e transações por upsert atômico, sem duplicar', async () => {
     const items = itemsMock()
     items.findById.mockResolvedValue(itemRow())

@@ -12,6 +12,8 @@ import { mapAccountFields, mapTransaction, reconnectWarningDays } from './bankin
 import { PluggyClient } from './pluggy/pluggy.client'
 import { PluggyItemRepository } from './pluggy-item.repository'
 
+const MANUAL_SYNC_COOLDOWN_MS = 15 * 60 * 1000
+
 const NOT_FOUND = () => new NotFoundError('BANK_CONNECTION_NOT_FOUND', 'Conexão bancária não encontrada.')
 
 // Item desconectado (8.5) não existe mais do lado do Pluggy — checar status ou sincronizar contra ele só
@@ -101,6 +103,19 @@ export class BankingService {
     const item = await this.items.findById(userId, id)
     if (!item) throw NOT_FOUND()
     assertConnected(item)
+    if (item.lastSyncAt) {
+      const retryAfterSeconds = Math.ceil((item.lastSyncAt.getTime() + MANUAL_SYNC_COOLDOWN_MS - Date.now()) / 1000)
+      if (retryAfterSeconds > 0) {
+        throw new DomainError(
+          'SYNC_TOO_RECENT',
+          'Essa conexão foi atualizada há pouco. Tente de novo em alguns minutos.',
+          429,
+          {
+            retryAfterSeconds,
+          },
+        )
+      }
+    }
     return this.runSync(userId, item.id)
   }
 
