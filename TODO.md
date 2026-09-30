@@ -1042,7 +1042,8 @@ TABLE ... OWNER TO gastos`), e o `migrate dev` acusa "drift" nesse caso — usar
 
 - [x] Card de ritmo acompanha o mês das setas da Início: mês futuro usa `getSummary(userId, month)` (fatura prevista
       dos cartões) + gastos fixos, sem selo nem marcador de hoje, rótulo "Meu previsto em …". Além do mês
-      seguinte não há `BudgetMonth` (teto zero). Falta conferir ao vivo
+      seguinte o teto é projetado do mês configurado mais recente (só em memória, nada gravado). Falta conferir
+      ao vivo
 
 ### Bugs achados só ao rodar de verdade (e corrigidos)
 

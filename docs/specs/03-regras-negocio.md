@@ -327,7 +327,9 @@ teto variável = renda mensal (fixa + benefícios)
   o mês escolhido nas setas da Início: num **mês futuro** mostra o **previsto**
   (fatura prevista de cada cartão, só parcelas já lançadas, mais os gastos fixos)
   contra o teto daquele mês, sem selo "No ritmo" nem marcador de hoje. Só existe
-  `BudgetMonth` para o mês atual e o seguinte; além disso o teto é zero.
+  `BudgetMonth` gravado para o mês atual e o seguinte; nos meses além disso o
+  teto é **projetado** do mês configurado mais recente, só na resposta (nada é
+  gravado). Mês passado sem linha continua zero.
 - **Compras parceladas**: cada parcela conta no mês em que o banco a lança.
   O total de parcelas futuras já comprometidas é mostrado à parte ("já
   comprometido nos próximos meses"); não é somado ao mês corrente.
