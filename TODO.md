@@ -1045,15 +1045,16 @@ TABLE ... OWNER TO gastos`), e o `migrate dev` acusa "drift" nesse caso — usar
       seguinte o teto é projetado do mês configurado mais recente (só em memória, nada gravado). Falta conferir
       ao vivo
 
-- [ ] 5.6–5.9 — Extrato e resumo da conta de benefício, com Pix por favorecido. Etapas:
+- [x] 5.6–5.8 — Extrato e resumo da conta de benefício, com Pix por favorecido. Etapas:
   - [x] spec: 00, 03 § Extrato e relatório da conta de benefício, 06, 08 e CLAUDE.md (exceção controlada à regra
         "Movimentações sem relatório" e ao § 13 de privacidade do Pix)
   - [x] API: `GET /movements/report?accountId=&month=` (resumo, ritmo, saídas por dia), `GET /movements/pix-recipients`
         (por favorecido) e `GET /movements/pix?recipient=` (detalhe), funções puras em `movement-report.mapper`,
         testes com 2 usuários. Só Pix enviados, detectados pela descrição "Pix …"
-  - [ ] Web: `/movements/benefit` com "Extrato | Resumo", saldo no topo, entrada pelo card do benefício da Início
-        e pelo filtro de contas
-  - [ ] Web: aba Resumo (cards, barras por dia) e lista de Pix por favorecido com detalhe e busca
+  - [x] Web: `/movements/benefit` com "Extrato | Resumo", saldo e ritmo no topo, seletor de mês, entrada pelo card
+        do benefício da Início e por um link no Extrato
+  - [x] Web: aba Resumo (barras de saídas por dia, resultado) e Pix por favorecido com busca e detalhe. Falta
+        conferir ao vivo no celular com os dados reais (74 Pix / 26 favorecidos no banco de dev)
   - [ ] Depois (P2): marcar favorecido como pessoa/estabelecimento; tipo de Pix real (`operationType`)
 
 ### Bugs achados só ao rodar de verdade (e corrigidos)
