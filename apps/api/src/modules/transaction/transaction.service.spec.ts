@@ -19,6 +19,8 @@ function repoMock() {
     create: jest.fn(),
     findMany: jest.fn(),
     findForecast: jest.fn(),
+    findPurchaseCandidates: jest.fn(),
+    updateDisplayName: jest.fn(),
     findById: jest.fn(),
     updateCategory: jest.fn(),
   } as unknown as jest.Mocked<TransactionRepository>
@@ -72,6 +74,7 @@ function row(
     installmentNumber: null,
     installmentTotal: null,
     installmentDueAt: null,
+    displayName: null,
     billId: null,
     createdAt: new Date('2026-09-21T12:00:00.000Z'),
     updatedAt: new Date('2026-09-21T12:00:00.000Z'),
@@ -348,6 +351,65 @@ describe('TransactionService', () => {
 
     await expect(service.listByMonth('user-1', '2026-13')).rejects.toBeInstanceOf(DomainError)
     expect(repo.findMany).not.toHaveBeenCalled()
+  })
+
+  describe('updateDisplayName', () => {
+    it('404 quando a transação não é do usuário (ou não é cartão)', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValue(null)
+      const service = newService({ repo })
+
+      await expect(
+        service.updateDisplayName('user-2', 'tx-do-user-1', { displayName: 'Air fryer' }),
+      ).rejects.toBeInstanceOf(NotFoundError)
+      expect(repo.updateDisplayName).not.toHaveBeenCalled()
+    })
+
+    it('compra à vista: só ela recebe o nome', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValue(row({ id: 'tx-1' }))
+      const service = newService({ repo })
+
+      await service.updateDisplayName('user-1', 'tx-1', { displayName: 'Fogão' })
+
+      expect(repo.findPurchaseCandidates).not.toHaveBeenCalled()
+      expect(repo.updateDisplayName).toHaveBeenCalledWith('user-1', ['tx-1'], 'Fogão')
+    })
+
+    it('compra parcelada: todas as parcelas da mesma compra recebem o nome, e só elas', async () => {
+      const occurredAt = new Date('2026-06-21T22:35:59.001Z')
+      const repo = repoMock()
+      repo.findById.mockResolvedValue(
+        row({
+          id: 'tx-3',
+          description: 'Air fryer 3/12',
+          occurredAt,
+          installmentNumber: 3,
+          installmentTotal: 12,
+        }),
+      )
+      repo.findPurchaseCandidates.mockResolvedValue([
+        { id: 'tx-3', description: 'Air fryer 3/12', occurredAt, installmentTotal: 12 },
+        { id: 'tx-4', description: 'Air fryer 4/12', occurredAt, installmentTotal: 12 },
+        { id: 'tx-12', description: 'Air fryer 12/12', occurredAt, installmentTotal: 12 },
+        { id: 'outra', description: 'TV 1/12', occurredAt, installmentTotal: 12 },
+      ])
+      const service = newService({ repo })
+
+      await service.updateDisplayName('user-1', 'tx-3', { displayName: 'Air fryer' })
+
+      expect(repo.updateDisplayName).toHaveBeenCalledWith('user-1', ['tx-3', 'tx-4', 'tx-12'], 'Air fryer')
+    })
+
+    it('null limpa o nome e volta ao do banco', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValue(row({ id: 'tx-1', displayName: 'Fogão' }))
+      const service = newService({ repo })
+
+      await service.updateDisplayName('user-1', 'tx-1', { displayName: null })
+
+      expect(repo.updateDisplayName).toHaveBeenCalledWith('user-1', ['tx-1'], null)
+    })
   })
 
   describe('updatePerson', () => {

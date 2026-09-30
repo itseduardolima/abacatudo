@@ -278,6 +278,9 @@ model Transaction {
   installmentNumber            Int?
   installmentTotal             Int?
   installmentDueAt             DateTime?
+  // Nome na fatura (03-regras-negocio § Mensagem de conta): apelido da compra, igual em todas as parcelas.
+  // O sync nunca escreve aqui.
+  displayName                  String?
   billId                       String?
   createdAt                    DateTime          @default(now())
   updatedAt                    DateTime          @updatedAt

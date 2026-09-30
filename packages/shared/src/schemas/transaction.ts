@@ -31,6 +31,8 @@ export const transactionSchema = z
     // Quando a parcela cai na fatura (a `date` do Pluggy) — null pra compra à vista. É o dia que a fatura
     // prevista mostra, já que occurredAt é o da compra.
     installmentDueAt: z.string().datetime().nullable(),
+    // Apelido da compra ("Air fryer"), usado na mensagem de conta; null usa o nome do banco.
+    displayName: z.string().nullable(),
     createdAt: z.string().datetime(),
     // Vazio quando a transação não está dividida (personId sozinho decide o dono) — preenchido só depois
     // de um PUT .../split (03-regras-negocio § Só a minha parte).
@@ -52,6 +54,19 @@ export const updateTransactionPersonInputSchema = z
   })
   .strict()
 export type UpdateTransactionPersonInput = z.infer<typeof updateTransactionPersonInputSchema>
+
+// Nome na fatura: vale para todas as parcelas da mesma compra. null volta ao nome do banco.
+export const updateTransactionDisplayNameInputSchema = z
+  .object({
+    displayName: z
+      .string()
+      .trim()
+      .min(1, 'Informe um nome para a compra.')
+      .max(60, 'Use até 60 caracteres.')
+      .nullable(),
+  })
+  .strict()
+export type UpdateTransactionDisplayNameInput = z.infer<typeof updateTransactionDisplayNameInputSchema>
 
 // Corrigir a categoria de uma transação (03-regras-negocio § Categorias e regras). Mesma lógica de
 // alwaysForMerchant do endpoint de pessoa, na mesma Rule do estabelecimento.

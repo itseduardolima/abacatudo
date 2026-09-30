@@ -2,6 +2,7 @@ import {
   createTransactionInputSchema,
   transactionSchema,
   updateTransactionCategoryInputSchema,
+  updateTransactionDisplayNameInputSchema,
   updateTransactionPersonInputSchema,
 } from './transaction'
 
@@ -23,6 +24,7 @@ const VALID = {
   installmentNumber: null,
   installmentTotal: null,
   installmentDueAt: null,
+  displayName: null,
   createdAt: '2026-09-21T12:00:00.000Z',
   splits: [],
 }
@@ -121,5 +123,20 @@ describe('createTransactionInputSchema', () => {
   it('categoryId/personId são opcionais, mas rejeitam id inválido quando vêm', () => {
     expect(createTransactionInputSchema.safeParse(BASE).success).toBe(true)
     expect(createTransactionInputSchema.safeParse({ ...BASE, personId: 'não-é-uuid' }).success).toBe(false)
+  })
+})
+
+describe('updateTransactionDisplayNameInputSchema', () => {
+  it('aceita um nome (aparado) ou null para limpar', () => {
+    expect(updateTransactionDisplayNameInputSchema.parse({ displayName: '  Air fryer ' })).toEqual({
+      displayName: 'Air fryer',
+    })
+    expect(updateTransactionDisplayNameInputSchema.parse({ displayName: null })).toEqual({ displayName: null })
+  })
+
+  it('rejeita nome vazio, com mais de 60 caracteres ou campo extra', () => {
+    expect(updateTransactionDisplayNameInputSchema.safeParse({ displayName: '   ' }).success).toBe(false)
+    expect(updateTransactionDisplayNameInputSchema.safeParse({ displayName: 'a'.repeat(61) }).success).toBe(false)
+    expect(updateTransactionDisplayNameInputSchema.safeParse({ displayName: null, extra: 1 }).success).toBe(false)
   })
 })
