@@ -1147,6 +1147,9 @@ fatura) e `/movements` só com o resto — como o desenho previa.
       (`429 SYNC_TOO_RECENT`, pelo `lastSyncAt`). Falta: janela `lastSyncAt − 7d` (spec 07)
 - [x] 8.4 — Aviso de reconectar + reconectar, testado ao vivo (falta job diário + e-mail, gap consciente)
 - [x] 8.5 — Desconectar, testado ao vivo
+- [x] Renomear conta: `PATCH /accounts/:id` aceita `name` (o sync nunca escreve o nome no update, então o nome
+      escolhido sobrevive). Em Contas, cada linha tem um botão "⋯" que abre a folha de ações (editar nome,
+      bandeira, conta de benefício, remover). Falta conferir ao vivo no celular
 - [x] 2.3 — Cartão adicional → pessoa, testado ao vivo
 
 ### Bugs achados só ao rodar de verdade (e corrigidos)
