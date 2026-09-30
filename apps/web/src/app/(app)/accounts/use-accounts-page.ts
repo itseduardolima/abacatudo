@@ -8,6 +8,7 @@ import { useAccounts } from '@/hooks/queries/use-accounts'
 import { useArchiveAccount } from '@/hooks/queries/use-archive-account'
 import { useConnectBank } from '@/hooks/queries/use-connect-bank'
 import { useCreateAccount } from '@/hooks/queries/use-create-account'
+import { useSyncBankConnection } from '@/hooks/queries/use-sync-bank-connection'
 import { useUpdateAccount } from '@/hooks/queries/use-update-account'
 import { ApiClientError } from '@/lib/api-client'
 
@@ -20,9 +21,11 @@ export function useAccountsPage() {
   const updateAccount = useUpdateAccount()
   const archiveAccount = useArchiveAccount()
   const connectBank = useConnectBank()
+  const syncBankConnection = useSyncBankConnection()
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [ruleError, setRuleError] = useState<string | null>(null)
   const [connectError, setConnectError] = useState<string | null>(null)
+  const [syncError, setSyncError] = useState<string | null>(null)
   const [pickingLogoForId, setPickingLogoForId] = useState<string | null>(null)
   const {
     register,
@@ -77,6 +80,24 @@ export function useAccountsPage() {
     }
   }
 
+  const onSyncBanks = async () => {
+    setSyncError(null)
+    const connectionIds = new Set(
+      (accounts.data ?? [])
+        .filter((account) => account.bankConnectionId && !account.disconnected)
+        .map((account) => account.bankConnectionId as string),
+    )
+    for (const connectionId of connectionIds) {
+      try {
+        await syncBankConnection.mutateAsync(connectionId)
+      } catch (error) {
+        if (!(error instanceof ApiClientError)) throw error
+        setSyncError(error.error.message)
+        return
+      }
+    }
+  }
+
   return {
     accounts: accounts.data ?? [],
     isLoadingAccounts: accounts.isPending,
@@ -103,6 +124,9 @@ export function useAccountsPage() {
     onConnectBank: () => void onConnectBank(),
     isConnectingBank: connectBank.isPending,
     connectError,
+    onSyncBanks: () => void onSyncBanks(),
+    isSyncingBanks: syncBankConnection.isPending,
+    syncError,
     archive: (id: string) => archiveAccount.mutate(id),
     isArchiving: archiveAccount.isPending,
     archivingId: archiveAccount.variables ?? null,

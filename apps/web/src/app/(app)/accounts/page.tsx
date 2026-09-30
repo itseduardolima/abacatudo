@@ -35,6 +35,9 @@ export default function AccountsPage() {
     onConnectBank,
     isConnectingBank,
     connectError,
+    onSyncBanks,
+    isSyncingBanks,
+    syncError,
     archive,
     isArchiving,
     archivingId,
@@ -87,6 +90,7 @@ export default function AccountsPage() {
       </div>
 
       {connectError && <InlineAlert>{connectError}</InlineAlert>}
+      {syncError && <InlineAlert>{syncError}</InlineAlert>}
 
       {isLoadingAccounts && <p className="text-text">Carregando…</p>}
 
@@ -96,7 +100,18 @@ export default function AccountsPage() {
 
       {connectedAccounts.length > 0 && (
         <section>
-          <h2 className="text-base font-bold text-ink">Conectadas pelo banco</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-base font-bold text-ink">Conectadas pelo banco</h2>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              state={isSyncingBanks ? 'loading' : 'idle'}
+              onClick={onSyncBanks}
+            >
+              Atualizar agora
+            </Button>
+          </div>
           <ul className="mt-1 flex flex-col">
             {connectedAccounts.map((account) => (
               <li key={account.id} className="flex flex-col gap-2 border-b border-surface py-3.5 last:border-b-0">
