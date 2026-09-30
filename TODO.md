@@ -1207,10 +1207,16 @@ typecheck/lint/build limpos).
 - [ ] 7.5 — Parcelas futuras / fatura prevista (Home e Fatura navegam por mês). Plano em etapas:
   - [x] spec 03 § Fatura prevista (regras acordadas: só parcelas lançadas, mês de `date`, horizonte até a
         última parcela, ◀ trava no mês atual)
-  - [ ] API: função pura no `invoice.mapper` + `InvoiceService` para mês futuro + `isForecast`/`lastForecastMonth` no schema
-  - [ ] API: `GET /transactions?month=` devolvendo as parcelas do mês futuro
-  - [ ] Web: seletor de mês na Home (`CardInvoiceRow`) e na tela da Fatura, rótulo "Prevista"
-  - [ ] Testes: Jest (cálculo, invariante, fronteira de mês em Manaus, 2 Users) + Cypress do seletor
+  - [x] API: coluna `Transaction.installmentDueAt` (migration; o sync grava a `date` do Pluggy; linhas antigas
+        só ganham o valor no próximo sync) + `GET /invoice?month=` prevê o mês futuro (`isForecast`,
+        `lastForecastMonth`) — a `occurredAt` é a data da COMPRA, então o mês da parcela precisou de coluna
+  - [x] API: `GET /transactions?month=` devolve as parcelas do mês futuro (`installmentDueAt` no DTO)
+  - [x] Web: `MonthStepper` com setas desabilitáveis; Home ("Faturas previstas") e Fatura ("Fatura prevista
+        de …") navegam por mês via `useForecastMonth` (◀ trava no mês atual, ▶ até `lastForecastMonth`); a Home
+        abre a Fatura com `?month=`
+  - [x] Testes: Jest (cálculo, invariante, mês sem parcela, conta manual, mês inválido, 2 Users) + Cypress do
+        `MonthStepper`. Falta conferir ao vivo: as linhas já sincronizadas só ganham `installmentDueAt` no
+        próximo sync (job das 03:00 ou "Atualizar agora"), e a fronteira de mês em Manaus só foi testada por mock
 - [ ] 7.6 — Congelar meses fechados
 - [ ] 10.3 — Chat com tool use
 - [x] 11.1 — PWA instalável: manifest, service worker (cache de assets/API, limpa no logout), testado ao vivo
