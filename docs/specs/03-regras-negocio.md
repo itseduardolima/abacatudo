@@ -323,7 +323,11 @@ teto variável = renda mensal (fixa + benefícios)
   cartões + gastos fixos ativos) com o esperado linear até hoje, sobre o
   teto; sinaliza se está acima. O card da Início mostra também **quanto foi gasto
   nos cartões de crédito, somando todos** (fatura do banco de cada cartão, com o
-  que não é meu incluso), calculado no backend (`cardsTotalCents`).
+  que não é meu incluso), calculado no backend (`cardsTotalCents`). O card acompanha
+  o mês escolhido nas setas da Início: num **mês futuro** mostra o **previsto**
+  (fatura prevista de cada cartão, só parcelas já lançadas, mais os gastos fixos)
+  contra o teto daquele mês, sem selo "No ritmo" nem marcador de hoje. Só existe
+  `BudgetMonth` para o mês atual e o seguinte; além disso o teto é zero.
 - **Compras parceladas**: cada parcela conta no mês em que o banco a lança.
   O total de parcelas futuras já comprometidas é mostrado à parte ("já
   comprometido nos próximos meses"); não é somado ao mês corrente.

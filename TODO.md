@@ -1040,6 +1040,10 @@ TABLE ... OWNER TO gastos`), e o `migrate dev` acusa "drift" nesse caso — usar
       fatura de todos os cartões, `cardsTotalCents` no `/budget/pace`). O `diffCents` continua na API. Falta
       conferir ao vivo
 
+- [x] Card de ritmo acompanha o mês das setas da Início: mês futuro usa `getSummary(userId, month)` (fatura prevista
+      dos cartões) + gastos fixos, sem selo nem marcador de hoje, rótulo "Meu previsto em …". Além do mês
+      seguinte não há `BudgetMonth` (teto zero). Falta conferir ao vivo
+
 ### Bugs achados só ao rodar de verdade (e corrigidos)
 
 - Payload > 1 MB devolvia 500 em vez de 413; JSON malformado vazava a mensagem crua da biblioteca.
