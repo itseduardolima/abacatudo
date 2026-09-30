@@ -6,7 +6,7 @@ import { useForecastMonth } from '@/hooks/use-forecast-month'
 import { useAccounts } from '@/hooks/queries/use-accounts'
 import { useCategories } from '@/hooks/queries/use-categories'
 import { useClearSplit } from '@/hooks/queries/use-clear-split'
-import { useInvoice } from '@/hooks/queries/use-invoice'
+import { useInvoice, useInvoices } from '@/hooks/queries/use-invoice'
 import { usePeople } from '@/hooks/queries/use-people'
 import { usePreviewSplit } from '@/hooks/queries/use-preview-split'
 import { useReplaceSplit } from '@/hooks/queries/use-replace-split'
@@ -16,6 +16,7 @@ import { useUpdateTransactionDisplayName } from '@/hooks/queries/use-update-tran
 import { useUpdateTransactionCategory } from '@/hooks/queries/use-update-transaction-category'
 import { useUpdateTransactionPerson } from '@/hooks/queries/use-update-transaction-person'
 import { ApiClientError } from '@/lib/api-client'
+import { latestForecastMonth } from '@/lib/utils/latest-forecast-month'
 import { dayGroupLabel } from '@/lib/utils/format-day-group'
 import { formatMoney, parseMoneyInput } from '@/lib/utils/format-money'
 
@@ -60,8 +61,11 @@ export function useTransactionsPage() {
     if (!selectedAccountId && cardAccounts[0]) setSelectedAccountId(cardAccounts[0].id)
   }, [cardAccounts, selectedAccountId])
 
-  const currentInvoice = useInvoice(selectedAccountId)
-  const forecast = useForecastMonth(currentInvoice.data?.lastForecastMonth ?? null, useSearchParams().get('month'))
+  const currentInvoices = useInvoices(cardAccounts.map((account) => account.id))
+  const forecast = useForecastMonth(
+    latestForecastMonth(currentInvoices.map((query) => query.data?.lastForecastMonth)),
+    useSearchParams().get('month'),
+  )
   const forecastMonth = forecast.isForecast ? forecast.month : undefined
   const invoice = useInvoice(selectedAccountId, forecastMonth)
   const transactions = useTransactions(forecastMonth)
