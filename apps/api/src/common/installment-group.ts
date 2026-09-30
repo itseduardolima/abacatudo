@@ -4,18 +4,15 @@ import { monthKey } from './date/timezone'
 // (InvoiceRepository/invoice.mapper.ts) quanto pela lista de lançamentos (TransactionRepository). Nunca
 // duplicar essa conta em outro lugar: as duas já divergiram uma vez (achado ao vivo comparando com o OFX
 // de um Nubank real) e é fácil voltar a acontecer.
-export function installmentGroupKey(row: {
+// Nome da compra sem o marcador da parcela. O texto da parcela é único por linha e cada banco escreve de um
+// jeito: "Compra 2/6" (Nubank, no fim) ou "RAMSONS STUDI PARC 05/12 MANAUS      BR" (BB, no meio, com a
+// cidade depois). Tira o marcador "N/M" da PRÓPRIA parcela (com "PARC" antes, se houver), em qualquer
+// posição, e junta os espaços. Serve pro agrupamento e pro nome exibido (sem "PARC 05/12" do lado do "5/12").
+export function installmentBaseName(row: {
   description: string
-  occurredAt: Date
   installmentTotal: number
   installmentNumber?: number | null
 }): string {
-  // O texto da parcela é único por linha e cada banco escreve de um jeito: "Compra 2/6" (Nubank, no fim) ou
-  // "RAMSONS STUDI PARC 05/12 MANAUS      BR" (BB, no meio, com a cidade depois). Tira o marcador "N/M" da
-  // PRÓPRIA parcela (com "PARC" antes, se houver), em qualquer posição, e junta os espaços — o que sobra é o
-  // nome da compra. A data da compra também varia de uma parcela pra outra no BB (17 e 18/02 na mesma
-  // compra), então o agrupamento usa só o MÊS da compra, mais o total de parcelas (evita juntar duas compras
-  // diferentes do mesmo nome).
   const collapsed = row.description.replace(/\s+/g, ' ').trim()
   const marker =
     row.installmentNumber == null
@@ -24,8 +21,19 @@ export function installmentGroupKey(row: {
           `\\s*(?:PARC(?:ELA)?\\.?\\s*)?(?<!\\d)0*${row.installmentNumber}\\s*/\\s*0*${row.installmentTotal}(?!\\d)`,
           'i',
         )
-  const baseDescription = collapsed.replace(marker, '').replace(/\s+/g, ' ').trim().toLowerCase()
-  return `${baseDescription}|${monthKey(row.occurredAt)}|${row.installmentTotal}`
+  return collapsed.replace(marker, '').replace(/\s+/g, ' ').trim()
+}
+
+export function installmentGroupKey(row: {
+  description: string
+  occurredAt: Date
+  installmentTotal: number
+  installmentNumber?: number | null
+}): string {
+  // A data da compra também varia de uma parcela pra outra no BB (17 e 18/02 na mesma compra), então o
+  // agrupamento usa só o MÊS da compra, mais o total de parcelas (evita juntar duas compras diferentes do
+  // mesmo nome).
+  return `${installmentBaseName(row).toLowerCase()}|${monthKey(row.occurredAt)}|${row.installmentTotal}`
 }
 
 interface InstallmentRow {

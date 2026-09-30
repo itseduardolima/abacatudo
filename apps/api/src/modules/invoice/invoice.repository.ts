@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { installmentGroupKey } from '../../common/installment-group'
+import { installmentBaseName, installmentGroupKey } from '../../common/installment-group'
 import { PRISMA, type PrismaService } from '../../prisma/prisma.client'
 import type { Prisma } from '@prisma/client'
 import type { InvoiceRow } from './invoice.mapper'
@@ -105,7 +105,7 @@ export class InvoiceRepository {
     })
     return rows.map((row) => ({
       ...toInvoiceRow(row, installmentOf(row)),
-      label: row.displayName ?? row.merchant ?? row.description.replace(/\s*\d+\/\d+$/, ''),
+      label: row.displayName ?? row.merchant ?? purchaseName(row),
       installmentNumber: row.installmentNumber,
       installmentTotal: row.installmentTotal,
       sortAt: row.installmentDueAt ?? row.occurredAt,
@@ -144,7 +144,7 @@ export class InvoiceRepository {
               kind: 'EXPENSE' as const,
               personId: row.personId,
               splits: row.splits,
-              label: row.displayName ?? row.merchant ?? row.description.replace(/\s*\d+\/\d+$/, ''),
+              label: row.displayName ?? row.merchant ?? purchaseName(row),
             },
           ],
     )
@@ -193,4 +193,18 @@ function toInvoiceRow(
     splits: row.splits,
     installment,
   }
+}
+
+function purchaseName(row: {
+  description: string
+  installmentNumber: number | null
+  installmentTotal: number | null
+}): string {
+  return row.installmentTotal == null
+    ? row.description
+    : installmentBaseName({
+        description: row.description,
+        installmentNumber: row.installmentNumber,
+        installmentTotal: row.installmentTotal,
+      })
 }

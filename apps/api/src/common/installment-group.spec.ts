@@ -1,4 +1,4 @@
-import { installmentGroupKey, keepCurrentInstallmentsOnly } from './installment-group'
+import { installmentBaseName, installmentGroupKey, keepCurrentInstallmentsOnly } from './installment-group'
 
 interface TestRow {
   id: string
@@ -127,5 +127,31 @@ describe('keepCurrentInstallmentsOnly', () => {
 
   it('sem linhas, sem linhas', () => {
     expect(keepCurrentInstallmentsOnly([])).toEqual([])
+  })
+})
+
+describe('installmentBaseName', () => {
+  it('tira o marcador da parcela em qualquer posição, sem mexer no resto do nome', () => {
+    expect(
+      installmentBaseName({
+        description: 'RAMSONS STUDI PARC 05/12 MANAUS      BR',
+        installmentNumber: 5,
+        installmentTotal: 12,
+      }),
+    ).toBe('RAMSONS STUDI MANAUS BR')
+    expect(
+      installmentBaseName({ description: 'Ramsons Manauara 3/4', installmentNumber: 3, installmentTotal: 4 }),
+    ).toBe('Ramsons Manauara')
+    expect(
+      installmentBaseName({
+        description: 'LOJA 15/12 PARC 05/12 MANAUS BR',
+        installmentNumber: 5,
+        installmentTotal: 12,
+      }),
+    ).toBe('LOJA 15/12 MANAUS BR')
+  })
+
+  it('sem o número da parcela, só tira o marcador do fim (comportamento antigo)', () => {
+    expect(installmentBaseName({ description: 'Compra 2/6', installmentTotal: 6 })).toBe('Compra')
   })
 })
