@@ -1,4 +1,4 @@
-import { createAccountInputSchema } from './account'
+import { createAccountInputSchema, updateAccountInputSchema } from './account'
 
 describe('createAccountInputSchema', () => {
   it('aceita um cartão de crédito com os campos próprios dele', () => {
@@ -48,5 +48,16 @@ describe('createAccountInputSchema', () => {
 
   it('rejeita nome vazio', () => {
     expect(createAccountInputSchema.safeParse({ name: '  ', type: 'CASH' }).success).toBe(false)
+  })
+})
+
+describe('updateAccountInputSchema — name', () => {
+  it('aceita um nome novo e apara os espaços', () => {
+    expect(updateAccountInputSchema.parse({ name: '  Cartão principal  ' })).toEqual({ name: 'Cartão principal' })
+  })
+
+  it('rejeita nome vazio (só espaços) ou maior que 80 caracteres', () => {
+    expect(updateAccountInputSchema.safeParse({ name: '   ' }).success).toBe(false)
+    expect(updateAccountInputSchema.safeParse({ name: 'a'.repeat(81) }).success).toBe(false)
   })
 })

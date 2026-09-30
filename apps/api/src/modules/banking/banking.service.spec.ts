@@ -305,6 +305,23 @@ describe('BankingService', () => {
     await expect(service.manualSync('user-1', 'item-1')).resolves.toEqual({ accountsSynced: 0, transactionsSynced: 0 })
   })
 
+  it('manualSync: o update do upsert nunca leva o nome — renomear a conta não é desfeito pelo sync', async () => {
+    const items = itemsMock()
+    items.findById.mockResolvedValue(itemRow())
+    const accounts = accountsMock()
+    accounts.upsertFromSync.mockResolvedValue(accountRow())
+    const pluggy = pluggyMock()
+    pluggy.listAccounts.mockResolvedValue([{ id: 'ext-acc-1', type: 'CREDIT', name: 'Nubank', creditData: null }])
+    pluggy.listTransactions.mockResolvedValue({ results: [], next: null })
+
+    await newService({ items, accounts, pluggy }).manualSync('user-1', 'item-1')
+
+    const createData = accounts.upsertFromSync.mock.calls[0]?.[2]
+    const updateData = accounts.upsertFromSync.mock.calls[0]?.[3]
+    expect(createData).toMatchObject({ name: 'Nubank' })
+    expect(updateData).not.toHaveProperty('name')
+  })
+
   it('manualSync: sincroniza conta e transações por upsert atômico, sem duplicar', async () => {
     const items = itemsMock()
     items.findById.mockResolvedValue(itemRow())

@@ -32,11 +32,15 @@ export class AccountService {
     return toDto(row)
   }
 
-  // PATCH único pros dois campos editáveis (benefício, logo do banco) — só mexe no que veio no body, nunca
+  // PATCH único pros campos editáveis (nome, benefício, logo do banco) — só mexe no que veio no body, nunca
   // sobrescreve o outro campo com o valor atual (teria corrida se dois PATCH parciais chegassem juntos).
   async update(userId: string, id: string, input: UpdateAccountInput): Promise<Account> {
     const existing = await this.repo.findById(userId, id)
     if (!existing) throw new NotFoundError('ACCOUNT_NOT_FOUND', 'Conta não encontrada.')
+
+    if (input.name !== undefined) {
+      await this.repo.update(userId, id, { name: input.name })
+    }
 
     if (input.isBenefitAccount !== undefined) {
       if (input.isBenefitAccount && existing.type !== 'CHECKING') {

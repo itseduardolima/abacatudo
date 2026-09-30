@@ -46,10 +46,13 @@ export const accountSchema = z
   .strict()
 export type Account = z.infer<typeof accountSchema>
 
-// Os dois campos editáveis hoje — ambos opcionais, o PATCH só toca no que vier (o resto da conta nunca
+// Os campos editáveis hoje (nome, benefício, logo) — todos opcionais, o PATCH só toca no que vier (o resto da conta nunca
 // muda depois de criada).
+export const accountNameSchema = z.string().trim().min(1, 'Informe um nome para a conta.').max(80)
+
 export const updateAccountInputSchema = z
   .object({
+    name: accountNameSchema.optional(),
     isBenefitAccount: z.boolean().optional(),
     bankLogo: bankLogoSchema.nullable().optional(),
   })
@@ -61,7 +64,7 @@ export type UpdateAccountInput = z.infer<typeof updateAccountInputSchema>
 // sobre o formato dele).
 export const createAccountInputSchema = z
   .object({
-    name: z.string().trim().min(1, 'Informe um nome para a conta.').max(80),
+    name: accountNameSchema,
     type: accountTypeSchema,
     source: accountSourceSchema.exclude(['PLUGGY']).default('MANUAL'), // PLUGGY só é setado pelo sync (Sprint 6), nunca pelo cliente.
     closingDay: dayOfMonthSchema.optional(),

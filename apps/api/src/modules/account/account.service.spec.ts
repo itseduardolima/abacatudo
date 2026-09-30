@@ -186,6 +186,29 @@ describe('AccountService', () => {
     expect(result.disconnected).toBe(false)
   })
 
+  describe('update — name', () => {
+    it('renomeia só o nome, sem tocar nos outros campos', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValue(row())
+      const service = new AccountService(repo)
+
+      await service.update('user-1', 'acc-1', { name: 'Cartão principal' })
+
+      expect(repo.update).toHaveBeenCalledTimes(1)
+      expect(repo.update).toHaveBeenCalledWith('user-1', 'acc-1', { name: 'Cartão principal' })
+      expect(repo.setBenefitAccount).not.toHaveBeenCalled()
+    })
+
+    it('conta de outro usuário: 404 e nada é gravado', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValue(null)
+      const service = new AccountService(repo)
+
+      await expect(service.update('user-2', 'acc-do-user-1', { name: 'X' })).rejects.toBeInstanceOf(NotFoundError)
+      expect(repo.update).not.toHaveBeenCalled()
+    })
+  })
+
   describe('update — isBenefitAccount', () => {
     it('404 quando a conta não existe (ou não é do usuário)', async () => {
       const repo = repoMock()
