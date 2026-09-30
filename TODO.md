@@ -1141,7 +1141,10 @@ fatura) e `/movements` só com o resto — como o desenho previa.
 - [x] 8.2 — Sync idempotente: upsert por `[accountId, externalId]` (`banking-sync.repository.ts`), nunca
       duplica; nunca sobrescreve `categoryId`/`personId`/`note` (são do usuário, não do Pluggy)
 - [x] 8.3 — Sync diário/manual (sem webhook): `POST /banking/items/:id/sync` (manual) + primeira vez que o
-      `checkStatus` vê o status virar `UPDATED` (automático). **Falta o job diário agendado** — ver gap acima
+      `checkStatus` vê o status virar `UPDATED` (automático). Job diário: `BankingSyncJob` (`@nestjs/schedule` 6.x, CJS — a 12.x é ESM-only e quebra no
+      Jest/CJS), `@Cron` 03:00 America/Manaus, `pg_try_advisory_xact_lock`, um usuário por vez via `runAsUser`,
+      falha de um item/usuário não derruba os demais; só itens não `DISCONNECTED`. Manual limitado a 1 por conexão a cada 15 min
+      (`429 SYNC_TOO_RECENT`, pelo `lastSyncAt`). Falta: janela `lastSyncAt − 7d` (spec 07)
 - [x] 8.4 — Aviso de reconectar + reconectar, testado ao vivo (falta job diário + e-mail, gap consciente)
 - [x] 8.5 — Desconectar, testado ao vivo
 - [x] 2.3 — Cartão adicional → pessoa, testado ao vivo

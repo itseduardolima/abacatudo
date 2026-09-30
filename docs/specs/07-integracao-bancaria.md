@@ -138,8 +138,8 @@ Account
 
 ## Sincronização
 
-- **Gatilhos**: diário (job), manual ("atualizar agora", 1 por conta a cada
-  15 min), webhook.
+- **Gatilhos**: diário (job), manual ("atualizar agora", 1 por conexão a cada
+  15 min, `429 SYNC_TOO_RECENT`; o job diário e o `checkStatus` não sofrem o limite), webhook.
 - **Idempotência**: upsert por `(accountId, externalId)`. Rodar duas vezes
   não muda nada.
 - **Janela**: primeira conexão traz o histórico que o banco fornecer;
