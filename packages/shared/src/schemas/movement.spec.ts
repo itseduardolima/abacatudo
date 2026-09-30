@@ -1,4 +1,9 @@
-import { movementReportSchema, movementTotalsSchema, pixRecipientsResponseSchema } from './movement'
+import {
+  movementSpendingSchema,
+  movementReportSchema,
+  movementTotalsSchema,
+  pixRecipientsResponseSchema,
+} from './movement'
 
 describe('movementTotalsSchema', () => {
   it('aceita a forma completa', () => {
@@ -53,6 +58,28 @@ describe('pixRecipientsResponseSchema', () => {
         month: '2026-09',
         totalCents: 0,
         recipients: [{ ...recipient, count: 0 }],
+      }).success,
+    ).toBe(false)
+  })
+})
+
+describe('movementSpendingSchema', () => {
+  const spending = {
+    month: '2026-09',
+    totalCents: 5000,
+    pixCents: 1000,
+    cardPaymentCents: 0,
+    otherCents: 0,
+    establishments: [{ key: 'uber', label: 'UBER', count: 2, totalCents: 4000, lastAt: '2026-09-10T15:00:00.000Z' }],
+  }
+
+  it('aceita a resposta completa e recusa campo desconhecido ou contagem zerada', () => {
+    expect(movementSpendingSchema.safeParse(spending).success).toBe(true)
+    expect(movementSpendingSchema.safeParse({ ...spending, extra: 1 }).success).toBe(false)
+    expect(
+      movementSpendingSchema.safeParse({
+        ...spending,
+        establishments: [{ ...spending.establishments[0], count: 0 }],
       }).success,
     ).toBe(false)
   })

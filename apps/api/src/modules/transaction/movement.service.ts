@@ -1,5 +1,12 @@
 import { Injectable } from '@nestjs/common'
-import type { MovementHabits, MovementReport, MovementTotals, PixRecipientsResponse, Transaction } from '@gastos/shared'
+import type {
+  MovementHabits,
+  MovementReport,
+  MovementSpending,
+  MovementTotals,
+  PixRecipientsResponse,
+  Transaction,
+} from '@gastos/shared'
 import { dateKey, dayOfMonth, monthKey, monthRange, resolveMonthRange, shiftMonthKey } from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository } from '../account/account.repository'
@@ -10,6 +17,7 @@ import {
   frequentEstablishments,
   groupPixRecipients,
   isPixRow,
+  spendingBreakdown,
 } from './movement-report.mapper'
 import { MovementRepository } from './movement.repository'
 import { toTransactionDto } from './transaction.mapper'
@@ -96,6 +104,14 @@ export class MovementService {
     const account = await this.movementAccount(userId, accountId)
     const rows = await this.repo.findMany(userId, resolveMonthRange(month), { accountId: account.id, direction: 'OUT' })
     return filterPixRowsByRecipient(rows, recipient).map((row) => toTransactionDto(row))
+  }
+
+  // "Para onde vai": saídas do mês por estabelecimento, com Pix e pagamento de fatura à parte (03-regras-negocio
+  // § Extrato e relatório da conta de benefício). Só descritivo; nunca alimenta orçamento nem IA.
+  async spending(userId: string, accountId: string | undefined, month?: string): Promise<MovementSpending> {
+    const account = await this.movementAccount(userId, accountId)
+    const rows = await this.repo.findMany(userId, resolveMonthRange(month), { accountId: account.id, direction: 'OUT' })
+    return { month: month ?? monthKey(new Date()), ...spendingBreakdown(rows) }
   }
 
   // Gastos que se repetem (03-regras-negocio § Extrato e relatório da conta de benefício): recorrentes com o

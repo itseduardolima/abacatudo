@@ -1,4 +1,10 @@
-import type { FrequentEstablishment, MovementReport, PixRecipient } from '@gastos/shared'
+import type {
+  Establishment,
+  FrequentEstablishment,
+  MovementReport,
+  MovementSpending,
+  PixRecipient,
+} from '@gastos/shared'
 import { cleanName } from '../insight/subscription.mapper'
 import { normalizeMerchant } from '../rule/normalize-merchant'
 
@@ -123,9 +129,7 @@ export interface HabitRow extends ReportRow {
   merchant: string | null
 }
 
-// Estabelecimentos com >= 2 compras no mês (Pix nunca entra): pega o que não é mensal (corrida, lanche) e
-// que o detector de recorrência não pega. Sem categoria — só agrupa pelo nome sem a cidade.
-export function frequentEstablishments(rows: HabitRow[], limit = 8): FrequentEstablishment[] {
+function groupEstablishments(rows: HabitRow[]): Establishment[] {
   const groups = new Map<string, { label: string; count: number; totalCents: number; lastAt: Date }>()
 
   for (const row of rows) {
@@ -142,15 +146,45 @@ export function frequentEstablishments(rows: HabitRow[], limit = 8): FrequentEst
     if (row.occurredAt > group.lastAt) group.lastAt = row.occurredAt
   }
 
-  return [...groups.entries()]
-    .filter(([, group]) => group.count >= 2)
-    .map(([key, group]) => ({
-      key,
-      label: group.label,
-      count: group.count,
-      totalCents: group.totalCents,
-      lastAt: group.lastAt.toISOString(),
-    }))
+  return [...groups.entries()].map(([key, group]) => ({
+    key,
+    label: group.label,
+    count: group.count,
+    totalCents: group.totalCents,
+    lastAt: group.lastAt.toISOString(),
+  }))
+}
+
+// Estabelecimentos com >= 2 compras no mês (Pix nunca entra): pega o que não é mensal (corrida, lanche) e
+// que o detector de recorrência não pega. Sem categoria — só agrupa pelo nome sem a cidade.
+export function frequentEstablishments(rows: HabitRow[], limit = 8): FrequentEstablishment[] {
+  return groupEstablishments(rows)
+    .filter((group) => group.count >= 2)
     .sort((a, b) => b.count - a.count || b.totalCents - a.totalCents || a.label.localeCompare(b.label, 'pt-BR'))
     .slice(0, limit)
+}
+
+// "Para onde vai": saídas por estabelecimento (maiores primeiro), com o resto em "outros", e Pix e pagamento
+// de fatura como blocos à parte. Invariante: estabelecimentos + outros + Pix + fatura = saídas do mês.
+export function spendingBreakdown(rows: HabitRow[], limit = 10): Omit<MovementSpending, 'month'> {
+  const groups = groupEstablishments(rows).sort(
+    (a, b) => b.totalCents - a.totalCents || b.count - a.count || a.label.localeCompare(b.label, 'pt-BR'),
+  )
+  const top = groups.slice(0, limit)
+  const otherCents = groups.slice(limit).reduce((sum, group) => sum + group.totalCents, 0)
+  const pixCents = rows
+    .filter((row) => row.kind === 'EXPENSE' && isPixRow(row))
+    .reduce((sum, row) => sum + row.amountCents, 0)
+  const cardPaymentCents = rows
+    .filter((row) => row.kind === 'CARD_PAYMENT')
+    .reduce((sum, row) => sum + row.amountCents, 0)
+  const establishmentsCents = top.reduce((sum, group) => sum + group.totalCents, 0)
+
+  return {
+    totalCents: establishmentsCents + otherCents + pixCents + cardPaymentCents,
+    pixCents,
+    cardPaymentCents,
+    otherCents,
+    establishments: top,
+  }
 }

@@ -195,6 +195,43 @@ describe('MovementService', () => {
       ])
     })
 
+    it('spending: soma por estabelecimento e bate com as saídas do relatório do mesmo mês', async () => {
+      const repo = repoMock()
+      const monthRows = [
+        movementRow({ description: 'UBER DO BRASIL', amountCents: 1500 }),
+        movementRow({ description: 'UBER DO BRASIL', amountCents: 2500 }),
+        movementRow({ description: 'Pix Ana Souza', amountCents: 1000 }),
+      ]
+      repo.findMany.mockResolvedValue(monthRows)
+      const accounts = accountsMock()
+      accounts.findById.mockResolvedValue(account())
+      const service = new MovementService(repo, accounts)
+
+      const spending = await service.spending('user-1', 'acc-benefit', '2026-08')
+      const report = await service.report('user-1', 'acc-benefit', '2026-08')
+
+      expect(repo.findMany).toHaveBeenCalledWith(
+        'user-1',
+        { start: expect.any(Date), end: expect.any(Date) },
+        { accountId: 'acc-benefit', direction: 'OUT' },
+      )
+      expect(spending).toMatchObject({ month: '2026-08', totalCents: 5000, pixCents: 1000 })
+      expect(spending.establishments.map((e) => [e.label, e.totalCents])).toEqual([['UBER DO BRASIL', 4000]])
+      expect(spending.totalCents).toBe(report.expenseCents)
+    })
+
+    it('spending: conta de outro usuário é 404, sem ler movimentações', async () => {
+      const repo = repoMock()
+      const accounts = accountsMock()
+      accounts.findById.mockResolvedValue(null)
+      const service = new MovementService(repo, accounts)
+
+      await expect(service.spending('user-2', 'acc-do-user-1', '2026-09')).rejects.toMatchObject({
+        code: 'ACCOUNT_NOT_FOUND',
+      })
+      expect(repo.findMany).not.toHaveBeenCalled()
+    })
+
     describe('habits', () => {
       beforeEach(() => jest.useFakeTimers().setSystemTime(new Date('2026-09-30T15:00:00.000Z')))
       afterEach(() => jest.useRealTimers())

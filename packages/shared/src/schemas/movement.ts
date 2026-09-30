@@ -69,3 +69,28 @@ export const movementHabitsSchema = z
   })
   .strict()
 export type MovementHabits = z.infer<typeof movementHabitsSchema>
+
+export const establishmentSchema = z
+  .object({
+    key: z.string(),
+    label: z.string(),
+    count: z.number().int().min(1),
+    totalCents: centsSchema,
+    lastAt: z.string().datetime(),
+  })
+  .strict()
+export type Establishment = z.infer<typeof establishmentSchema>
+
+// "Para onde vai" (03-regras-negocio § Extrato e relatório da conta de benefício): estabelecimentos + outros
+// + Pix + pagamento de fatura = saídas do mês.
+export const movementSpendingSchema = z
+  .object({
+    month: monthSchema,
+    totalCents: centsSchema,
+    pixCents: centsSchema,
+    cardPaymentCents: centsSchema,
+    otherCents: centsSchema,
+    establishments: z.array(establishmentSchema),
+  })
+  .strict()
+export type MovementSpending = z.infer<typeof movementSpendingSchema>

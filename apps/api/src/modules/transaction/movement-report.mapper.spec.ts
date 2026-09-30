@@ -5,6 +5,7 @@ import {
   frequentEstablishments,
   groupPixRecipients,
   normalizeRecipientKey,
+  spendingBreakdown,
   type ReportRow,
 } from './movement-report.mapper'
 
@@ -175,5 +176,44 @@ describe('frequentEstablishments', () => {
     ])
 
     expect(frequentEstablishments(rows, 2)).toHaveLength(2)
+  })
+})
+
+describe('spendingBreakdown', () => {
+  function spend(overrides: Partial<ReportRow & { merchant: string | null }> = {}) {
+    return { ...row(), merchant: null, ...overrides }
+  }
+
+  const rows = [
+    spend({ description: 'UBER DO BRASIL', amountCents: 1000 }),
+    spend({ description: 'UBER DO BRASIL', amountCents: 2000 }),
+    spend({ description: 'TEMPUS', amountCents: 400 }),
+    spend({ description: 'CASA LA PAZ', amountCents: 5000 }),
+    spend({ description: 'Pix Ana Souza', amountCents: 700 }),
+    spend({ description: 'Pix Bruno Lima', amountCents: 300 }),
+    spend({ description: 'Pagamento de fatura', kind: 'CARD_PAYMENT', amountCents: 9000 }),
+    spend({ description: 'Vendas', kind: 'INCOME', amountCents: 99999 }),
+  ]
+
+  it('estabelecimentos por total, Pix e pagamento de fatura à parte, entrada fora', () => {
+    const result = spendingBreakdown(rows)
+
+    expect(result.establishments.map((e) => [e.label, e.totalCents, e.count])).toEqual([
+      ['CASA LA PAZ', 5000, 1],
+      ['UBER DO BRASIL', 3000, 2],
+      ['TEMPUS', 400, 1],
+    ])
+    expect(result).toMatchObject({ pixCents: 1000, cardPaymentCents: 9000, otherCents: 0 })
+  })
+
+  it('invariante: estabelecimentos + outros + Pix + fatura = saídas do mês (mesmo cortando no limite)', () => {
+    const result = spendingBreakdown(rows, 2)
+    const shown = result.establishments.reduce((sum, e) => sum + e.totalCents, 0)
+    const expenses = rows.filter((r) => r.kind !== 'INCOME').reduce((sum, r) => sum + r.amountCents, 0)
+
+    expect(result.establishments).toHaveLength(2)
+    expect(result.otherCents).toBe(400)
+    expect(shown + result.otherCents + result.pixCents + result.cardPaymentCents).toBe(expenses)
+    expect(result.totalCents).toBe(expenses)
   })
 })
