@@ -20,6 +20,7 @@ export function computePace(input: {
   todayDayOfMonth: number
   capCents: number
   spentCents: number
+  cardsTotalCents: number
 }): BudgetPace {
   const daysInMonth = daysInMonthFor(input.monthKeyValue)
 
@@ -44,6 +45,7 @@ export function computePace(input: {
     month: input.monthKeyValue,
     capCents: input.capCents,
     spentCents: input.spentCents,
+    cardsTotalCents: input.cardsTotalCents,
     remainingCents,
     daysInMonth,
     daysElapsed,

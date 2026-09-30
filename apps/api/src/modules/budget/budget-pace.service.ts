@@ -31,6 +31,7 @@ export class BudgetPaceService {
       todayDayOfMonth: dayOfMonth(new Date()),
       capCents: budget.incomeCents,
       spentCents: invoice.mineCents + fixedExpensesCents,
+      cardsTotalCents: invoice.totalCents,
     })
   }
 }

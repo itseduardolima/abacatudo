@@ -45,6 +45,7 @@ describe('BudgetPaceService', () => {
     expect(fixedExpenses.sumActiveCents).toHaveBeenCalledWith('user-1')
     expect(result.capCents).toBe(300_000)
     expect(result.spentCents).toBe(70_000)
+    expect(result.cardsTotalCents).toBe(51_000)
     expect(result.month).toBe('2026-09')
   })
 

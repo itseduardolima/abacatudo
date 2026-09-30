@@ -27,6 +27,8 @@ export const budgetPaceSchema = z
     month: monthKeySchema,
     capCents: centsSchema,
     spentCents: centsSchema,
+    // Gasto nos cartões de crédito, somando todos (fatura do banco de cada um) — inclui o que não é meu.
+    cardsTotalCents: centsSchema,
     remainingCents: centsSchema,
     daysInMonth: z.number().int().positive(),
     daysElapsed: z.number().int().nonnegative(),

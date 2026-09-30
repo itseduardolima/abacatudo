@@ -9,6 +9,7 @@ describe('computePace', () => {
       todayDayOfMonth: 15,
       capCents: 300_000,
       spentCents: 100_000,
+      cardsTotalCents: 0,
     })
     expect(result.daysInMonth).toBe(30)
     expect(result.daysElapsed).toBe(14)
@@ -24,6 +25,7 @@ describe('computePace', () => {
       todayDayOfMonth: 15,
       capCents: 300_000,
       spentCents: 50_000,
+      cardsTotalCents: 0,
     })
     expect(result.status).toBe('ON_TRACK')
     expect(result.diffCents).toBeGreaterThan(0)
@@ -36,6 +38,7 @@ describe('computePace', () => {
       todayDayOfMonth: 15,
       capCents: 300_000,
       spentCents: 250_000,
+      cardsTotalCents: 0,
     })
     expect(result.status).toBe('OVER_PACE')
     expect(result.diffCents).toBeLessThan(0)
@@ -48,6 +51,7 @@ describe('computePace', () => {
       todayDayOfMonth: 15,
       capCents: 300_000,
       spentCents: 280_000,
+      cardsTotalCents: 0,
     })
     expect(result.daysElapsed).toBe(result.daysInMonth)
     expect(result.daysRemaining).toBe(0)
@@ -62,6 +66,7 @@ describe('computePace', () => {
       todayDayOfMonth: 15,
       capCents: 300_000,
       spentCents: 0,
+      cardsTotalCents: 0,
     })
     expect(result.daysElapsed).toBe(0)
     expect(result.expectedByNowCents).toBe(0)
@@ -75,6 +80,7 @@ describe('computePace', () => {
       todayDayOfMonth: 20,
       capCents: 100_000,
       spentCents: 150_000,
+      cardsTotalCents: 0,
     })
     expect(result.remainingCents).toBe(-50_000)
     expect(result.perDayRemainingCents).toBeLessThan(0)
@@ -87,9 +93,23 @@ describe('computePace', () => {
       todayDayOfMonth: 1,
       capCents: 300_000,
       spentCents: 0,
+      cardsTotalCents: 0,
     })
     expect(result.daysElapsed).toBe(0)
     expect(result.expectedByNowCents).toBe(0)
     expect(result.daysRemaining).toBe(result.daysInMonth)
+  })
+
+  it('cardsTotalCents é repassado como veio, sem misturar com o gasto "meu"', () => {
+    const result = computePace({
+      monthKeyValue: '2026-09',
+      currentMonthKey: '2026-09',
+      todayDayOfMonth: 15,
+      capCents: 300_000,
+      spentCents: 100_000,
+      cardsTotalCents: 180_000,
+    })
+    expect(result.cardsTotalCents).toBe(180_000)
+    expect(result.spentCents).toBe(100_000)
   })
 })
