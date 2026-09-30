@@ -29,4 +29,13 @@ describe('MonthStepper', () => {
     cy.get('@onPrevious').should('not.have.been.called')
     cy.get('@onNext').should('not.have.been.called')
   })
+
+  it('fullWidth ocupa a largura toda do contêiner', () => {
+    cy.mount(
+      <div style={{ width: 360 }}>
+        <MonthStepper label="setembro 2026" onPrevious={cy.stub()} onNext={cy.stub()} fullWidth />
+      </div>,
+    )
+    cy.contains('setembro 2026').parent().invoke('outerWidth').should('eq', 360)
+  })
 })

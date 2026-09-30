@@ -118,15 +118,14 @@ function TransactionsContent() {
       )}
 
       {selectedAccount && (
-        <div className="self-end">
-          <MonthStepper
-            label={formatMonthName(forecast.month)}
-            onPrevious={forecast.goToPreviousMonth}
-            onNext={forecast.goToNextMonth}
-            canGoPrevious={forecast.canGoPrevious}
-            canGoNext={forecast.canGoNext}
-          />
-        </div>
+        <MonthStepper
+          label={formatMonthName(forecast.month)}
+          onPrevious={forecast.goToPreviousMonth}
+          onNext={forecast.goToNextMonth}
+          canGoPrevious={forecast.canGoPrevious}
+          canGoNext={forecast.canGoNext}
+          fullWidth
+        />
       )}
 
       {selectedAccount && forecast.isForecast && (

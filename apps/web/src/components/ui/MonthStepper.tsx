@@ -8,15 +8,19 @@ export function MonthStepper({
   onNext,
   canGoPrevious = true,
   canGoNext = true,
+  fullWidth = false,
 }: {
   label: string
   onPrevious: () => void
   onNext: () => void
   canGoPrevious?: boolean
   canGoNext?: boolean
+  fullWidth?: boolean
 }) {
   return (
-    <div className="inline-flex items-center rounded-pill bg-canvas p-1 shadow-hair">
+    <div
+      className={`items-center rounded-pill bg-canvas p-1 shadow-hair ${fullWidth ? 'flex w-full justify-between' : 'inline-flex'}`}
+    >
       <button
         type="button"
         onClick={onPrevious}
