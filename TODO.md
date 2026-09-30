@@ -1055,7 +1055,9 @@ TABLE ... OWNER TO gastos`), e o `migrate dev` acusa "drift" nesse caso — usar
         do benefício da Início e por um link no Extrato
   - [x] Web: aba Resumo (barras de saídas por dia, resultado) e Pix por favorecido com busca e detalhe. Falta
         conferir ao vivo no celular com os dados reais (74 Pix / 26 favorecidos no banco de dev)
-  - [ ] 5.10 — Gastos que se repetem no benefício (recorrentes com o detector do cartão + mais frequentes do mês, sem Pix)
+  - [x] 5.10 — Gastos que se repetem no benefício: `GET /movements/habits` (recorrentes com o detector do cartão sobre
+        os últimos 4 meses + estabelecimentos mais frequentes do mês, sem Pix) e seções na aba Resumo. Falta
+        conferir ao vivo; categorias ficam para depois
   - [ ] Depois (P2): marcar favorecido como pessoa/estabelecimento; tipo de Pix real (`operationType`)
 
 ### Bugs achados só ao rodar de verdade (e corrigidos)
