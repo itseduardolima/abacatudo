@@ -1036,6 +1036,10 @@ TABLE ... OWNER TO gastos`), e o `migrate dev` acusa "drift" nesse caso — usar
         "Nome na fatura" no detalhe da compra. Falta conferir ao vivo no celular (abrir o WhatsApp de verdade) e
         decidir o que fazer com compra sem dono (`personId` nulo) — hoje fica fora de qualquer mensagem
 
+- [x] Card de ritmo da Início: no lugar de "R$ X abaixo/acima do ritmo" mostra "Nos cartões R$ X" (soma da
+      fatura de todos os cartões, `cardsTotalCents` no `/budget/pace`). O `diffCents` continua na API. Falta
+      conferir ao vivo
+
 ### Bugs achados só ao rodar de verdade (e corrigidos)
 
 - Payload > 1 MB devolvia 500 em vez de 413; JSON malformado vazava a mensagem crua da biblioteca.
