@@ -79,7 +79,7 @@ export default function HomePage() {
               canGoNext={forecast.canGoNext}
             />
           </div>
-          {forecast.isForecast && <p className="mt-2 text-xs text-muted">Só parcelas já lançadas pelo banco.</p>}
+          {forecast.isForecast && <p className="mt-2 text-xs text-muted">Parcelas lançadas pelo banco e estimadas.</p>}
           <div className="mt-1">
             {cardAccounts.map((account) => (
               <CardInvoiceRow

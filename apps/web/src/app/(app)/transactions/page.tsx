@@ -2,6 +2,7 @@
 
 import { Suspense } from 'react'
 import type { Segment } from './use-transactions-page'
+import { EstimatedInstallmentsSection } from './estimated-installments-section'
 import { StatementsSheet } from './statements-sheet'
 import { TransactionSheet } from './transaction-sheet'
 import { Button } from '@/components/ui/Button'
@@ -41,6 +42,7 @@ function TransactionsContent() {
     selectedAccountId,
     setSelectedAccountId,
     invoice,
+    estimatedInstallments,
     forecast,
     segment,
     setSegment,
@@ -138,7 +140,7 @@ function TransactionsContent() {
       )}
 
       {selectedAccount && forecast.isForecast && (
-        <p className="text-xs text-muted">Previsão: só as parcelas que o banco já lançou para este mês.</p>
+        <p className="text-xs text-muted">Previsão: parcelas lançadas pelo banco e estimadas para este mês.</p>
       )}
 
       {selectedAccount && invoice && (
@@ -184,6 +186,12 @@ function TransactionsContent() {
               </div>
             </div>
           </div>
+          {forecast.isForecast && invoice.estimatedCents > 0 && (
+            <p className="text-xs text-muted">
+              Inclui <MoneyText cents={invoice.estimatedCents} className="!text-xs" /> de parcelas estimadas (o banco
+              ainda não lançou).
+            </p>
+          )}
           <Button variant="outline" onClick={statementsSheet.open}>
             Enviar contas
           </Button>
@@ -207,7 +215,7 @@ function TransactionsContent() {
         </div>
       )}
 
-      {selectedAccount && groups.length === 0 && !isLoading && (
+      {selectedAccount && groups.length === 0 && !isLoading && !estimatedInstallments?.items.length && (
         <p className="text-text">
           {forecast.isForecast ? 'Nenhuma parcela prevista neste mês.' : 'Nenhum lançamento neste mês.'}
         </p>
@@ -281,6 +289,8 @@ function TransactionsContent() {
           ))}
         </div>
       ))}
+
+      {forecast.isForecast && <EstimatedInstallmentsSection data={estimatedInstallments} />}
 
       {statementsSheet.isOpen && (
         <StatementsSheet

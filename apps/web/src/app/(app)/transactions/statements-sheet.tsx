@@ -50,7 +50,7 @@ export function StatementsSheet({
         <p className="text-lg font-bold text-ink">Enviar contas</p>
         <p className="mb-3 mt-1 text-sm text-muted">
           {isForecast
-            ? 'Previsão: só as parcelas que o banco já lançou. Nada é enviado sozinho.'
+            ? 'Previsão: parcelas lançadas e estimadas (marcadas no texto). Nada é enviado sozinho.'
             : 'Fatura aberta: o valor pode mudar até o fechamento. Nada é enviado sozinho.'}
         </p>
 
