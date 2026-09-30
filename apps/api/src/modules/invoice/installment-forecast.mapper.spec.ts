@@ -1,3 +1,4 @@
+import { installmentGroupKey } from '../../common/installment-group'
 import { addMonthsKeepingDay, estimateInstallments, type InstallmentSource } from './installment-forecast.mapper'
 
 function source(overrides: Partial<InstallmentSource> = {}): InstallmentSource {
@@ -74,5 +75,29 @@ describe('estimateInstallments', () => {
 
   it('total absurdo não gera lista enorme', () => {
     expect(estimateInstallments([source({ number: 1, total: 999 })])).toEqual([])
+  })
+})
+
+describe('estimateInstallments com as descrições reais do BB', () => {
+  it('uma compra em 12x com o marcador no meio da descrição gera UMA estimativa por parcela faltante, não uma por linha', () => {
+    const sources = Array.from({ length: 8 }, (_, index) => {
+      const number = index + 1
+      const occurredAt = new Date(number >= 6 ? '2026-02-17T00:00:00.000Z' : '2026-02-18T00:19:51.000Z')
+      return source({
+        groupKey: installmentGroupKey({
+          description: `RAMSONS STUDI PARC ${String(number).padStart(2, '0')}/12 MANAUS      BR`,
+          occurredAt,
+          installmentTotal: 12,
+          installmentNumber: number,
+        }),
+        number,
+        total: 12,
+        dueAt: new Date(`2026-0${Math.min(number + 1, 9)}-19T12:00:00.000Z`),
+      })
+    })
+
+    const estimated = estimateInstallments(sources)
+
+    expect(estimated.map((item) => item.number)).toEqual([9, 10, 11, 12])
   })
 })

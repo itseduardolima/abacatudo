@@ -389,10 +389,10 @@ describe('TransactionService', () => {
         }),
       )
       repo.findPurchaseCandidates.mockResolvedValue([
-        { id: 'tx-3', description: 'Air fryer 3/12', occurredAt, installmentTotal: 12 },
-        { id: 'tx-4', description: 'Air fryer 4/12', occurredAt, installmentTotal: 12 },
-        { id: 'tx-12', description: 'Air fryer 12/12', occurredAt, installmentTotal: 12 },
-        { id: 'outra', description: 'TV 1/12', occurredAt, installmentTotal: 12 },
+        { id: 'tx-3', description: 'Air fryer 3/12', occurredAt, installmentNumber: 3, installmentTotal: 12 },
+        { id: 'tx-4', description: 'Air fryer 4/12', occurredAt, installmentNumber: 4, installmentTotal: 12 },
+        { id: 'tx-12', description: 'Air fryer 12/12', occurredAt, installmentNumber: 12, installmentTotal: 12 },
+        { id: 'outra', description: 'TV 1/12', occurredAt, installmentNumber: 1, installmentTotal: 12 },
       ])
       const service = newService({ repo })
 

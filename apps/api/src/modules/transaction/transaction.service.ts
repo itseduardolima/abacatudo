@@ -167,6 +167,7 @@ export class TransactionService {
         description: existing.description,
         occurredAt: existing.occurredAt,
         installmentTotal: existing.installmentTotal,
+        installmentNumber: existing.installmentNumber,
       })
       const candidates = await this.repo.findPurchaseCandidates(
         userId,
@@ -180,6 +181,7 @@ export class TransactionService {
           description: candidate.description,
           occurredAt: candidate.occurredAt,
           installmentTotal: candidate.installmentTotal,
+          installmentNumber: candidate.installmentNumber,
         })
         if (key === groupKey) ids.push(candidate.id)
       }

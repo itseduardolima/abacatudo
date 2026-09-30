@@ -37,6 +37,51 @@ describe('installmentGroupKey', () => {
   })
 })
 
+describe('installmentGroupKey — descrição do BB e data de compra variável', () => {
+  const key = (description: string, number: number, at: string, total = 12) =>
+    installmentGroupKey({ description, occurredAt: new Date(at), installmentTotal: total, installmentNumber: number })
+
+  it('junta as parcelas do BB: marcador "PARC 05/12" no meio, cidade depois, espaços de sobra', () => {
+    const a = key('RAMSONS STUDI PARC 05/12 MANAUS      BR', 5, '2026-02-18T00:19:51.000Z')
+    const b = key('RAMSONS STUDI PARC 06/12 MANAUS      BR', 6, '2026-02-18T00:19:51.000Z')
+    const c = key('RAMSONS STUDI PARC 10/12 MANAUS BR', 10, '2026-02-18T00:19:51.000Z')
+
+    expect(a).toBe(b)
+    expect(a).toBe(c)
+  })
+
+  it('a data da compra varia entre parcelas (17 e 18/02): continua a mesma compra', () => {
+    const a = key('RAMSONS STUDI PARC 05/12 MANAUS      BR', 5, '2026-02-18T00:19:51.000Z')
+    const b = key('RAMSONS STUDI PARC 06/12 MANAUS      BR', 6, '2026-02-17T00:00:00.000Z')
+
+    expect(a).toBe(b)
+  })
+
+  it('o formato do Nubank (marcador no fim) continua funcionando', () => {
+    const a = key('Ramsons Manauara 1/4', 1, '2025-12-26T17:55:44.000Z', 4)
+    const b = key('Ramsons Manauara 4/4', 4, '2025-12-26T17:55:44.000Z', 4)
+
+    expect(a).toBe(b)
+  })
+
+  it('compras do mesmo nome em meses diferentes, ou com total diferente, não se misturam', () => {
+    const feb = key('MANAUS ADRI M PARC 01/10 MANAUS BR', 1, '2026-08-13T12:00:00.000Z', 10)
+    const sep = key('MANAUS ADRI M PARC 01/10 MANAUS BR', 1, '2026-09-15T12:00:00.000Z', 10)
+    const other = key('MANAUS ADRI M PARC 01/06 MANAUS BR', 1, '2026-08-13T12:00:00.000Z', 6)
+
+    expect(feb).not.toBe(sep)
+    expect(feb).not.toBe(other)
+  })
+
+  it('só tira o marcador da própria parcela, nunca um "N/M" parecido no nome da loja', () => {
+    const a = key('LOJA 15/12 PARC 05/12 MANAUS BR', 5, '2026-02-18T00:19:51.000Z')
+    const b = key('LOJA 15/12 PARC 06/12 MANAUS BR', 6, '2026-02-18T00:19:51.000Z')
+
+    expect(a).toBe(b)
+    expect(a).toContain('loja 15/12')
+  })
+})
+
 describe('keepCurrentInstallmentsOnly', () => {
   it('compra parcelada sem billId: mantém só a parcela de menor número, descarta as futuras', () => {
     const rows = [

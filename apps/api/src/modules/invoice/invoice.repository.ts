@@ -135,6 +135,7 @@ export class InvoiceRepository {
                 description: row.description,
                 occurredAt: row.occurredAt,
                 installmentTotal: row.installmentTotal,
+                installmentNumber: row.installmentNumber,
               }),
               number: row.installmentNumber,
               total: row.installmentTotal,
@@ -170,6 +171,7 @@ function installmentOf(row: {
       description: row.description,
       occurredAt: row.occurredAt,
       installmentTotal: row.installmentTotal,
+      installmentNumber: row.installmentNumber,
     }),
     number: row.installmentNumber,
   }

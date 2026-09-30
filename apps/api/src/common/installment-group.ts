@@ -1,13 +1,31 @@
+import { monthKey } from './date/timezone'
+
 // Fonte única da chave de agrupamento de parcela — usada tanto pelo cálculo da fatura
 // (InvoiceRepository/invoice.mapper.ts) quanto pela lista de lançamentos (TransactionRepository). Nunca
 // duplicar essa conta em outro lugar: as duas já divergiram uma vez (achado ao vivo comparando com o OFX
 // de um Nubank real) e é fácil voltar a acontecer.
-export function installmentGroupKey(row: { description: string; occurredAt: Date; installmentTotal: number }): string {
-  // O texto da parcela ("Compra 2/6") é único por linha — tira o "N/M" do fim pra achar as outras
-  // parcelas da mesma compra, junto com a data (todas nascem na mesma compra) e o total de parcelas
-  // (evita juntar duas compras diferentes que por acaso têm o mesmo nome no mesmo dia).
-  const baseDescription = row.description.replace(/\s*\d+\/\d+$/, '')
-  return `${baseDescription}|${row.occurredAt.toISOString()}|${row.installmentTotal}`
+export function installmentGroupKey(row: {
+  description: string
+  occurredAt: Date
+  installmentTotal: number
+  installmentNumber?: number | null
+}): string {
+  // O texto da parcela é único por linha e cada banco escreve de um jeito: "Compra 2/6" (Nubank, no fim) ou
+  // "RAMSONS STUDI PARC 05/12 MANAUS      BR" (BB, no meio, com a cidade depois). Tira o marcador "N/M" da
+  // PRÓPRIA parcela (com "PARC" antes, se houver), em qualquer posição, e junta os espaços — o que sobra é o
+  // nome da compra. A data da compra também varia de uma parcela pra outra no BB (17 e 18/02 na mesma
+  // compra), então o agrupamento usa só o MÊS da compra, mais o total de parcelas (evita juntar duas compras
+  // diferentes do mesmo nome).
+  const collapsed = row.description.replace(/\s+/g, ' ').trim()
+  const marker =
+    row.installmentNumber == null
+      ? /\s*(?:PARC(?:ELA)?\.?\s*)?\d+\s*\/\s*\d+\s*$/i
+      : new RegExp(
+          `\\s*(?:PARC(?:ELA)?\\.?\\s*)?(?<!\\d)0*${row.installmentNumber}\\s*/\\s*0*${row.installmentTotal}(?!\\d)`,
+          'i',
+        )
+  const baseDescription = collapsed.replace(marker, '').replace(/\s+/g, ' ').trim().toLowerCase()
+  return `${baseDescription}|${monthKey(row.occurredAt)}|${row.installmentTotal}`
 }
 
 interface InstallmentRow {
@@ -30,6 +48,7 @@ export function keepCurrentInstallmentsOnly<T extends InstallmentRow>(rows: T[])
       description: row.description,
       occurredAt: row.occurredAt,
       installmentTotal: row.installmentTotal,
+      installmentNumber: row.installmentNumber,
     })
     const current = lowestNumberByGroup.get(key)
     if (current === undefined || row.installmentNumber < current) lowestNumberByGroup.set(key, row.installmentNumber)
@@ -41,6 +60,7 @@ export function keepCurrentInstallmentsOnly<T extends InstallmentRow>(rows: T[])
       description: row.description,
       occurredAt: row.occurredAt,
       installmentTotal: row.installmentTotal,
+      installmentNumber: row.installmentNumber,
     })
     return row.installmentNumber === lowestNumberByGroup.get(key)
   })

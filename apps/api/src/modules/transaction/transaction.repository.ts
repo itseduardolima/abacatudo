@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common'
 import type { Prisma, Transaction } from '@prisma/client'
+import { monthKey, monthRange } from '../../common/date/timezone'
 import { keepCurrentInstallmentsOnly } from '../../common/installment-group'
 import { PRISMA, type PrismaService } from '../../prisma/prisma.client'
 
@@ -63,15 +64,32 @@ export class TransactionRepository {
     })
   }
 
+  // A data da compra varia de uma parcela pra outra em alguns bancos (BB: 17 e 18/02 na mesma compra), então
+  // as candidatas são as do mês da compra — o agrupamento fino é o installmentGroupKey.
   findPurchaseCandidates(
     userId: string,
     accountId: string,
     occurredAt: Date,
     installmentTotal: number,
-  ): Promise<{ id: string; description: string; occurredAt: Date; installmentTotal: number | null }[]> {
+  ): Promise<
+    {
+      id: string
+      description: string
+      occurredAt: Date
+      installmentNumber: number | null
+      installmentTotal: number | null
+    }[]
+  > {
+    const purchaseMonth = monthRange(monthKey(occurredAt))
     return this.prisma.transaction.findMany({
-      where: { userId, accountId, occurredAt, installmentTotal, account: { type: 'CREDIT_CARD' } },
-      select: { id: true, description: true, occurredAt: true, installmentTotal: true },
+      where: {
+        userId,
+        accountId,
+        occurredAt: { gte: purchaseMonth.start, lt: purchaseMonth.end },
+        installmentTotal,
+        account: { type: 'CREDIT_CARD' },
+      },
+      select: { id: true, description: true, occurredAt: true, installmentNumber: true, installmentTotal: true },
     })
   }
 
