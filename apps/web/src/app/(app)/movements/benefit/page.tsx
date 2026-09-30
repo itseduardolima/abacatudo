@@ -80,8 +80,10 @@ export default function BenefitPage() {
               </p>
               {report?.pace && (
                 <p className="mt-2 text-sm text-on-inverse-muted">
-                  Dá <MoneyText cents={report.pace.perDayCents} className="!text-on-inverse" /> por dia nos{' '}
-                  {report.pace.daysRemaining} dias que restam do mês
+                  Dá <MoneyText cents={report.pace.perDayCents} className="!text-on-inverse" /> por dia{' '}
+                  {report.pace.daysRemaining === 1
+                    ? 'no dia que resta do mês'
+                    : `nos ${report.pace.daysRemaining} dias que restam do mês`}
                 </p>
               )}
               {(report?.lastSyncAt ?? benefitAccount.lastSyncAt) && (
@@ -91,9 +93,7 @@ export default function BenefitPage() {
               )}
             </div>
 
-            <div className="flex items-center justify-between gap-3">
-              <SegmentedControl label="Visão" options={TAB_OPTIONS} value={tab} onChange={setTab} />
-            </div>
+            <SegmentedControl label="Visão" options={TAB_OPTIONS} value={tab} onChange={setTab} />
             <MonthStepper
               label={`${formatMonthName(month)} ${month.slice(0, 4)}`}
               onPrevious={goToPreviousMonth}
