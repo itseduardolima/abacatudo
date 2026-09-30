@@ -71,7 +71,10 @@ na verdade, "atualizar o spec" (avisar o usuário).
   decidido só pelo **tipo da conta** (`CREDIT_CARD`), sem heurística por
   lançamento; `TransactionRepository` só devolve cartão de crédito e
   `MovementRepository` só o resto. Renda, benefício e gastos fixos são
-  informados pelo usuário. (spec 03 § Escopo)
+  informados pelo usuário. Única exceção em Movimentações: o extrato e o resumo
+  descritivo da conta de benefício, com Pix por favorecido (spec 03 § Extrato e
+  relatório da conta de benefício) — nunca alimenta orçamento nem IA.
+  (spec 03 § Escopo)
 - **Gasto de terceiros no meu cartão é subtraído; a cobrança é só uma mensagem
   manual.** Não existe valor a receber, saldo por pessoa, "marcar pago" nem
   abatimento (decisão de produto); o User gera e envia o texto da conta pelo

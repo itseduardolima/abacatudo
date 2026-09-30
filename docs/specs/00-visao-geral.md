@@ -45,7 +45,8 @@ reescrever o banco. Não é um SaaS aberto: cadastro só por convite.
   relatórios e IA valem apenas para compras no cartão de crédito.
 - **Movimentações (débito, Pix, benefício e contas)**: exibidas em telas e funcionalidades
   separadas (extrato, filtros, totais informativos), sem categorizar, orçar
-  nem analisar.
+  nem analisar. **Única exceção**: a tela da conta de benefício tem um resumo
+  descritivo e a lista de Pix por favorecido (03 § Extrato e relatório do benefício).
 - Orçamento mensal a partir da renda fixa, com envelopes por categoria e
   alertas.
 - Relatórios: categorias, estabelecimentos, comparação mês a mês,
@@ -60,7 +61,8 @@ reescrever o banco. Não é um SaaS aberto: cadastro só por convite.
 - Investimentos, imposto de renda, contas a pagar/boleto.
 - Gerir gasto por débito, Pix ou saldo de benefício (categorizar, orçar,
   relatórios, IA). Só consulta, em área separada; benefício entra como renda
-  informada.
+  informada. Exceção descrita em 03: resumo descritivo da conta de benefício,
+  que nunca alimenta orçamento nem IA.
 - Controle de dívida da família (valor a receber, saldo por pessoa, marcar
   pago, abatimento) e qualquer envio **automático** de cobrança. Decisão de
   produto: o gasto de terceiros é subtraído da visão; a única saída é a

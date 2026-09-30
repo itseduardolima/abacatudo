@@ -204,7 +204,8 @@ endpoints próprios (`/movements`), módulo próprio (`movement`).
   opcional por lançamento.
 - **O que NÃO existe aqui**: categoria, pessoa, divisão, regra, envelope,
   alerta, relatório de economia e IA. Nada de Movimentações alimenta o
-  orçamento ou os relatórios do cartão.
+  orçamento ou os relatórios do cartão. **Exceção única**: o extrato e o
+  resumo descritivo da conta de benefício (§ abaixo).
 - **Rótulos informativos (P2)**: lançamento que casa com outro em **conta
   própria** (mesmo valor, sentidos opostos, <= 2 dias) recebe o rótulo
   "transferência entre suas contas" (`kind = TRANSFER`) para não parecer
@@ -217,10 +218,45 @@ endpoints próprios (`/movements`), módulo próprio (`movement`).
   (conta corrente) e a linha `CARD_PAYMENT` do lado do cartão é excluída do
   gasto.
 - **Dado de terceiros**: Pix traz nome do favorecido/pagador. Fica só nesta
-  área — não vai para relatório, insight nem IA (ver 08 § 13 e 10-ia).
+  área (extrato e a lista de Pix por favorecido do benefício, consultas do
+  próprio User) — não vai para relatório do cartão, insight, export nem IA
+  (ver 08 § 13 e 10-ia).
 - **Benefício (VR/VA)**: a recarga aparece aqui como entrada, só
   informativa. O valor mensal do benefício que vale para o orçamento é o que
   o User **informa** (ver "Orçamento mensal").
+
+### Extrato e relatório da conta de benefício
+
+Tela própria (`/movements/benefit`, dentro da área Extrato) para a conta
+marcada como **benefício** (`isBenefitAccount`, `CHECKING`). É **consulta
+descritiva**: calculada em código, testada, sem LLM, e **nunca** alimenta o
+orçamento, o ritmo do cartão, os relatórios do cartão nem a IA. Os endpoints
+recebem `accountId` (para outra conta corrente entrar depois sem refazer a
+API), mas a UI só expõe o benefício por enquanto.
+
+- **Extrato**: a mesma lista de Movimentações filtrada pela conta, com o
+  **saldo atual** e "atualizado em" (do sync) no topo; mês selecionável.
+- **Resumo do mês** (aba "Resumo"): entradas, saídas e resultado; **ritmo do
+  benefício** = saldo atual ÷ dias restantes do mês (só no mês atual; não é o
+  ritmo do orçamento e não o altera); **saídas por dia** (barras) com o
+  acumulado do mês. Entradas e saídas são as registradas pelo banco: repasse
+  entre contas próprias só deixa de contar quando existir o rótulo
+  `TRANSFER` (§ Rótulos informativos).
+- **Pix por favorecido**: só Pix **enviados** (saídas cuja descrição começa
+  com "Pix ", convenção dos bancos; limitação declarada, trocar por
+  `operationType` real se o sync passar a guardá-lo). Agrupa pelo nome do
+  favorecido normalizado (sem acento, caixa baixa, espaços colapsados) e
+  mostra, por favorecido, o **total**, a **quantidade** e a **data do último**,
+  do maior total para o menor, com busca por nome. Tocar num favorecido abre
+  os Pix dele no mês. **Não classifica** favorecido como pessoa ou
+  estabelecimento (sem heurística por nome ou CNPJ); marcar isso à mão é
+  evolução futura.
+- **Privacidade**: o nome do favorecido aparece só aqui e no extrato, para o
+  próprio User; nunca em relatório do cartão, insight, export, prompt ou log
+  (08 § 13).
+- **Dinheiro e agrupamento vêm do backend**; o front só exibe.
+- Invariante testada: total por favorecido somado = total dos Pix enviados do
+  mês; entradas − saídas = resultado.
 
 ## Só a minha parte (gasto de terceiros no meu cartão)
 
