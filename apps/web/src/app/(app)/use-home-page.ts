@@ -13,7 +13,6 @@ import { ApiClientError } from '@/lib/api-client'
 export function useHomePage() {
   const router = useRouter()
   const me = useMe()
-  const pace = useBudgetPace()
   const accounts = useAccounts()
   const connectBank = useConnectBank()
   const [connectError, setConnectError] = useState<string | null>(null)
@@ -36,6 +35,7 @@ export function useHomePage() {
       .at(-1) ?? null
   const forecast = useForecastMonth(lastForecastMonth)
   const invoiceMonth = forecast.isForecast ? forecast.month : undefined
+  const pace = useBudgetPace(invoiceMonth)
   const monthInvoices = useInvoices(
     cardAccounts.map((account) => account.id),
     invoiceMonth,
