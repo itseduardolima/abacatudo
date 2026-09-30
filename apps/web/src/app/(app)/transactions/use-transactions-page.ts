@@ -12,6 +12,7 @@ import { usePreviewSplit } from '@/hooks/queries/use-preview-split'
 import { useReplaceSplit } from '@/hooks/queries/use-replace-split'
 import { useSuggestCategories } from '@/hooks/queries/use-suggest-categories'
 import { useTransactions } from '@/hooks/queries/use-transactions'
+import { useUpdateTransactionDisplayName } from '@/hooks/queries/use-update-transaction-display-name'
 import { useUpdateTransactionCategory } from '@/hooks/queries/use-update-transaction-category'
 import { useUpdateTransactionPerson } from '@/hooks/queries/use-update-transaction-person'
 import { ApiClientError } from '@/lib/api-client'
@@ -26,7 +27,7 @@ function centsToInputValue(cents: number): string {
 }
 
 export type Segment = 'all' | 'mine' | 'notMine'
-export type SheetView = 'detail' | 'category' | 'person' | 'split'
+export type SheetView = 'detail' | 'category' | 'person' | 'split' | 'name'
 export type SplitMode = 'equal' | 'byValue'
 
 // Hook de página: só orquestração (04-padroes-codigo). Fatura é por cartão (protótipo 08-fatura) — a
@@ -39,6 +40,7 @@ export function useTransactionsPage() {
   const people = usePeople()
   const updateCategory = useUpdateTransactionCategory()
   const updatePerson = useUpdateTransactionPerson()
+  const updateDisplayName = useUpdateTransactionDisplayName()
   const previewSplit = usePreviewSplit()
   const replaceSplit = useReplaceSplit()
   const clearSplit = useClearSplit()
@@ -69,6 +71,8 @@ export function useTransactionsPage() {
   const [sheetView, setSheetView] = useState<SheetView>('detail')
   const [alwaysForMerchant, setAlwaysForMerchant] = useState(false)
   const [ruleError, setRuleError] = useState<string | null>(null)
+  const [nameDraft, setNameDraft] = useState('')
+  const [nameError, setNameError] = useState<string | null>(null)
   const submissionRef = useRef(0)
 
   // Estado da divisão (11-dividir): "Igualmente" recalcula sempre que a lista de pessoas muda (preview,
@@ -123,6 +127,25 @@ export function useTransactionsPage() {
     setSheetView('detail')
     setAlwaysForMerchant(false)
     setRuleError(null)
+  }
+
+  const openNameEdit = (currentName: string) => {
+    setNameDraft(currentName)
+    setNameError(null)
+    setSheetView('name')
+  }
+
+  const saveDisplayName = async (displayName: string | null) => {
+    if (!editingId) return
+    setNameError(null)
+    try {
+      await updateDisplayName.mutateAsync({ id: editingId, displayName })
+      setSheetView('detail')
+    } catch (error) {
+      if (!(error instanceof ApiClientError)) throw error
+      const fieldErrors = error.error.details?.fieldErrors as Record<string, string[] | undefined> | undefined
+      setNameError(fieldErrors?.displayName?.[0] ?? error.error.message)
+    }
   }
 
   const closeEdit = () => {
@@ -253,6 +276,12 @@ export function useTransactionsPage() {
     editingTx,
     sheetView,
     setSheetView,
+    nameDraft,
+    setNameDraft,
+    nameError,
+    isSavingName: updateDisplayName.isPending,
+    openNameEdit,
+    saveDisplayName: (displayName: string | null) => void saveDisplayName(displayName),
     openEdit,
     closeEdit,
     alwaysForMerchant,
