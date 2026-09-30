@@ -313,7 +313,7 @@ sistema, por uma **mensagem de texto que o User gera e envia manualmente**
     parcelas `k+1..N` com o **mesmo valor** e a **mesma data de vencimento, mês a mês** a partir da última
     conhecida (dia limitado ao fim do mês). Nunca é gravada: é recalculada a cada consulta. Quando o banco
     lança a parcela de verdade, ela vira a referência (`k` sobe) e a estimada some sozinha, sem duplicar; se o
-    banco já manda todas as parcelas (Nubank), nada é estimado. O pessoa e a divisão da compra valem para as
+    banco já manda todas as parcelas (Nubank), nada é estimado. A pessoa e a divisão da compra valem para as
     estimadas. Só entram em mês **posterior ao atual**. Sempre marcadas **"estimada"** (na tela, com o
     quanto da fatura é estimado, e no texto da conta) e podem errar poucos centavos ou dias.
   - **Mês da parcela = mês de `date`** em `America/Manaus` (mesma regra de "Formato dos dados", spec 07); não
