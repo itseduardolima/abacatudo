@@ -108,7 +108,7 @@ parte".
 | 7.2 | ~~Como Dono, quero **envelopes por categoria**.~~ DESCARTADO (2026-09-25)                               | Valor ou %; "Livre" mostra o não alocado                                                                                                        | 5   | P0  |
 | 7.3 | ~~Como Dono, quero **alertas** em 70/90/100%.~~ DESCARTADO (2026-09-25)                                 | Cada limiar dispara uma vez por mês por envelope; entra só compra no cartão de self; exclui pagamento de fatura, terceiros, Pix e a classificar | 5   | P0  |
 | 7.4 | Como Dono, quero o **ritmo** (quanto por dia ainda posso gastar).                                       | `restante ÷ dias restantes` sobre o teto; gasto = fatura aberta + gastos fixos                                                                  | 3   | P1  |
-| 7.5 | Como Dono, quero ver **parcelas futuras** já comprometidas.                                             | Soma por mês; não entra no mês corrente                                                                                                         | 3   | P1  |
+| 7.5 | Como Dono, quero ver **parcelas futuras** já comprometidas.                                             | Soma por mês; não entra no mês corrente; navegável como **fatura prevista** por cartão (Home e Fatura), só parcelas já lançadas                 | 3   | P1  |
 | 7.6 | Como sistema, quero **congelar** meses fechados.                                                        | Mudar renda hoje não reescreve o passado                                                                                                        | 3   | P1  |
 
 ## Épico 8 — Integração bancária (Pluggy)

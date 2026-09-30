@@ -1204,7 +1204,13 @@ typecheck/lint/build limpos).
 - [ ] 1.7 — Reautenticação em ação sensível
 - [ ] 1.8 — Exportar e excluir conta
 - [x] 7.4 — Ritmo (por dia): `GET /budget/pace?month=`, testado ao vivo
-- [ ] 7.5 — Parcelas futuras
+- [ ] 7.5 — Parcelas futuras / fatura prevista (Home e Fatura navegam por mês). Plano em etapas:
+  - [x] spec 03 § Fatura prevista (regras acordadas: só parcelas lançadas, mês de `date`, horizonte até a
+        última parcela, ◀ trava no mês atual)
+  - [ ] API: função pura no `invoice.mapper` + `InvoiceService` para mês futuro + `isForecast`/`lastForecastMonth` no schema
+  - [ ] API: `GET /transactions?month=` devolvendo as parcelas do mês futuro
+  - [ ] Web: seletor de mês na Home (`CardInvoiceRow`) e na tela da Fatura, rótulo "Prevista"
+  - [ ] Testes: Jest (cálculo, invariante, fronteira de mês em Manaus, 2 Users) + Cypress do seletor
 - [ ] 7.6 — Congelar meses fechados
 - [ ] 10.3 — Chat com tool use
 - [x] 11.1 — PWA instalável: manifest, service worker (cache de assets/API, limpa no logout), testado ao vivo
