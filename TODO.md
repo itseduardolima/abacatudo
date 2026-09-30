@@ -1058,7 +1058,8 @@ TABLE ... OWNER TO gastos`), e o `migrate dev` acusa "drift" nesse caso — usar
   - [x] 5.10 — Gastos que se repetem no benefício: `GET /movements/habits` (recorrentes com o detector do cartão sobre
         os últimos 4 meses + estabelecimentos mais frequentes do mês, sem Pix) e seções na aba Resumo. Falta
         conferir ao vivo; categorias ficam para depois
-  - [ ] 5.11 — Para onde vai, por estabelecimento (`GET /movements/spending`, top 10 + outros, Pix e fatura à parte)
+  - [x] 5.11 — Para onde vai, por estabelecimento (`GET /movements/spending`, top 10 + outros, Pix e fatura à parte;
+        seção na aba Resumo). Falta conferir ao vivo. Categorias (mesma lista do cartão) seguem para depois
   - [ ] Depois (P2): marcar favorecido como pessoa/estabelecimento; tipo de Pix real (`operationType`)
 
 ### Bugs achados só ao rodar de verdade (e corrigidos)
