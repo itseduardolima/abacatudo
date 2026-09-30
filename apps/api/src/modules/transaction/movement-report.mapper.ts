@@ -1,0 +1,114 @@
+import type { MovementReport, PixRecipient } from '@gastos/shared'
+
+export interface ReportRow {
+  kind: string
+  amountCents: number
+  occurredAt: Date
+  description: string
+}
+
+const OUT_KINDS = ['EXPENSE', 'CARD_PAYMENT']
+const PIX_PREFIX = /^pix\s+/i
+const pad = (n: number) => String(n).padStart(2, '0')
+
+function daysInMonthFor(month: string): number {
+  const [year, monthNumber] = month.split('-').map(Number)
+  return new Date(Date.UTC(year as number, monthNumber as number, 0)).getUTCDate()
+}
+
+export function computeMovementReport(input: {
+  rows: ReportRow[]
+  month: string
+  balanceCents: number | null
+  currentMonthKey: string
+  todayDayOfMonth: number
+  dayKeyOf: (date: Date) => string
+}): Pick<MovementReport, 'incomeCents' | 'expenseCents' | 'resultCents' | 'pace' | 'daily'> {
+  const daysInMonth = daysInMonthFor(input.month)
+  const expenseByDay = new Map<string, number>()
+  let incomeCents = 0
+  let expenseCents = 0
+
+  for (const row of input.rows) {
+    if (row.kind === 'INCOME') incomeCents += row.amountCents
+    if (OUT_KINDS.includes(row.kind)) {
+      expenseCents += row.amountCents
+      const key = input.dayKeyOf(row.occurredAt)
+      expenseByDay.set(key, (expenseByDay.get(key) ?? 0) + row.amountCents)
+    }
+  }
+
+  let cumulativeExpenseCents = 0
+  const daily = Array.from({ length: daysInMonth }, (_, index) => {
+    const day = `${input.month}-${pad(index + 1)}`
+    const dayExpense = expenseByDay.get(day) ?? 0
+    cumulativeExpenseCents += dayExpense
+    return { day, expenseCents: dayExpense, cumulativeExpenseCents }
+  })
+
+  let pace: MovementReport['pace'] = null
+  if (input.month === input.currentMonthKey && input.balanceCents !== null) {
+    const daysRemaining = daysInMonth - (input.todayDayOfMonth - 1)
+    pace = {
+      daysRemaining,
+      perDayCents: daysRemaining > 0 ? Math.max(0, Math.round(input.balanceCents / daysRemaining)) : 0,
+    }
+  }
+
+  return { incomeCents, expenseCents, resultCents: incomeCents - expenseCents, pace, daily }
+}
+
+export function normalizeRecipientKey(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function recipientName(description: string): string {
+  return description.replace(PIX_PREFIX, '').replace(/\s+/g, ' ').trim()
+}
+
+export function isSentPix(row: ReportRow): boolean {
+  return row.kind === 'EXPENSE' && PIX_PREFIX.test(row.description) && recipientName(row.description) !== ''
+}
+
+export function groupPixRecipients(rows: ReportRow[], search?: string): PixRecipient[] {
+  const wanted = search ? normalizeRecipientKey(search) : ''
+  const groups = new Map<string, { name: string; totalCents: number; count: number; lastAt: Date }>()
+
+  for (const row of rows) {
+    if (!isSentPix(row)) continue
+    const name = recipientName(row.description)
+    const key = normalizeRecipientKey(name)
+    if (wanted && !key.includes(wanted)) continue
+
+    const group = groups.get(key)
+    if (!group) {
+      groups.set(key, { name, totalCents: row.amountCents, count: 1, lastAt: row.occurredAt })
+      continue
+    }
+    group.totalCents += row.amountCents
+    group.count += 1
+    if (row.occurredAt > group.lastAt) {
+      group.lastAt = row.occurredAt
+      group.name = name
+    }
+  }
+
+  return [...groups.entries()]
+    .map(([key, group]) => ({
+      key,
+      name: group.name,
+      totalCents: group.totalCents,
+      count: group.count,
+      lastAt: group.lastAt.toISOString(),
+    }))
+    .sort((a, b) => b.totalCents - a.totalCents || a.name.localeCompare(b.name, 'pt-BR'))
+}
+
+export function filterPixRowsByRecipient<T extends ReportRow>(rows: T[], recipientKey: string): T[] {
+  return rows.filter((row) => isSentPix(row) && normalizeRecipientKey(recipientName(row.description)) === recipientKey)
+}
