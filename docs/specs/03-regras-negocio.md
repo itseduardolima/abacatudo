@@ -80,7 +80,9 @@ nunca se misturam com a gestão.
 - Person com transações não pode ser apagada; pode ser **arquivada** (some
   das listas de escolha, o histórico fica).
 - Nome de Person é dado pessoal de terceiro: guardado só como rótulo, sem
-  CPF, telefone ou qualquer outro dado (ver 08 § 13).
+  CPF, telefone ou qualquer outro dado (ver 08 § 13). A mensagem de conta
+  (§ Mensagem de conta) abre o WhatsApp **sem número**: o User escolhe o
+  contato lá.
 
 ## Contas (Account)
 
@@ -222,9 +224,11 @@ endpoints próprios (`/movements`), módulo próprio (`movement`).
 
 ## Só a minha parte (gasto de terceiros no meu cartão)
 
-Decisão de produto: **o sistema não controla dívida nem cobrança da
-família.** Não existe "valor a receber", abatimento nem saldo por pessoa. O
-que o User quer é enxergar **só o que é dele**.
+Decisão de produto: **o sistema não controla dívida da família.** Não existe
+"valor a receber", abatimento, saldo por pessoa nem "marcar como pago". O que
+o User quer é enxergar **só o que é dele**. A cobrança acontece fora do
+sistema, por uma **mensagem de texto que o User gera e envia manualmente**
+(§ Mensagem de conta).
 
 - Gasto atribuído a uma Person que **não é self** é simplesmente
   **subtraído** da visão do User: não entra no orçamento, no total "meu
@@ -261,11 +265,37 @@ que o User quer é enxergar **só o que é dele**.
   self.
 - `Person` continua existindo só como **rótulo de quem gastou** (para
   classificar, dividir e responder "quanto foi da fulana este mês" de forma
-  meramente informativa). Sem saldo, sem marcar pago/em aberto, sem cobrança.
+  meramente informativa). Sem saldo, sem marcar pago/em aberto; a cobrança é só
+  a mensagem manual de conta.
 - O gasto de terceiros continua **visível** (lista de lançamentos filtrada
   por pessoa, e o "Não é meu" da fatura), mas fora de todos os totais "meus".
 - Reembolso que a família fizer por Pix aparece em Movimentações como
   qualquer entrada; **não abate nada** (não há saldo) e não afeta o "Meu".
+
+### Mensagem de conta (WhatsApp)
+
+O User gera, **um clique por vez**, o texto da conta de cada Person não-self e
+o envia pelo WhatsApp. O sistema **nunca envia sozinho**, não guarda telefone
+e não registra se foi enviado, pago ou recebido.
+
+- **Quem**: cada Person não-self com valor > 0 na fatura do mês escolhido
+  (Person arquivada só entra se tiver compra no mês). Split entra só com a
+  **fatia da Person**.
+- **Qual fatura**: a **aberta** (a mesma da tela Fatura), sem o saldo da fatura
+  já fechada (a composição dele não é atribuível a pessoas). Mês futuro usa a
+  fatura prevista (só parcelas já lançadas) e sai marcado como previsão. Como a
+  fatura aberta muda até o fechamento, o valor enviado pode diferir do final.
+- **Conteúdo**: só o total, cada compra com o valor e a parcela `n/N` (a
+  última vira `n/N - última`), uma seção por cartão, e "Pagar até dia X" com o
+  `dueDay` do cartão (sem `dueDay`, a linha some).
+- **Nome na fatura**: a compra tem um apelido opcional (`displayName`) que
+  substitui o nome do banco no texto. Vale para **todas as parcelas** da
+  compra (inclusive as futuras) e o sync nunca o sobrescreve. Sem apelido, usa
+  o estabelecimento ou a descrição do banco.
+- **Texto e dinheiro vêm do backend** (função pura, testada); o front só
+  codifica e abre `wa.me/?text=` ou copia. Centavos formatados em pt-BR.
+- Invariante testada: Meu + soma das Persons = fatura aberta sem saldo
+  anterior, centavo a centavo.
 
 ## Orçamento mensal
 

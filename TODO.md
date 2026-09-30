@@ -1027,6 +1027,13 @@ TABLE ... OWNER TO gastos`), e o `migrate dev` acusa "drift" nesse caso — usar
 - [x] 0.6 — Spike Pluggy **concluído em 2026-09-21**, com dado real (Nubank via Meu Pluggy). Catálogo (InfinitePay existe, Bee Vale não), custo (plano pago inviável; caminho = Meu Pluggy) e **formato dos dados** verificados: spec 07 § Resultado do spike e § Formato dos dados.
 - [x] 0.7 — Protótipo das telas (23 telas mobile em 7 fluxos + 11 telas desktop, estilo Wise): https://claude.ai/artifact/CAyHffJCJ5wDrutNeEai1k. Falta validar: estados de orçamento
 
+- [ ] 6.3–6.5 — Conta do mês por pessoa pelo WhatsApp (manual, sem telefone guardado). Etapas:
+  - [x] spec: 00, 03 § Mensagem de conta, 06, 08 e CLAUDE.md (a decisão "sem cobrança" virou "só mensagem manual")
+  - [ ] API: `Transaction.displayName` (migration) + `PATCH /transactions/:id/display-name` (vale p/ todas as parcelas)
+  - [ ] API: cálculo por pessoa + formatador do texto (funções puras, invariante Meu + pessoas = fatura)
+  - [ ] API: `GET /invoice/statements?month=`
+  - [ ] Web: botão "Enviar contas" (folha com WhatsApp/Copiar) + campo "Nome na fatura" no detalhe da compra
+
 ### Bugs achados só ao rodar de verdade (e corrigidos)
 
 - Payload > 1 MB devolvia 500 em vez de 413; JSON malformado vazava a mensagem crua da biblioteca.

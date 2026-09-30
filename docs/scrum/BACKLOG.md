@@ -91,14 +91,17 @@ Só consulta. Sem categoria, pessoa, orçamento, relatório ou IA. Regra em
 
 ## Épico 6 — Fatura só com a minha parte
 
-Decisão de produto: **sem** valor a receber, abatimento ou cobrança. O gasto
-de terceiros é subtraído. Regra em `03-regras-negocio.md` § "Só a minha
+Decisão de produto: **sem** valor a receber, saldo ou abatimento; a cobrança é
+só uma mensagem manual (6.3-6.5). O gasto de terceiros é subtraído. Regra em `03-regras-negocio.md` § "Só a minha
 parte".
 
-| #   | HU                                                                                             | Critérios de aceite                                                                           | Pts | P   |
-| --- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --- | --- |
-| 6.1 | Como Dono, quero ver a **fatura com o desconto do que não é meu** e o valor "Meu" em destaque. | Total − Não é meu = Meu; invariante testada centavo a centavo; split conta só a fatia do self | 5   | P0  |
-| 6.2 | Como Dono, quero o **"Meu" do mês** (todos os cartões) alimentando o orçamento.                | Só compra no cartão de self/fatia self; terceiros e Pix fora de totais e relatórios           | 3   | P0  |
+| #   | HU                                                                                             | Critérios de aceite                                                                                            | Pts | P   |
+| --- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | --- | --- |
+| 6.1 | Como Dono, quero ver a **fatura com o desconto do que não é meu** e o valor "Meu" em destaque. | Total − Não é meu = Meu; invariante testada centavo a centavo; split conta só a fatia do self                  | 5   | P0  |
+| 6.2 | Como Dono, quero o **"Meu" do mês** (todos os cartões) alimentando o orçamento.                | Só compra no cartão de self/fatia self; terceiros e Pix fora de totais e relatórios                            | 3   | P0  |
+| 6.3 | Como Dono, quero dar um **nome na fatura** a uma compra (ex.: "Air fryer").                    | Vale para todas as parcelas da compra; sync não sobrescreve; texto puro 1-60 caracteres                        | 3   | P1  |
+| 6.4 | Como Dono, quero o **texto da conta de cada pessoa** do mês, pronto.                           | Total, compras, `n/N`, "última", seção por cartão, "Pagar até dia X"; split só a fatia; Meu + pessoas = fatura | 5   | P1  |
+| 6.5 | Como Dono, quero **enviar a conta pelo WhatsApp** ou copiar, com um clique meu.                | `wa.me/?text=` sem número; nada é enviado sozinho nem registrado; "Copiar texto" se o link for grande          | 3   | P1  |
 
 ## Épico 7 — Orçamento mensal
 

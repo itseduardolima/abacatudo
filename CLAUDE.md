@@ -72,8 +72,10 @@ na verdade, "atualizar o spec" (avisar o usuário).
   lançamento; `TransactionRepository` só devolve cartão de crédito e
   `MovementRepository` só o resto. Renda, benefício e gastos fixos são
   informados pelo usuário. (spec 03 § Escopo)
-- **Gasto de terceiros no meu cartão é subtraído, nunca cobrado.** Não existe
-  valor a receber, saldo por pessoa nem abatimento (decisão de produto). A
+- **Gasto de terceiros no meu cartão é subtraído; a cobrança é só uma mensagem
+  manual.** Não existe valor a receber, saldo por pessoa, "marcar pago" nem
+  abatimento (decisão de produto); o User gera e envia o texto da conta pelo
+  WhatsApp na mão, sem telefone guardado (spec 03 § Mensagem de conta). A
   fatura mostra total − não é meu − a classificar = **meu**, e vale a
   invariante `Fatura = Meu + Não é meu + A classificar` (spec 03).
 - **Pagamento de fatura nunca é gasto** (as compras já entram uma a uma pelo
