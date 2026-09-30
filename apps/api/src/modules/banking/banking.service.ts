@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 import type { CardHolderHint, PluggyItem as PluggyItemRow, Rule } from '@prisma/client'
 import type { BankConnection, ConnectBankResponse, SyncResult } from '@gastos/shared'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
@@ -28,6 +28,8 @@ function assertConnected(item: PluggyItemRow): void {
 
 @Injectable()
 export class BankingService {
+  private readonly logger = new Logger(BankingService.name)
+
   constructor(
     private readonly pluggy: PluggyClient,
     private readonly items: PluggyItemRepository,
@@ -77,6 +79,22 @@ export class BankingService {
     const refreshed = await this.items.findById(userId, id)
     if (!refreshed) throw NOT_FOUND()
     return toConnectionDto(refreshed)
+  }
+
+  async syncAllConnected(userId: string): Promise<{ synced: number; failed: number }> {
+    const items = await this.items.findConnected(userId)
+    let synced = 0
+    let failed = 0
+    for (const item of items) {
+      try {
+        await this.runSync(userId, item.id)
+        synced++
+      } catch (error) {
+        failed++
+        this.logger.error(`Sync failed for item ${item.id}: ${describeError(error)}`)
+      }
+    }
+    return { synced, failed }
   }
 
   async manualSync(userId: string, id: string): Promise<SyncResult> {
@@ -219,6 +237,11 @@ function resolvePersonId(
 function resolveCategoryId(merchant: string | null, ruleByMerchant: Map<string, Rule>): string | null {
   if (!merchant) return null
   return ruleByMerchant.get(normalizeMerchant(merchant))?.categoryId ?? null
+}
+
+function describeError(error: unknown): string {
+  if (error instanceof DomainError) return error.code
+  return error instanceof Error ? error.name : 'UnknownError'
 }
 
 function toConnectionDto(row: PluggyItemRow): BankConnection {

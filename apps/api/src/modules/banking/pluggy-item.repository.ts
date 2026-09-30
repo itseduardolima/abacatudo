@@ -14,6 +14,13 @@ export class PluggyItemRepository {
     return this.prisma.pluggyItem.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } })
   }
 
+  findConnected(userId: string): Promise<PluggyItem[]> {
+    return this.prisma.pluggyItem.findMany({
+      where: { userId, status: { not: 'DISCONNECTED' } },
+      orderBy: { createdAt: 'asc' },
+    })
+  }
+
   findById(userId: string, id: string): Promise<PluggyItem | null> {
     return this.prisma.pluggyItem.findFirst({ where: { userId, id } })
   }

@@ -16,6 +16,6 @@ import { TwoFactorService } from './two-factor.service'
   imports: [PersonModule],
   controllers: [AuthController],
   providers: [AuthService, AuthRepository, LoginAttemptTracker, PasswordResetService, TwoFactorService],
-  exports: [AuthService],
+  exports: [AuthService, AuthRepository],
 })
 export class AuthModule {}

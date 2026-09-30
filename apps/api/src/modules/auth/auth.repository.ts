@@ -72,6 +72,11 @@ export class AuthRepository {
     })
   }
 
+  async findAllUserIds(): Promise<string[]> {
+    const users = await this.prisma.user.findMany({ select: { id: true } })
+    return users.map((user) => user.id)
+  }
+
   async updatePassword(userId: string, passwordHash: string): Promise<void> {
     await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } })
   }

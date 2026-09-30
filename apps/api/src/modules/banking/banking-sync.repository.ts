@@ -6,6 +6,18 @@ import type { MappedTransaction } from './banking.mapper'
 export class BankingSyncRepository {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaService) {}
 
+  async withAdvisoryLock(key: number, fn: () => Promise<void>): Promise<boolean> {
+    return this.prisma.$transaction(
+      async (tx) => {
+        const [row] = await tx.$queryRaw<{ locked: boolean }[]>`SELECT pg_try_advisory_xact_lock(${key}) AS locked`
+        if (!row?.locked) return false
+        await fn()
+        return true
+      },
+      { timeout: 60 * 60 * 1000, maxWait: 10_000 },
+    )
+  }
+
   // Upsert por [accountId, externalId] (idempotente: sincronizar de novo nunca duplica). personId/
   // categoryId só entram na criação (padrão "Meu"/Rule pra cartão, sempre null pra movimentação — ver
   // banking.service.ts); o update nunca toca categoryId/personId/note — são do usuário, o Pluggy não manda

@@ -29,6 +29,7 @@ function itemsMock() {
   return {
     create: jest.fn(),
     findMany: jest.fn(),
+    findConnected: jest.fn(),
     findById: jest.fn(),
     update: jest.fn(),
   } as unknown as jest.Mocked<PluggyItemRepository>
@@ -270,6 +271,21 @@ describe('BankingService', () => {
     await service.checkStatus('user-1', 'item-1')
 
     expect(pluggy.listAccounts).not.toHaveBeenCalled()
+  })
+
+  it('syncAllConnected: sincroniza só os itens conectados e uma falha não derruba os outros', async () => {
+    const items = itemsMock()
+    items.findConnected.mockResolvedValue([itemRow({ id: 'item-1' }), itemRow({ id: 'item-2' })])
+    items.findById.mockImplementation(async (_userId, id) => itemRow({ id }))
+    const accounts = accountsMock()
+    accounts.upsertFromSync.mockResolvedValue(accountRow())
+    const pluggy = pluggyMock()
+    pluggy.listAccounts.mockRejectedValueOnce(new Error('pluggy down')).mockResolvedValueOnce([])
+
+    const result = await newService({ items, accounts, pluggy }).syncAllConnected('user-1')
+
+    expect(items.findConnected).toHaveBeenCalledWith('user-1')
+    expect(result).toEqual({ synced: 1, failed: 1 })
   })
 
   it('manualSync: sincroniza conta e transações por upsert atômico, sem duplicar', async () => {

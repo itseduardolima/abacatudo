@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core'
+import { ScheduleModule } from '@nestjs/schedule'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { ZodValidationPipe } from 'nestjs-zod'
 import { validateEnv } from './common/config/env'
@@ -35,6 +36,7 @@ import { PrismaModule } from './prisma/prisma.module'
         return [{ ttl: 60_000, limit: 120, skipIf: () => !enabled }]
       },
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     MailModule,
     AuthModule,
