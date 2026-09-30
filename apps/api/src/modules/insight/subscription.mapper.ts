@@ -36,7 +36,7 @@ function daysBetween(from: string, to: string): number {
 
 // A descrição do cartão separa o nome da cidade por um bloco de espaços ("PG *NIO FIBRA     RIO DE JANEIR
 // BR"): fica só o nome, e espaços soltos viram um só.
-function cleanName(raw: string): string {
+export function cleanName(raw: string): string {
   const name = (raw.trim().split(/\s{2,}/)[0] ?? '').replace(/\s+/g, ' ').trim()
   return name === '' ? raw.replace(/\s+/g, ' ').trim() : name
 }

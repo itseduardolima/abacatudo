@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { centsSchema, idSchema } from './common'
+import { subscriptionReportSchema } from './insight'
 
 // "Não entram no orçamento" (03-regras-negocio § Movimentações) — puramente informativo.
 export const movementTotalsSchema = z.object({ incomeCents: centsSchema, expenseCents: centsSchema }).strict()
@@ -47,3 +48,24 @@ export const pixRecipientsResponseSchema = z
   .object({ month: monthSchema, totalCents: centsSchema, recipients: z.array(pixRecipientSchema) })
   .strict()
 export type PixRecipientsResponse = z.infer<typeof pixRecipientsResponseSchema>
+
+export const frequentEstablishmentSchema = z
+  .object({
+    key: z.string(),
+    label: z.string(),
+    count: z.number().int().min(2),
+    totalCents: centsSchema,
+    lastAt: z.string().datetime(),
+  })
+  .strict()
+export type FrequentEstablishment = z.infer<typeof frequentEstablishmentSchema>
+
+// Gastos que se repetem no benefício (03-regras-negocio § Extrato e relatório da conta de benefício): só
+// estabelecimentos, nunca Pix.
+export const movementHabitsSchema = z
+  .object({
+    recurring: subscriptionReportSchema,
+    frequent: z.array(frequentEstablishmentSchema),
+  })
+  .strict()
+export type MovementHabits = z.infer<typeof movementHabitsSchema>

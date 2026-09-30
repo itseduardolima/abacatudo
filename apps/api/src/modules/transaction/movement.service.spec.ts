@@ -195,6 +195,69 @@ describe('MovementService', () => {
       ])
     })
 
+    describe('habits', () => {
+      beforeEach(() => jest.useFakeTimers().setSystemTime(new Date('2026-09-30T15:00:00.000Z')))
+      afterEach(() => jest.useRealTimers())
+
+      it('404 de outro usuário, sem ler movimentações', async () => {
+        const repo = repoMock()
+        const accounts = accountsMock()
+        accounts.findById.mockResolvedValue(null)
+        const service = new MovementService(repo, accounts)
+
+        await expect(service.habits('user-2', 'acc-do-user-1', '2026-09')).rejects.toMatchObject({
+          code: 'ACCOUNT_NOT_FOUND',
+        })
+        expect(repo.findMany).not.toHaveBeenCalled()
+      })
+
+      it('recorrentes pelo detector do cartão (sem Pix) e mais frequentes do mês', async () => {
+        const repo = repoMock()
+        const disney = (id: string, at: string) =>
+          movementRow({
+            id,
+            description: 'THE WALT DISNEY COMPANY (BRASIL) LTDA',
+            amountCents: 3495,
+            occurredAt: new Date(at),
+          })
+        const pix = (id: string, at: string) =>
+          movementRow({ id, description: 'Pix Eduardo Lima Castro', amountCents: 1000, occurredAt: new Date(at) })
+        const windowRows = [
+          disney('d1', '2026-07-13T12:00:00.000Z'),
+          disney('d2', '2026-08-13T12:00:00.000Z'),
+          disney('d3', '2026-09-13T12:00:00.000Z'),
+          pix('p1', '2026-07-10T12:00:00.000Z'),
+          pix('p2', '2026-08-10T12:00:00.000Z'),
+          pix('p3', '2026-09-10T12:00:00.000Z'),
+        ]
+        const monthRows = [
+          movementRow({ description: 'UBER DO BRASIL', amountCents: 1500 }),
+          movementRow({ description: 'UBER DO BRASIL', amountCents: 2500 }),
+          movementRow({ description: 'Pix Eduardo Lima Castro', amountCents: 1000 }),
+          movementRow({ description: 'Pix Eduardo Lima Castro', amountCents: 1000 }),
+        ]
+        repo.findMany.mockResolvedValueOnce(monthRows).mockResolvedValueOnce(windowRows)
+        const accounts = accountsMock()
+        accounts.findById.mockResolvedValue(account())
+        const service = new MovementService(repo, accounts)
+
+        const result = await service.habits('user-1', 'acc-benefit', '2026-09')
+
+        expect(repo.findMany).toHaveBeenCalledTimes(2)
+        expect(repo.findMany).toHaveBeenCalledWith(
+          'user-1',
+          { start: expect.any(Date), end: expect.any(Date) },
+          { accountId: 'acc-benefit', direction: 'OUT' },
+        )
+        expect(result.recurring.items.map((item) => [item.label, item.monthlyCents, item.occurrences])).toEqual([
+          ['THE WALT DISNEY COMPANY (BRASIL) LTDA', 3495, 3],
+        ])
+        expect(result.frequent.map((item) => [item.label, item.count, item.totalCents])).toEqual([
+          ['UBER DO BRASIL', 2, 4000],
+        ])
+      })
+    })
+
     it('pixTransactions: exige o favorecido e devolve só os Pix dele', async () => {
       const repo = repoMock()
       repo.findMany.mockResolvedValue([

@@ -1,9 +1,16 @@
 import { Injectable } from '@nestjs/common'
-import type { MovementReport, MovementTotals, PixRecipientsResponse, Transaction } from '@gastos/shared'
-import { dateKey, dayOfMonth, monthKey, resolveMonthRange } from '../../common/date/timezone'
+import type { MovementHabits, MovementReport, MovementTotals, PixRecipientsResponse, Transaction } from '@gastos/shared'
+import { dateKey, dayOfMonth, monthKey, monthRange, resolveMonthRange, shiftMonthKey } from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository } from '../account/account.repository'
-import { computeMovementReport, filterPixRowsByRecipient, groupPixRecipients } from './movement-report.mapper'
+import { detectSubscriptions } from '../insight/subscription.mapper'
+import {
+  computeMovementReport,
+  filterPixRowsByRecipient,
+  frequentEstablishments,
+  groupPixRecipients,
+  isPixRow,
+} from './movement-report.mapper'
 import { MovementRepository } from './movement.repository'
 import { toTransactionDto } from './transaction.mapper'
 
@@ -89,6 +96,42 @@ export class MovementService {
     const account = await this.movementAccount(userId, accountId)
     const rows = await this.repo.findMany(userId, resolveMonthRange(month), { accountId: account.id, direction: 'OUT' })
     return filterPixRowsByRecipient(rows, recipient).map((row) => toTransactionDto(row))
+  }
+
+  // Gastos que se repetem (03-regras-negocio § Extrato e relatório da conta de benefício): recorrentes com o
+  // mesmo detector do cartão (últimos 4 meses, independe do mês escolhido) e os estabelecimentos mais
+  // frequentes do mês. Pix nunca entra. O detector foi feito pra cartão (dono = pessoa self); aqui toda a
+  // conta é do dono, então cada linha vira "dele" com um id fixo.
+  async habits(userId: string, accountId: string | undefined, month?: string): Promise<MovementHabits> {
+    const account = await this.movementAccount(userId, accountId)
+    const currentMonth = monthKey(new Date())
+    const monthRows = await this.repo.findMany(userId, resolveMonthRange(month), {
+      accountId: account.id,
+      direction: 'OUT',
+    })
+    const windowRows = await this.repo.findMany(
+      userId,
+      { start: monthRange(shiftMonthKey(currentMonth, -4)).start, end: monthRange(currentMonth).end },
+      { accountId: account.id, direction: 'OUT' },
+    )
+
+    const owner = 'account-owner'
+    const recurring = detectSubscriptions(
+      windowRows
+        .filter((row) => row.kind === 'EXPENSE' && !isPixRow(row))
+        .map((row) => ({
+          kind: 'EXPENSE' as const,
+          amountCents: row.amountCents,
+          occurredAt: row.occurredAt,
+          merchant: row.merchant,
+          description: row.description,
+          personId: owner,
+          splits: [],
+        })),
+      owner,
+      new Date(),
+    )
+    return { recurring, frequent: frequentEstablishments(monthRows) }
   }
 
   private async movementAccount(userId: string, accountId: string | undefined) {

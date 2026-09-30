@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common'
-import type { MovementReport, MovementTotals, PixRecipientsResponse, Transaction } from '@gastos/shared'
+import type { MovementHabits, MovementReport, MovementTotals, PixRecipientsResponse, Transaction } from '@gastos/shared'
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import { MovementService } from './movement.service'
 
@@ -25,6 +25,15 @@ export class MovementController {
     @Query('month') month?: string,
   ): Promise<MovementReport> {
     return this.movements.report(userId, accountId, month)
+  }
+
+  @Get('habits')
+  habits(
+    @CurrentUser() userId: string,
+    @Query('accountId') accountId?: string,
+    @Query('month') month?: string,
+  ): Promise<MovementHabits> {
+    return this.movements.habits(userId, accountId, month)
   }
 
   @Get('pix-recipients')

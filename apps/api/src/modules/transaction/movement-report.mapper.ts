@@ -1,4 +1,6 @@
-import type { MovementReport, PixRecipient } from '@gastos/shared'
+import type { FrequentEstablishment, MovementReport, PixRecipient } from '@gastos/shared'
+import { cleanName } from '../insight/subscription.mapper'
+import { normalizeMerchant } from '../rule/normalize-merchant'
 
 export interface ReportRow {
   kind: string
@@ -111,4 +113,44 @@ export function groupPixRecipients(rows: ReportRow[], search?: string): PixRecip
 
 export function filterPixRowsByRecipient<T extends ReportRow>(rows: T[], recipientKey: string): T[] {
   return rows.filter((row) => isSentPix(row) && normalizeRecipientKey(recipientName(row.description)) === recipientKey)
+}
+
+export function isPixRow(row: Pick<ReportRow, 'description'>): boolean {
+  return PIX_PREFIX.test(row.description)
+}
+
+export interface HabitRow extends ReportRow {
+  merchant: string | null
+}
+
+// Estabelecimentos com >= 2 compras no mês (Pix nunca entra): pega o que não é mensal (corrida, lanche) e
+// que o detector de recorrência não pega. Sem categoria — só agrupa pelo nome sem a cidade.
+export function frequentEstablishments(rows: HabitRow[], limit = 8): FrequentEstablishment[] {
+  const groups = new Map<string, { label: string; count: number; totalCents: number; lastAt: Date }>()
+
+  for (const row of rows) {
+    if (row.kind !== 'EXPENSE' || isPixRow(row)) continue
+    const label = cleanName(row.merchant ?? row.description)
+    const key = normalizeMerchant(label)
+    const group = groups.get(key)
+    if (!group) {
+      groups.set(key, { label, count: 1, totalCents: row.amountCents, lastAt: row.occurredAt })
+      continue
+    }
+    group.count += 1
+    group.totalCents += row.amountCents
+    if (row.occurredAt > group.lastAt) group.lastAt = row.occurredAt
+  }
+
+  return [...groups.entries()]
+    .filter(([, group]) => group.count >= 2)
+    .map(([key, group]) => ({
+      key,
+      label: group.label,
+      count: group.count,
+      totalCents: group.totalCents,
+      lastAt: group.lastAt.toISOString(),
+    }))
+    .sort((a, b) => b.count - a.count || b.totalCents - a.totalCents || a.label.localeCompare(b.label, 'pt-BR'))
+    .slice(0, limit)
 }

@@ -2,6 +2,7 @@ import { dateKey } from '../../common/date/timezone'
 import {
   computeMovementReport,
   filterPixRowsByRecipient,
+  frequentEstablishments,
   groupPixRecipients,
   normalizeRecipientKey,
   type ReportRow,
@@ -134,5 +135,45 @@ describe('groupPixRecipients', () => {
 
     expect(filtered).toHaveLength(2)
     expect(filtered.every((r) => r.description.toLowerCase().includes('karine'))).toBe(true)
+  })
+})
+
+describe('frequentEstablishments', () => {
+  function habit(overrides: Partial<ReportRow & { merchant: string | null }> = {}) {
+    return { ...row(), merchant: null, ...overrides }
+  }
+
+  it('agrupa pelo nome sem a cidade, exige 2+ compras, ignora Pix e entradas, e ordena por quantidade e total', () => {
+    const result = frequentEstablishments([
+      habit({ description: 'UBER DO BRASIL TECNOLOGIA LTDA.', amountCents: 1000 }),
+      habit({ description: 'UBER DO BRASIL TECNOLOGIA LTDA.     MANAUS BR', amountCents: 2000 }),
+      habit({
+        description: 'UBER DO BRASIL TECNOLOGIA LTDA.',
+        amountCents: 500,
+        occurredAt: new Date('2026-09-20T12:00:00.000Z'),
+      }),
+      habit({ description: 'TEMPUS', amountCents: 400 }),
+      habit({ description: 'TEMPUS', amountCents: 900 }),
+      habit({ description: 'CASA LA PAZ', amountCents: 700 }),
+      habit({ description: 'Pix Ana Souza', amountCents: 100 }),
+      habit({ description: 'Pix Ana Souza', amountCents: 100 }),
+      habit({ description: 'Vendas', kind: 'INCOME', amountCents: 9000 }),
+      habit({ description: 'Vendas', kind: 'INCOME', amountCents: 9000 }),
+    ])
+
+    expect(result.map((r) => [r.label, r.count, r.totalCents])).toEqual([
+      ['UBER DO BRASIL TECNOLOGIA LTDA.', 3, 3500],
+      ['TEMPUS', 2, 1300],
+    ])
+    expect(result[0]?.lastAt).toBe('2026-09-20T12:00:00.000Z')
+  })
+
+  it('respeita o limite de itens', () => {
+    const rows = ['A', 'B', 'C'].flatMap((name) => [
+      { ...row({ description: name }), merchant: null },
+      { ...row({ description: name }), merchant: null },
+    ])
+
+    expect(frequentEstablishments(rows, 2)).toHaveLength(2)
   })
 })
