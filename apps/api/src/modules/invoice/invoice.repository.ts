@@ -41,6 +41,31 @@ export class InvoiceRepository {
     })
     return rows.map((row) => toInvoiceRow(row, installmentOf(row)))
   }
+
+  // Fatura prevista (03-regras-negocio § Fatura prevista): parcelas ainda sem billId cuja data de
+  // vencimento (installmentDueAt, a `date` do Pluggy) cai no mês pedido — nunca a compra inteira, nunca
+  // CARD_PAYMENT.
+  async findForecastRows(userId: string, accountId: string, range: { start: Date; end: Date }): Promise<InvoiceRow[]> {
+    const rows = await this.prisma.transaction.findMany({
+      where: {
+        userId,
+        billId: null,
+        installmentDueAt: { gte: range.start, lt: range.end },
+        kind: { in: ['EXPENSE', 'REFUND'] },
+        account: { id: accountId, type: 'CREDIT_CARD', source: 'PLUGGY' },
+      },
+      include: { splits: { select: { personId: true, amountCents: true } } },
+    })
+    return rows.map((row) => toInvoiceRow(row, null))
+  }
+
+  async findLastInstallmentDueAt(userId: string, accountId: string): Promise<Date | null> {
+    const result = await this.prisma.transaction.aggregate({
+      where: { userId, accountId, billId: null, installmentDueAt: { not: null } },
+      _max: { installmentDueAt: true },
+    })
+    return result._max.installmentDueAt
+  }
 }
 
 function installmentOf(row: {

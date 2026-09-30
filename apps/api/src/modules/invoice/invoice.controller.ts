@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common'
-import type { Invoice } from '@gastos/shared'
+import type { AccountInvoice, Invoice } from '@gastos/shared'
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import { InvoiceService } from './invoice.service'
 
@@ -12,7 +12,7 @@ export class InvoiceController {
     @CurrentUser() userId: string,
     @Query('accountId') accountId?: string,
     @Query('month') month?: string,
-  ): Promise<Invoice> {
+  ): Promise<AccountInvoice> {
     return this.invoices.getForAccount(userId, accountId, month)
   }
 
