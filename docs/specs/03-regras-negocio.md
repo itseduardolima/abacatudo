@@ -313,7 +313,11 @@ sistema, por uma **mensagem de texto que o User gera e envia manualmente**
   - Mesmo formato e mesma invariante da fatura atual (`Fatura = Meu + Não é meu`); a pessoa da compra vale para
     todas as parcelas do grupo (ver "Atribuição de pessoa"). Sem saldo anterior, sem `CARD_PAYMENT`.
   - Rotulada **"Prevista"**. **Nunca** entra no ritmo, no orçamento, no "Meu em [mês]" da Home nem em relatório.
-  - **Horizonte**: até o mês da última parcela existente; a seta ▶ só habilita até lá. A seta ◀ para no mês
+  - **Horizonte**: até o mês da última parcela existente **em qualquer cartão**; a
+    seta ▶ só habilita até lá e anda igual para todos os cartões (o cartão sem
+    parcela naquele mês mostra fatura zerada). Nem todo banco expõe parcelas
+    futuras: o Nubank traz até o fim do parcelamento, já BB e Pic Pay só as que o
+    banco já lançou. A seta ◀ para no mês
     atual (não guardamos histórico de faturas fechadas).
 - **Split** entre self e outras Persons conta para o "Meu" só a fatia do
   self.
