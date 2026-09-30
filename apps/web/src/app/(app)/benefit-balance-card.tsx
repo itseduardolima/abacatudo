@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { MoneyText } from '@/components/finance/MoneyText'
 import { formatSyncedAt } from '@/lib/utils/format-date'
 
@@ -7,6 +8,22 @@ import { formatSyncedAt } from '@/lib/utils/format-date'
 // aqui — o Pluggy não manda isso pra conta corrente, e o app nunca inventa número (03-regras-negocio); o
 // que dá pra mostrar de verdade é a hora do último sync, pra saber se o saldo é fresco.
 export function BenefitBalanceCard({
+  accountName,
+  cents,
+  syncedAt,
+}: {
+  accountName: string | null
+  cents: number
+  syncedAt: string | null
+}) {
+  return (
+    <Link href="/movements/benefit" className="block h-full" aria-label="Abrir extrato e resumo do benefício">
+      <BenefitBalanceCardBody accountName={accountName} cents={cents} syncedAt={syncedAt} />
+    </Link>
+  )
+}
+
+function BenefitBalanceCardBody({
   accountName,
   cents,
   syncedAt,

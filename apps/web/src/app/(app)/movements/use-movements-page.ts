@@ -7,7 +7,7 @@ import { useMovements } from '@/hooks/queries/use-movements'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { useMonthNavigation } from '@/hooks/use-month-navigation'
 import { ApiClientError } from '@/lib/api-client'
-import { dayGroupLabel } from '@/lib/utils/format-day-group'
+import { groupMovementsByDay } from '@/lib/utils/group-movements-by-day'
 
 export type DirectionFilter = 'ALL' | 'IN' | 'OUT'
 
@@ -32,21 +32,17 @@ export function useMovementsPage() {
   const statementAccounts = (accounts.data ?? []).filter(
     (account) => account.type !== 'CREDIT_CARD' && !account.archivedAt,
   )
+  const hasBenefitAccount = (accounts.data ?? []).some((account) => account.isBenefitAccount && !account.archivedAt)
   const accountNameById = new Map((accounts.data ?? []).map((account) => [account.id, account.name]))
 
-  const groups: { label: string; items: NonNullable<typeof movements.data> }[] = []
-  for (const movement of movements.data ?? []) {
-    const label = dayGroupLabel(movement.occurredAt)
-    const last = groups[groups.length - 1]
-    if (last && last.label === label) last.items.push(movement)
-    else groups.push({ label, items: [movement] })
-  }
+  const groups = groupMovementsByDay(movements.data ?? [])
 
   return {
     month,
     goToPreviousMonth,
     goToNextMonth,
     statementAccounts,
+    hasBenefitAccount,
     accountNameById,
     accountId,
     setAccountId,
