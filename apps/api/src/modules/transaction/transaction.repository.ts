@@ -63,6 +63,25 @@ export class TransactionRepository {
     })
   }
 
+  findPurchaseCandidates(
+    userId: string,
+    accountId: string,
+    occurredAt: Date,
+    installmentTotal: number,
+  ): Promise<{ id: string; description: string; occurredAt: Date; installmentTotal: number | null }[]> {
+    return this.prisma.transaction.findMany({
+      where: { userId, accountId, occurredAt, installmentTotal, account: { type: 'CREDIT_CARD' } },
+      select: { id: true, description: true, occurredAt: true, installmentTotal: true },
+    })
+  }
+
+  async updateDisplayName(userId: string, ids: string[], displayName: string | null): Promise<Prisma.BatchPayload> {
+    return this.prisma.transaction.updateMany({
+      where: { userId, id: { in: ids }, account: { type: 'CREDIT_CARD' } },
+      data: { displayName },
+    })
+  }
+
   async updateCategory(userId: string, id: string, categoryId: string): Promise<Prisma.BatchPayload> {
     return this.prisma.transaction.updateMany({
       where: { userId, id, account: { type: 'CREDIT_CARD' } },

@@ -280,7 +280,10 @@ rigor do § 1.
 - **Dado de terceiros (familiares)**: `Person` guarda só nome/rótulo. Compras
   no cartão do User atribuídas a um familiar são do próprio fluxo financeiro
   do User; o sistema não coleta CPF, telefone ou endereço da Person e não
-  compartilha nada com ela.
+  compartilha nada com ela **por conta própria**. Exceção controlada: a
+  mensagem de conta (03) só sai do app quando o User toca em "WhatsApp" ou
+  "Copiar"; nenhum número é guardado, o texto nunca vai para log e o envio
+  não é registrado.
 - **Pix é dado de terceiros**: traz nome do favorecido/pagador. Fica só na
   área Movimentações — não entra em relatório, insight, prompt da IA nem
   export por padrão do assistente. Quem não quer nem armazenar isso pode

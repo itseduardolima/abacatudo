@@ -55,7 +55,8 @@ dentro das telas de gestão, nem o contrário.
    categoria, mês), busca, detalhe em bottom sheet (dividir, categoria, nota).
 4. **Fatura**: card escuro com o **"Meu"** em display lima e, num card branco
    interno, total do banco, "− Não é meu" e "− A classificar"; lista das compras com o dono de cada uma. (Pessoa é só um
-   filtro/rótulo, sem saldo nem cobrança.)
+   filtro/rótulo, sem saldo; o botão "Enviar contas" gera a mensagem manual de
+   cobrança por pessoa.)
 5. **Orçamento**: renda e benefício (informados), fixos, meta de poupança,
    envelopes, ritmo.
 6. **Relatórios**: por categoria, estabelecimento, comparação mensal,

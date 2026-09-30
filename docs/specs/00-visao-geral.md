@@ -38,7 +38,9 @@ reescrever o banco. Não é um SaaS aberto: cadastro só por convite.
 - **Separação por pessoa** (eu / familiares): caixa "a classificar", regras
   que aprendem e divisão de uma compra entre pessoas. O gasto de terceiros é
   **subtraído**: a fatura mostra o total, desconta o que não é seu e destaca
-  só o valor que é seu. Sem controle de dívida nem cobrança.
+  só o valor que é seu. Sem controle de dívida: a única "cobrança" é uma
+  **mensagem de texto** que o próprio User gera e envia, na mão, pelo WhatsApp
+  (03 § Mensagem de conta).
 - **Gestão só do cartão de crédito**: categoria, pessoa, orçamento,
   relatórios e IA valem apenas para compras no cartão de crédito.
 - **Movimentações (débito, Pix, benefício e contas)**: exibidas em telas e funcionalidades
@@ -59,8 +61,10 @@ reescrever o banco. Não é um SaaS aberto: cadastro só por convite.
 - Gerir gasto por débito, Pix ou saldo de benefício (categorizar, orçar,
   relatórios, IA). Só consulta, em área separada; benefício entra como renda
   informada.
-- Cobrança/controle de dívida da família (valor a receber, abatimento). Decisão
-  de produto: o gasto de terceiros só é subtraído da visão.
+- Controle de dívida da família (valor a receber, saldo por pessoa, marcar
+  pago, abatimento) e qualquer envio **automático** de cobrança. Decisão de
+  produto: o gasto de terceiros é subtraído da visão; a única saída é a
+  mensagem manual de conta (03 § Mensagem de conta).
 - Múltiplos usuários compartilhando os mesmos dados (household). Cada conta
   é isolada; se um dia for necessário, é um módulo novo, não um relaxamento
   do isolamento.
@@ -80,7 +84,7 @@ reescrever o banco. Não é um SaaS aberto: cadastro só por convite.
 | Movimentação       | Lançamento de conta que não é cartão de crédito (débito, Pix, TED, boleto, benefício). Só consulta |
 | A classificar      | Transação ainda sem `Person` confirmada                                                            |
 | Meu                | Parte do gasto que é do próprio User (`personId` = self, ou a fatia self de um split)              |
-| Não é meu          | Gasto de outra Person no cartão do User. Subtraído da visão; sem cobrança nem saldo                |
+| Não é meu          | Gasto de outra Person no cartão do User. Subtraído da visão; sem saldo nem controle de dívida      |
 | Orçamento (Budget) | Teto mensal de gasto do User, derivado da renda fixa                                               |
 | Envelope           | Parcela do orçamento reservada a uma categoria                                                     |
 | Item (Pluggy)      | Uma conexão autorizada com uma instituição via Open Finance                                        |

@@ -41,6 +41,7 @@ function row(
     installmentNumber: null,
     installmentTotal: null,
     installmentDueAt: null,
+    displayName: null,
     billId: null,
     createdAt: new Date('2026-09-21T12:00:00.000Z'),
     updatedAt: new Date('2026-09-21T12:00:00.000Z'),

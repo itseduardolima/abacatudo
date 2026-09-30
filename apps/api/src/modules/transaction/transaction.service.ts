@@ -3,8 +3,10 @@ import type {
   CreateTransactionInput,
   Transaction,
   UpdateTransactionCategoryInput,
+  UpdateTransactionDisplayNameInput,
   UpdateTransactionPersonInput,
 } from '@gastos/shared'
+import { installmentGroupKey } from '../../common/installment-group'
 import { dayFromDateString, monthKey, resolveMonthRange } from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository } from '../account/account.repository'
@@ -147,6 +149,43 @@ export class TransactionService {
 
     const result = await this.repo.updateCategory(userId, id, input.categoryId)
     if (result.count === 0) throw NOT_FOUND()
+
+    const updated = await this.repo.findById(userId, id)
+    if (!updated) throw NOT_FOUND()
+    return toTransactionDto(updated, updated.splits)
+  }
+
+  // Nome na fatura vale pra compra inteira: todas as parcelas (inclusive as futuras, que já existem como
+  // linha) recebem o mesmo apelido — pelo mesmo agrupamento que a fatura usa (installmentGroupKey).
+  async updateDisplayName(userId: string, id: string, input: UpdateTransactionDisplayNameInput): Promise<Transaction> {
+    const existing = await this.repo.findById(userId, id)
+    if (!existing) throw NOT_FOUND()
+
+    const ids = [id]
+    if (existing.installmentNumber != null && existing.installmentTotal != null) {
+      const groupKey = installmentGroupKey({
+        description: existing.description,
+        occurredAt: existing.occurredAt,
+        installmentTotal: existing.installmentTotal,
+      })
+      const candidates = await this.repo.findPurchaseCandidates(
+        userId,
+        existing.accountId,
+        existing.occurredAt,
+        existing.installmentTotal,
+      )
+      for (const candidate of candidates) {
+        if (candidate.id === id || candidate.installmentTotal == null) continue
+        const key = installmentGroupKey({
+          description: candidate.description,
+          occurredAt: candidate.occurredAt,
+          installmentTotal: candidate.installmentTotal,
+        })
+        if (key === groupKey) ids.push(candidate.id)
+      }
+    }
+
+    await this.repo.updateDisplayName(userId, ids, input.displayName)
 
     const updated = await this.repo.findById(userId, id)
     if (!updated) throw NOT_FOUND()

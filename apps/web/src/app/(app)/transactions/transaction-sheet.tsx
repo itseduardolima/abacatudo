@@ -5,6 +5,7 @@ import { Check, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { InlineAlert } from '@/components/ui/InlineAlert'
+import { Input } from '@/components/ui/Input'
 import { MoneyText } from '@/components/finance/MoneyText'
 import { formatDateTimeLong } from '@/lib/utils/format-date'
 import { formatMoney, maskMoneyInput, parseMoneyInput } from '@/lib/utils/format-money'
@@ -18,6 +19,7 @@ export interface SheetTransaction {
   occurredAt: string
   description: string
   merchant: string | null
+  displayName: string | null
   categoryId: string | null
   personId: string | null
   cardLast4: string | null
@@ -39,6 +41,12 @@ interface TransactionSheetProps {
   people: Person[]
   isSaving: boolean
   ruleError: string | null
+  nameDraft: string
+  setNameDraft: (value: string) => void
+  nameError: string | null
+  isSavingName: boolean
+  openNameEdit: (currentName: string) => void
+  saveDisplayName: (displayName: string | null) => void
   alwaysForMerchant: boolean
   setAlwaysForMerchant: (value: boolean) => void
   selectCategory: (transactionId: string, categoryId: string) => void
@@ -70,6 +78,12 @@ export function TransactionSheet({
   people,
   isSaving,
   ruleError,
+  nameDraft,
+  setNameDraft,
+  nameError,
+  isSavingName,
+  openNameEdit,
+  saveDisplayName,
   alwaysForMerchant,
   setAlwaysForMerchant,
   selectCategory,
@@ -123,8 +137,10 @@ export function TransactionSheet({
           <div className="flex flex-col gap-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate text-xl font-bold text-ink">{tx.merchant ?? tx.description}</p>
-                {tx.merchant && <p className="mt-0.5 truncate text-xs text-muted">{tx.description}</p>}
+                <p className="truncate text-xl font-bold text-ink">{tx.displayName ?? tx.merchant ?? tx.description}</p>
+                {(tx.displayName || tx.merchant) && (
+                  <p className="mt-0.5 truncate text-xs text-muted">{tx.description}</p>
+                )}
               </div>
               <button
                 type="button"
@@ -196,6 +212,17 @@ export function TransactionSheet({
                     ) : (
                       <span className="font-medium text-muted">Sem dono</span>
                     )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openNameEdit(tx.displayName ?? tx.merchant ?? tx.description)}
+                    className="flex w-full items-center justify-between border-b border-surface py-3 text-sm"
+                  >
+                    <span className="text-muted">Nome na fatura</span>
+                    <span className="flex items-center gap-1 font-medium text-ink">
+                      {tx.displayName ?? 'Nome do banco'}
+                      <ChevronRight size={16} strokeWidth={1.8} className="text-muted" />
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -288,6 +315,49 @@ export function TransactionSheet({
               </label>
             )}
           </div>
+        )}
+
+        {view === 'name' && (
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(event) => {
+              event.preventDefault()
+              saveDisplayName(nameDraft)
+            }}
+            noValidate
+          >
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setView('detail')}
+                aria-label="Voltar"
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface text-ink"
+              >
+                <ChevronLeft size={18} strokeWidth={1.8} />
+              </button>
+              <p className="text-lg font-bold text-ink">Nome na fatura</p>
+            </div>
+            <p className="text-sm text-muted">
+              Aparece no texto da conta que você envia. Vale para todas as parcelas dessa compra.
+            </p>
+            <Input
+              label="Nome"
+              value={nameDraft}
+              onChange={(event) => setNameDraft(event.target.value)}
+              error={nameError ?? undefined}
+              autoFocus
+            />
+            <div className="flex items-center gap-3">
+              <Button type="submit" state={isSavingName ? 'loading' : 'idle'}>
+                Salvar
+              </Button>
+              {tx.displayName && (
+                <Button type="button" variant="link" onClick={() => saveDisplayName(null)}>
+                  Usar o nome do banco
+                </Button>
+              )}
+            </div>
+          </form>
         )}
 
         {view === 'split' && (

@@ -2,6 +2,7 @@
 
 import { Suspense } from 'react'
 import type { Segment } from './use-transactions-page'
+import { StatementsSheet } from './statements-sheet'
 import { TransactionSheet } from './transaction-sheet'
 import { Button } from '@/components/ui/Button'
 import { BackIcon, IconButton } from '@/components/ui/IconButton'
@@ -11,6 +12,7 @@ import { MoneyText } from '@/components/finance/MoneyText'
 import { formatAccountType } from '@/lib/utils/format-account-type'
 import { formatMonthName } from '@/lib/utils/format-month'
 import { personAvatarClass, personInitial } from '@/lib/utils/person-avatar'
+import { useStatementsSheet } from './use-statements-sheet'
 import { useTransactionsPage } from './use-transactions-page'
 
 const SEGMENTS: { value: Segment; label: string }[] = [
@@ -49,6 +51,12 @@ function TransactionsContent() {
     editingTx,
     sheetView,
     setSheetView,
+    nameDraft,
+    setNameDraft,
+    nameError,
+    isSavingName,
+    openNameEdit,
+    saveDisplayName,
     openEdit,
     closeEdit,
     alwaysForMerchant,
@@ -72,6 +80,7 @@ function TransactionsContent() {
   } = useTransactionsPage()
 
   const selectedAccount = cardAccounts.find((account) => account.id === selectedAccountId)
+  const statementsSheet = useStatementsSheet(forecast.isForecast ? forecast.month : undefined)
 
   return (
     <main className="mx-auto flex min-h-screen max-w-[420px] flex-col gap-4 px-4 pb-28 md:pb-10 pt-8">
@@ -175,6 +184,9 @@ function TransactionsContent() {
               </div>
             </div>
           </div>
+          <Button variant="outline" onClick={statementsSheet.open}>
+            Enviar contas
+          </Button>
         </>
       )}
 
@@ -212,7 +224,7 @@ function TransactionsContent() {
               className="flex w-full items-center justify-between gap-3 border-b border-surface py-3 text-left last:border-b-0"
             >
               <div className="min-w-0">
-                <p className="truncate font-semibold text-ink">{tx.merchant ?? tx.description}</p>
+                <p className="truncate font-semibold text-ink">{tx.displayName ?? tx.merchant ?? tx.description}</p>
                 {tx.kind !== 'CARD_PAYMENT' &&
                 !tx.categoryName &&
                 tx.categorySuggestedName &&
@@ -270,6 +282,20 @@ function TransactionsContent() {
         </div>
       ))}
 
+      {statementsSheet.isOpen && (
+        <StatementsSheet
+          statements={statementsSheet.statements}
+          isLoading={statementsSheet.isLoading}
+          isError={statementsSheet.isError}
+          isForecast={statementsSheet.isForecast}
+          copiedPersonId={statementsSheet.copiedPersonId}
+          isTooLongForLink={statementsSheet.isTooLongForLink}
+          onSend={statementsSheet.send}
+          onCopy={statementsSheet.copy}
+          onClose={statementsSheet.close}
+        />
+      )}
+
       {editingId && editingTx && selectedAccount && (
         <TransactionSheet
           tx={editingTx}
@@ -280,6 +306,12 @@ function TransactionsContent() {
           people={people}
           isSaving={isSaving}
           ruleError={ruleError}
+          nameDraft={nameDraft}
+          setNameDraft={setNameDraft}
+          nameError={nameError}
+          isSavingName={isSavingName}
+          openNameEdit={openNameEdit}
+          saveDisplayName={saveDisplayName}
           alwaysForMerchant={alwaysForMerchant}
           setAlwaysForMerchant={setAlwaysForMerchant}
           selectCategory={(id, categoryId) => void selectCategory(id, categoryId)}
