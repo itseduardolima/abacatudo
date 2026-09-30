@@ -37,12 +37,11 @@ export class InvoiceService {
     const selfId = await this.selfPersonId(userId)
     const lastForecastMonth = await this.lastForecastMonth(account)
 
-    if (account.source === 'PLUGGY' && month && resolveMonthKey(month) > monthKey(new Date())) {
-      const rows = await this.repo.findForecastRows(userId, account.id, resolveMonthRange(month))
-      return { ...computeInvoice(rows, selfId), isForecast: true, lastForecastMonth }
+    return {
+      ...(await this.invoiceForAccount(account, selfId, month)),
+      isForecast: this.isForecastFor(account, month),
+      lastForecastMonth,
     }
-
-    return { ...(await this.invoiceForAccount(account, selfId, month)), isForecast: false, lastForecastMonth }
   }
 
   // Mensagem de conta por pessoa (03-regras-negocio § Mensagem de conta): mesma fatura que a tela mostra
@@ -86,12 +85,16 @@ export class InvoiceService {
   }
 
   // "Meu" da fatura aberta, somado em todos os cartões (03-regras-negocio § Só a minha parte) — é o
-  // número que alimenta o ritmo (HU 7.4). Sempre a fatura de agora; não existe "mês passado" aqui.
-  async getSummary(userId: string): Promise<Invoice> {
+  // número que alimenta o ritmo (HU 7.4). É a fatura de agora; não existe "mês passado" aqui. Só um mês
+  // futuro muda o resultado: aí soma a fatura prevista de cada cartão (só parcelas já lançadas).
+  async getSummary(userId: string, month?: string): Promise<Invoice> {
     const selfId = await this.selfPersonId(userId)
     const cardAccounts = (await this.accounts.findMany(userId, false)).filter((a) => a.type === 'CREDIT_CARD')
+    const futureMonth = month && resolveMonthKey(month) > monthKey(new Date()) ? month : undefined
 
-    const invoices = await Promise.all(cardAccounts.map((account) => this.invoiceForAccount(account, selfId)))
+    const invoices = await Promise.all(
+      cardAccounts.map((account) => this.invoiceForAccount(account, selfId, futureMonth)),
+    )
     return mergeInvoices(invoices)
   }
 
@@ -103,7 +106,16 @@ export class InvoiceService {
   // com a conta). Sem fatura fechada ainda (cartão novo) ou Pluggy fora do ar, usa toda a movimentação
   // local sem saldo anterior, em vez de quebrar a tela. MANUAL/IMPORT: nunca tem banco de verdade por
   // trás, mês calendário é a aproximação possível.
+  private isForecastFor(account: AccountWithPluggyItem, month?: string): boolean {
+    return account.source === 'PLUGGY' && Boolean(month) && resolveMonthKey(month as string) > monthKey(new Date())
+  }
+
   private async invoiceForAccount(account: AccountWithPluggyItem, selfPersonId: string, month?: string) {
+    if (this.isForecastFor(account, month)) {
+      const rows = await this.repo.findForecastRows(account.userId, account.id, resolveMonthRange(month as string))
+      return computeInvoice(rows, selfPersonId)
+    }
+
     if (account.source !== 'PLUGGY') {
       const rows = await this.repo.findRows(account.userId, resolveMonthRange(month), account.id)
       return computeInvoice(rows, selfPersonId)

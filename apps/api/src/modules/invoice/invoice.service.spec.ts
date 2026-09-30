@@ -468,6 +468,48 @@ describe('InvoiceService', () => {
       expect(result).toEqual({ totalCents: 59488, mineCents: 59488, notMineCents: 0 })
     })
 
+    it('mês futuro: soma a fatura prevista dos cartões PLUGGY, sem saldo anterior nem o Pluggy', async () => {
+      const futureMonth = shiftMonthKey(monthKey(new Date()), 1)
+      const people = peopleMock()
+      people.findSelf.mockResolvedValue(personRow())
+      const accounts = accountsMock()
+      accounts.findMany.mockResolvedValue([
+        accountRow({ id: 'card-a', source: 'PLUGGY', externalAccountId: 'ext-a' }),
+        accountRow({ id: 'card-b', source: 'PLUGGY', externalAccountId: 'ext-b' }),
+      ])
+      const repo = repoMock()
+      repo.findForecastRows.mockImplementation(async (_userId, accountId) =>
+        accountId === 'card-a'
+          ? [{ kind: 'EXPENSE', amountCents: 10000, personId: 'self-1', splits: [], installment: null }]
+          : [{ kind: 'EXPENSE', amountCents: 4000, personId: 'family-1', splits: [], installment: null }],
+      )
+      const pluggy = pluggyMock()
+      const service = new InvoiceService(repo, accounts, people, pluggy)
+
+      const result = await service.getSummary('user-1', futureMonth)
+
+      expect(repo.findOpenRows).not.toHaveBeenCalled()
+      expect(pluggy.getLastClosedBill).not.toHaveBeenCalled()
+      expect(result).toEqual({ totalCents: 14000, mineCents: 10000, notMineCents: 4000 })
+    })
+
+    it('mês atual ou passado no summary continua sendo a fatura de agora', async () => {
+      const people = peopleMock()
+      people.findSelf.mockResolvedValue(personRow())
+      const accounts = accountsMock()
+      accounts.findMany.mockResolvedValue([accountRow({ id: 'card-a', source: 'PLUGGY', externalAccountId: 'ext-a' })])
+      const repo = repoMock()
+      repo.findOpenRows.mockResolvedValue([])
+      const pluggy = pluggyMock()
+      pluggy.getLastClosedBill.mockResolvedValue(null)
+      const service = new InvoiceService(repo, accounts, people, pluggy)
+
+      await service.getSummary('user-1', shiftMonthKey(monthKey(new Date()), -1))
+
+      expect(repo.findForecastRows).not.toHaveBeenCalled()
+      expect(repo.findOpenRows).toHaveBeenCalledWith('user-1', 'card-a')
+    })
+
     it('sem Pessoa self, falha alto (invariante quebrada)', async () => {
       const people = peopleMock()
       people.findSelf.mockResolvedValue(null)

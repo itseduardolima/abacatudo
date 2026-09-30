@@ -41,7 +41,7 @@ describe('BudgetPaceService', () => {
     const result = await service.getPace('user-1')
 
     expect(budgetMonth.getOrCreate).toHaveBeenCalledWith('user-1', undefined)
-    expect(invoices.getSummary).toHaveBeenCalledWith('user-1')
+    expect(invoices.getSummary).toHaveBeenCalledWith('user-1', undefined)
     expect(fixedExpenses.sumActiveCents).toHaveBeenCalledWith('user-1')
     expect(result.capCents).toBe(300_000)
     expect(result.spentCents).toBe(70_000)
@@ -58,6 +58,7 @@ describe('BudgetPaceService', () => {
     const result = await service.getPace('user-1', '2026-08')
 
     expect(budgetMonth.getOrCreate).toHaveBeenCalledWith('user-1', '2026-08')
+    expect(invoices.getSummary).toHaveBeenCalledWith('user-1', '2026-08')
     expect(result.spentCents).toBe(15_000)
   })
 })

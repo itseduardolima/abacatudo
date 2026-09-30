@@ -21,7 +21,7 @@ export class BudgetPaceService {
   async getPace(userId: string, month?: string): Promise<BudgetPace> {
     const [budget, invoice, fixedExpensesCents] = await Promise.all([
       this.budgetMonth.getOrCreate(userId, month),
-      this.invoices.getSummary(userId),
+      this.invoices.getSummary(userId, month),
       this.fixedExpenses.sumActiveCents(userId),
     ])
 
