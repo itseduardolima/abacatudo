@@ -18,6 +18,7 @@ function repoMock() {
   return {
     create: jest.fn(),
     findMany: jest.fn(),
+    findForecast: jest.fn(),
     findById: jest.fn(),
     updateCategory: jest.fn(),
   } as unknown as jest.Mocked<TransactionRepository>
@@ -308,6 +309,36 @@ describe('TransactionService', () => {
 
     expect(repo.findMany).toHaveBeenCalledWith('user-1', { start: expect.any(Date), end: expect.any(Date) })
     expect(result).toHaveLength(1)
+    jest.useRealTimers()
+  })
+
+  it('listByMonth: mês futuro lista só as parcelas daquele mês, sem passar pelo filtro do mês corrente', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-21T12:00:00.000Z'))
+    const repo = repoMock()
+    repo.findForecast.mockResolvedValue([
+      row({ installmentNumber: 2, installmentTotal: 6, installmentDueAt: new Date('2026-11-05T12:00:00.000Z') }),
+    ])
+    const service = newService({ repo })
+
+    const result = await service.listByMonth('user-1', '2026-11')
+
+    expect(repo.findForecast).toHaveBeenCalledWith('user-1', { start: expect.any(Date), end: expect.any(Date) })
+    expect(repo.findMany).not.toHaveBeenCalled()
+    expect(result[0]).toMatchObject({ installmentNumber: 2, installmentDueAt: '2026-11-05T12:00:00.000Z' })
+    jest.useRealTimers()
+  })
+
+  it('listByMonth: o mês atual e os passados continuam no caminho de sempre', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-21T12:00:00.000Z'))
+    const repo = repoMock()
+    repo.findMany.mockResolvedValue([])
+    const service = newService({ repo })
+
+    await service.listByMonth('user-1', '2026-09')
+    await service.listByMonth('user-1', '2026-08')
+
+    expect(repo.findMany).toHaveBeenCalledTimes(2)
+    expect(repo.findForecast).not.toHaveBeenCalled()
     jest.useRealTimers()
   })
 

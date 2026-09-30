@@ -28,6 +28,9 @@ export const transactionSchema = z
     cardLast4: z.string().nullable(),
     installmentNumber: z.number().int().nullable(),
     installmentTotal: z.number().int().nullable(),
+    // Quando a parcela cai na fatura (a `date` do Pluggy) — null pra compra à vista. É o dia que a fatura
+    // prevista mostra, já que occurredAt é o da compra.
+    installmentDueAt: z.string().datetime().nullable(),
     createdAt: z.string().datetime(),
     // Vazio quando a transação não está dividida (personId sozinho decide o dono) — preenchido só depois
     // de um PUT .../split (03-regras-negocio § Só a minha parte).

@@ -5,7 +5,7 @@ import type {
   UpdateTransactionCategoryInput,
   UpdateTransactionPersonInput,
 } from '@gastos/shared'
-import { dayFromDateString, resolveMonthRange } from '../../common/date/timezone'
+import { dayFromDateString, monthKey, resolveMonthRange } from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository } from '../account/account.repository'
 import { CardHolderHintRepository } from '../card-holder-hint/card-holder-hint.repository'
@@ -101,7 +101,10 @@ export class TransactionService {
   }
 
   async listByMonth(userId: string, month?: string): Promise<Transaction[]> {
-    return (await this.repo.findMany(userId, resolveMonthRange(month))).map((row) => toTransactionDto(row, row.splits))
+    const range = resolveMonthRange(month)
+    const isFutureMonth = month !== undefined && month > monthKey(new Date())
+    const rows = isFutureMonth ? await this.repo.findForecast(userId, range) : await this.repo.findMany(userId, range)
+    return rows.map((row) => toTransactionDto(row, row.splits))
   }
 
   async updatePerson(userId: string, id: string, input: UpdateTransactionPersonInput): Promise<Transaction> {
