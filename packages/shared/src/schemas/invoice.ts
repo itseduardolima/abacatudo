@@ -16,6 +16,8 @@ export const accountInvoiceSchema = z
     mineCents: centsSchema,
     notMineCents: centsSchema,
     isForecast: z.boolean(),
+    // Quanto do total é parcela estimada (03-regras-negocio § Fatura prevista); 0 fora de mês futuro.
+    estimatedCents: centsSchema,
     lastForecastMonth: z
       .string()
       .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
@@ -38,3 +40,26 @@ export const statementsResponseSchema = z
   })
   .strict()
 export type StatementsResponse = z.infer<typeof statementsResponseSchema>
+
+// Parcelas estimadas de um cartão num mês futuro (BB e Pic Pay não mandam as futuras): mesmo valor e
+// vencimento da última parcela conhecida, mês a mês. Nunca gravadas.
+export const estimatedInstallmentSchema = z
+  .object({
+    key: z.string(),
+    label: z.string(),
+    amountCents: centsSchema,
+    installmentNumber: z.number().int().positive(),
+    installmentTotal: z.number().int().positive(),
+    dueAt: z.string().datetime(),
+  })
+  .strict()
+export type EstimatedInstallment = z.infer<typeof estimatedInstallmentSchema>
+
+export const estimatedInstallmentsResponseSchema = z
+  .object({
+    month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+    totalCents: centsSchema,
+    items: z.array(estimatedInstallmentSchema),
+  })
+  .strict()
+export type EstimatedInstallmentsResponse = z.infer<typeof estimatedInstallmentsResponseSchema>

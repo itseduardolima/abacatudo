@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
-import type { AccountInvoice, Invoice, StatementsResponse } from '@gastos/shared'
+import type { AccountInvoice, EstimatedInstallmentsResponse, Invoice, StatementsResponse } from '@gastos/shared'
 import { monthKey, resolveMonthRange } from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository, type AccountWithPluggyItem } from '../account/account.repository'
@@ -10,7 +10,9 @@ import {
   computeInvoiceWithCarryover,
   keepNextDueInstallmentOnly,
   mergeInvoices,
+  type InvoiceRow,
 } from './invoice.mapper'
+import { estimateInstallments, type InstallmentSource } from './installment-forecast.mapper'
 import { InvoiceRepository } from './invoice.repository'
 import { buildPersonStatements, formatStatementText, type StatementRow } from './statement.mapper'
 
@@ -41,6 +43,40 @@ export class InvoiceService {
       ...(await this.invoiceForAccount(account, selfId, month)),
       isForecast: this.isForecastFor(account, month),
       lastForecastMonth,
+    }
+  }
+
+  // Parcelas estimadas do cartão num mês futuro, pra tela listar à parte das lançadas (nunca gravadas).
+  async getEstimates(
+    userId: string,
+    accountId: string | undefined,
+    month?: string,
+  ): Promise<EstimatedInstallmentsResponse> {
+    if (!accountId) throw new DomainError('ACCOUNT_ID_REQUIRED', 'Informe accountId.', 400)
+    const account = await this.accounts.findById(userId, accountId)
+    if (!account) throw new NotFoundError('ACCOUNT_NOT_FOUND', 'Conta não encontrada.')
+    if (account.type !== 'CREDIT_CARD') {
+      throw new DomainError('NOT_A_CARD_ACCOUNT', 'Fatura só existe pra conta de cartão de crédito.', 422)
+    }
+
+    const targetMonth = month ? resolveMonthKey(month) : monthKey(new Date())
+    const items = this.isForecastFor(account, targetMonth)
+      ? (await this.estimatedInstallments(account, resolveMonthRange(targetMonth))).sort(
+          (a, b) => a.dueAt.getTime() - b.dueAt.getTime() || a.label.localeCompare(b.label, 'pt-BR'),
+        )
+      : []
+
+    return {
+      month: targetMonth,
+      totalCents: items.reduce((sum, item) => sum + item.amountCents, 0),
+      items: items.map((item) => ({
+        key: `${item.groupKey}#${item.number}`,
+        label: item.label,
+        amountCents: item.amountCents,
+        installmentNumber: item.number,
+        installmentTotal: item.total,
+        dueAt: item.dueAt.toISOString(),
+      })),
     }
   }
 
@@ -80,7 +116,13 @@ export class InvoiceService {
     isForecast: boolean,
   ): Promise<StatementRow[]> {
     if (account.source !== 'PLUGGY') return this.repo.findStatementCalendarRows(account.userId, account.id, range)
-    if (isForecast) return this.repo.findStatementForecastRows(account.userId, account.id, range)
+    if (isForecast) {
+      const [real, estimated] = await Promise.all([
+        this.repo.findStatementForecastRows(account.userId, account.id, range),
+        this.estimatedInstallments(account, range),
+      ])
+      return [...real, ...estimated.map(toStatementRow)]
+    }
     return keepNextDueInstallmentOnly(await this.repo.findStatementOpenRows(account.userId, account.id))
   }
 
@@ -110,22 +152,52 @@ export class InvoiceService {
     return account.source === 'PLUGGY' && Boolean(month) && resolveMonthKey(month as string) > monthKey(new Date())
   }
 
-  private async invoiceForAccount(account: AccountWithPluggyItem, selfPersonId: string, month?: string) {
+  private async invoiceForAccount(
+    account: AccountWithPluggyItem,
+    selfPersonId: string,
+    month?: string,
+  ): Promise<Invoice & { estimatedCents: number }> {
     if (this.isForecastFor(account, month)) {
-      const rows = await this.repo.findForecastRows(account.userId, account.id, resolveMonthRange(month as string))
-      return computeInvoice(rows, selfPersonId)
+      const range = resolveMonthRange(month as string)
+      const [real, estimated] = await Promise.all([
+        this.repo.findForecastRows(account.userId, account.id, range),
+        this.estimatedInstallments(account, range),
+      ])
+      const estimatedRows = estimated.map(toInvoiceRow)
+      return {
+        ...computeInvoice([...real, ...estimatedRows], selfPersonId),
+        estimatedCents: computeInvoice(estimatedRows, selfPersonId).totalCents,
+      }
     }
 
     if (account.source !== 'PLUGGY') {
       const rows = await this.repo.findRows(account.userId, resolveMonthRange(month), account.id)
-      return computeInvoice(rows, selfPersonId)
+      return { ...computeInvoice(rows, selfPersonId), estimatedCents: 0 }
     }
 
     const [rows, carryoverCents] = await Promise.all([
       this.repo.findOpenRows(account.userId, account.id),
       this.lastClosedBillCarryoverCents(account),
     ])
-    return computeInvoiceWithCarryover(keepNextDueInstallmentOnly(rows), selfPersonId, carryoverCents)
+    return {
+      ...computeInvoiceWithCarryover(keepNextDueInstallmentOnly(rows), selfPersonId, carryoverCents),
+      estimatedCents: 0,
+    }
+  }
+
+  // Parcelas estimadas (03-regras-negocio § Fatura prevista) só de mês posterior ao atual, e só do cartão
+  // PLUGGY. Sem `range`, devolve todas (pra achar até onde a previsão vai).
+  private async estimatedInstallments(
+    account: AccountWithPluggyItem,
+    range?: { start: Date; end: Date },
+  ): Promise<InstallmentSource[]> {
+    if (account.source !== 'PLUGGY') return []
+    const currentMonth = monthKey(new Date())
+    const sources = await this.repo.findInstallmentSources(account.userId, account.id)
+    return estimateInstallments(sources).filter(
+      (item) =>
+        monthKey(item.dueAt) > currentMonth && (!range || (item.dueAt >= range.start && item.dueAt < range.end)),
+    )
   }
 
   private async lastClosedBillCarryoverCents(account: AccountWithPluggyItem): Promise<number> {
@@ -143,8 +215,12 @@ export class InvoiceService {
 
   private async lastForecastMonth(account: AccountWithPluggyItem): Promise<string | null> {
     if (account.source !== 'PLUGGY') return null
-    const last = await this.repo.findLastInstallmentDueAt(account.userId, account.id)
-    return last ? monthKey(last) : null
+    const [last, estimated] = await Promise.all([
+      this.repo.findLastInstallmentDueAt(account.userId, account.id),
+      this.estimatedInstallments(account),
+    ])
+    const months = [...(last ? [monthKey(last)] : []), ...estimated.map((item) => monthKey(item.dueAt))]
+    return months.sort().at(-1) ?? null
   }
 
   private async selfPersonId(userId: string): Promise<string> {
@@ -157,4 +233,25 @@ export class InvoiceService {
 function resolveMonthKey(month: string): string {
   resolveMonthRange(month)
   return month
+}
+
+function toInvoiceRow(item: InstallmentSource): InvoiceRow {
+  return {
+    kind: item.kind,
+    amountCents: item.amountCents,
+    personId: item.personId,
+    splits: item.splits,
+    installment: null,
+  }
+}
+
+function toStatementRow(item: InstallmentSource): StatementRow {
+  return {
+    ...toInvoiceRow(item),
+    label: item.label,
+    installmentNumber: item.number,
+    installmentTotal: item.total,
+    sortAt: item.dueAt,
+    estimated: true,
+  }
 }
