@@ -1,6 +1,8 @@
 'use client'
 
+import { useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { useForecastMonth } from '@/hooks/use-forecast-month'
 import { useAccounts } from '@/hooks/queries/use-accounts'
 import { useCategories } from '@/hooks/queries/use-categories'
 import { useClearSplit } from '@/hooks/queries/use-clear-split'
@@ -35,7 +37,6 @@ export function useTransactionsPage() {
   const accounts = useAccounts()
   const categories = useCategories()
   const people = usePeople()
-  const transactions = useTransactions()
   const updateCategory = useUpdateTransactionCategory()
   const updatePerson = useUpdateTransactionPerson()
   const previewSplit = usePreviewSplit()
@@ -57,7 +58,11 @@ export function useTransactionsPage() {
     if (!selectedAccountId && cardAccounts[0]) setSelectedAccountId(cardAccounts[0].id)
   }, [cardAccounts, selectedAccountId])
 
-  const invoice = useInvoice(selectedAccountId)
+  const currentInvoice = useInvoice(selectedAccountId)
+  const forecast = useForecastMonth(currentInvoice.data?.lastForecastMonth ?? null, useSearchParams().get('month'))
+  const forecastMonth = forecast.isForecast ? forecast.month : undefined
+  const invoice = useInvoice(selectedAccountId, forecastMonth)
+  const transactions = useTransactions(forecastMonth)
   const [segment, setSegment] = useState<Segment>('all')
 
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -99,10 +104,11 @@ export function useTransactionsPage() {
         // de uma pessoa. Não é "Sem dono" (03-regras-negocio § Atribuição de pessoa: toda transação nasce
         // Meu, então null sem split ainda significa Eu, não "sem dono" de verdade).
         isSplit: tx.splits.length > 0,
-        dayLabel: dayGroupLabel(tx.occurredAt),
+        dayLabel: dayGroupLabel(forecast.isForecast ? (tx.installmentDueAt ?? tx.occurredAt) : tx.occurredAt),
+        sortAt: forecast.isForecast ? (tx.installmentDueAt ?? tx.occurredAt) : tx.occurredAt,
       }
     })
-    .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
+    .sort((a, b) => b.sortAt.localeCompare(a.sortAt))
 
   const groups: { label: string; items: typeof rows }[] = []
   for (const row of rows) {
@@ -237,6 +243,7 @@ export function useTransactionsPage() {
     selectedAccountId,
     setSelectedAccountId,
     invoice: invoice.data,
+    forecast,
     segment,
     setSegment,
     groups,
