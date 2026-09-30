@@ -1062,6 +1062,11 @@ TABLE ... OWNER TO gastos`), e o `migrate dev` acusa "drift" nesse caso — usar
         seção na aba Resumo). Falta conferir ao vivo. Categorias (mesma lista do cartão) seguem para depois
   - [ ] Depois (P2): marcar favorecido como pessoa/estabelecimento; tipo de Pix real (`operationType`)
 
+- [ ] Parcelas estimadas na fatura prevista (BB e Pic Pay não mandam as futuras). Etapas:
+  - [x] spec 03 § Fatura prevista (estimada = mesmo valor e vencimento mês a mês, nunca gravada, some quando o banco lança)
+  - [ ] API: `estimateInstallments` (função pura) + fatura/resumo/ritmo/mensagem de conta incluem as estimadas + `GET /invoice/estimates`
+  - [ ] Web: nota "inclui R$ X estimados" e seção "Parcelas estimadas" na Fatura; textos da Início
+
 ### Bugs achados só ao rodar de verdade (e corrigidos)
 
 - Payload > 1 MB devolvia 500 em vez de 413; JSON malformado vazava a mensagem crua da biblioteca.
