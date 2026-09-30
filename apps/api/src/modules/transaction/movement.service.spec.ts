@@ -1,6 +1,11 @@
 import { DomainError } from '../../common/errors/domain.error'
 import { MovementService } from './movement.service'
+import type { AccountRepository } from '../account/account.repository'
 import type { MovementRepository } from './movement.repository'
+
+function accountsMock() {
+  return { findById: jest.fn() } as unknown as jest.Mocked<AccountRepository>
+}
 
 function repoMock() {
   return { findMany: jest.fn(), totals: jest.fn() } as unknown as jest.Mocked<MovementRepository>
@@ -11,7 +16,7 @@ describe('MovementService', () => {
     it('devolve o que a Repository trouxer (débito, Pix, TED... nunca cartão)', async () => {
       const repo = repoMock()
       repo.findMany.mockResolvedValue([])
-      const service = new MovementService(repo)
+      const service = new MovementService(repo, accountsMock())
 
       const result = await service.listByMonth('user-1', { month: '2026-09' })
 
@@ -25,7 +30,7 @@ describe('MovementService', () => {
 
     it('mês em formato inválido é rejeitado antes de tocar no banco', async () => {
       const repo = repoMock()
-      const service = new MovementService(repo)
+      const service = new MovementService(repo, accountsMock())
 
       await expect(service.listByMonth('user-1', { month: 'setembro' })).rejects.toBeInstanceOf(DomainError)
       expect(repo.findMany).not.toHaveBeenCalled()
@@ -34,7 +39,7 @@ describe('MovementService', () => {
     it('repassa conta, direção e busca pra Repository', async () => {
       const repo = repoMock()
       repo.findMany.mockResolvedValue([])
-      const service = new MovementService(repo)
+      const service = new MovementService(repo, accountsMock())
 
       await service.listByMonth('user-1', {
         month: '2026-09',
@@ -52,7 +57,7 @@ describe('MovementService', () => {
 
     it('direção fora de IN/OUT é rejeitada antes de tocar no banco', async () => {
       const repo = repoMock()
-      const service = new MovementService(repo)
+      const service = new MovementService(repo, accountsMock())
 
       await expect(service.listByMonth('user-1', { direction: 'LATERAL' })).rejects.toBeInstanceOf(DomainError)
       expect(repo.findMany).not.toHaveBeenCalled()
@@ -63,12 +68,149 @@ describe('MovementService', () => {
     it('devolve os totais do mês, "não entram no orçamento"', async () => {
       const repo = repoMock()
       repo.totals.mockResolvedValue({ incomeCents: 50000, expenseCents: 32000 })
-      const service = new MovementService(repo)
+      const service = new MovementService(repo, accountsMock())
 
       const result = await service.totals('user-1', '2026-09')
 
       expect(repo.totals).toHaveBeenCalledWith('user-1', { start: expect.any(Date), end: expect.any(Date) })
       expect(result).toEqual({ incomeCents: 50000, expenseCents: 32000 })
+    })
+  })
+
+  describe('conta de benefício: resumo e Pix por favorecido', () => {
+    function account(overrides: Record<string, unknown> = {}) {
+      return {
+        id: 'acc-benefit',
+        userId: 'user-1',
+        type: 'CHECKING',
+        balanceCents: 30000,
+        pluggyItem: { lastSyncAt: new Date('2026-09-30T13:00:00.000Z'), status: 'UPDATED' },
+        ...overrides,
+      } as unknown as Awaited<ReturnType<AccountRepository['findById']>>
+    }
+
+    function movementRow(overrides: Record<string, unknown> = {}) {
+      return {
+        id: 'tx-1',
+        accountId: 'acc-benefit',
+        userId: 'user-1',
+        kind: 'EXPENSE',
+        status: 'POSTED',
+        amountCents: 1000,
+        occurredAt: new Date('2026-09-10T15:00:00.000Z'),
+        description: 'Pix Ana Souza',
+        merchant: null,
+        categoryId: null,
+        categorySuggestedId: null,
+        categorySuggestionConfidence: null,
+        personId: null,
+        note: null,
+        cardLast4: null,
+        installmentNumber: null,
+        installmentTotal: null,
+        installmentDueAt: null,
+        displayName: null,
+        billId: null,
+        externalId: 'ext-1',
+        createdAt: new Date('2026-09-10T15:00:00.000Z'),
+        updatedAt: new Date('2026-09-10T15:00:00.000Z'),
+        ...overrides,
+      } as never
+    }
+
+    it('report: 400 sem accountId, 404 de outro usuário e 422 em cartão de crédito, sem tocar nas movimentações', async () => {
+      const repo = repoMock()
+      const accounts = accountsMock()
+      const service = new MovementService(repo, accounts)
+
+      await expect(service.report('user-1', undefined, '2026-09')).rejects.toMatchObject({
+        code: 'ACCOUNT_ID_REQUIRED',
+      })
+
+      accounts.findById.mockResolvedValue(null)
+      await expect(service.report('user-2', 'acc-do-user-1', '2026-09')).rejects.toMatchObject({
+        code: 'ACCOUNT_NOT_FOUND',
+      })
+      expect(accounts.findById).toHaveBeenCalledWith('user-2', 'acc-do-user-1')
+
+      accounts.findById.mockResolvedValue(account({ type: 'CREDIT_CARD' }))
+      await expect(service.report('user-1', 'acc-card', '2026-09')).rejects.toMatchObject({
+        code: 'NOT_A_MOVEMENT_ACCOUNT',
+      })
+      expect(repo.findMany).not.toHaveBeenCalled()
+    })
+
+    it('report: devolve saldo, última sincronização e os totais do mês da conta pedida', async () => {
+      const repo = repoMock()
+      repo.findMany.mockResolvedValue([
+        movementRow({ kind: 'INCOME', amountCents: 5000 }),
+        movementRow({ amountCents: 2000 }),
+      ])
+      const accounts = accountsMock()
+      accounts.findById.mockResolvedValue(account())
+      const service = new MovementService(repo, accounts)
+
+      const result = await service.report('user-1', 'acc-benefit', '2026-08')
+
+      expect(repo.findMany).toHaveBeenCalledWith(
+        'user-1',
+        { start: expect.any(Date), end: expect.any(Date) },
+        { accountId: 'acc-benefit' },
+      )
+      expect(result).toMatchObject({
+        accountId: 'acc-benefit',
+        month: '2026-08',
+        balanceCents: 30000,
+        lastSyncAt: '2026-09-30T13:00:00.000Z',
+        incomeCents: 5000,
+        expenseCents: 2000,
+        resultCents: 3000,
+        pace: null,
+      })
+      expect(result.daily).toHaveLength(31)
+    })
+
+    it('pixRecipients: agrupa só Pix enviados da conta e soma o total', async () => {
+      const repo = repoMock()
+      repo.findMany.mockResolvedValue([
+        movementRow({ description: 'Pix Ana Souza', amountCents: 1000 }),
+        movementRow({ description: 'Pix ana souza', amountCents: 2500 }),
+        movementRow({ description: 'Pix Bruno Lima', amountCents: 700 }),
+      ])
+      const accounts = accountsMock()
+      accounts.findById.mockResolvedValue(account())
+      const service = new MovementService(repo, accounts)
+
+      const result = await service.pixRecipients('user-1', 'acc-benefit', '2026-09')
+
+      expect(repo.findMany).toHaveBeenCalledWith(
+        'user-1',
+        { start: expect.any(Date), end: expect.any(Date) },
+        { accountId: 'acc-benefit', direction: 'OUT' },
+      )
+      expect(result.totalCents).toBe(4200)
+      expect(result.recipients.map((r) => [r.name, r.totalCents, r.count])).toEqual([
+        ['Ana Souza', 3500, 2],
+        ['Bruno Lima', 700, 1],
+      ])
+    })
+
+    it('pixTransactions: exige o favorecido e devolve só os Pix dele', async () => {
+      const repo = repoMock()
+      repo.findMany.mockResolvedValue([
+        movementRow({ id: 'a', description: 'Pix Ana Souza' }),
+        movementRow({ id: 'b', description: 'Pix Bruno Lima' }),
+      ])
+      const accounts = accountsMock()
+      accounts.findById.mockResolvedValue(account())
+      const service = new MovementService(repo, accounts)
+
+      await expect(service.pixTransactions('user-1', 'acc-benefit', undefined, '2026-09')).rejects.toMatchObject({
+        code: 'RECIPIENT_REQUIRED',
+      })
+      const result = await service.pixTransactions('user-1', 'acc-benefit', 'ana souza', '2026-09')
+
+      expect(result.map((tx) => tx.id)).toEqual(['a'])
     })
   })
 })

@@ -1048,8 +1048,9 @@ TABLE ... OWNER TO gastos`), e o `migrate dev` acusa "drift" nesse caso — usar
 - [ ] 5.6–5.9 — Extrato e resumo da conta de benefício, com Pix por favorecido. Etapas:
   - [x] spec: 00, 03 § Extrato e relatório da conta de benefício, 06, 08 e CLAUDE.md (exceção controlada à regra
         "Movimentações sem relatório" e ao § 13 de privacidade do Pix)
-  - [ ] API: `GET /movements/report?accountId=&month=` (resumo, ritmo, saídas por dia) + `GET /movements/pix-recipients`
-        (por favorecido, com detalhe), funções puras, teste com 2 usuários
+  - [x] API: `GET /movements/report?accountId=&month=` (resumo, ritmo, saídas por dia), `GET /movements/pix-recipients`
+        (por favorecido) e `GET /movements/pix?recipient=` (detalhe), funções puras em `movement-report.mapper`,
+        testes com 2 usuários. Só Pix enviados, detectados pela descrição "Pix …"
   - [ ] Web: `/movements/benefit` com "Extrato | Resumo", saldo no topo, entrada pelo card do benefício da Início
         e pelo filtro de contas
   - [ ] Web: aba Resumo (cards, barras por dia) e lista de Pix por favorecido com detalhe e busca

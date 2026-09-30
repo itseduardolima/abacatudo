@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common'
-import type { MovementTotals, Transaction } from '@gastos/shared'
+import type { MovementReport, MovementTotals, PixRecipientsResponse, Transaction } from '@gastos/shared'
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import { MovementService } from './movement.service'
 
@@ -16,6 +16,35 @@ export class MovementController {
     @Query('search') search?: string,
   ): Promise<Transaction[]> {
     return this.movements.listByMonth(userId, { month, accountId, direction, search })
+  }
+
+  @Get('report')
+  report(
+    @CurrentUser() userId: string,
+    @Query('accountId') accountId?: string,
+    @Query('month') month?: string,
+  ): Promise<MovementReport> {
+    return this.movements.report(userId, accountId, month)
+  }
+
+  @Get('pix-recipients')
+  pixRecipients(
+    @CurrentUser() userId: string,
+    @Query('accountId') accountId?: string,
+    @Query('month') month?: string,
+    @Query('search') search?: string,
+  ): Promise<PixRecipientsResponse> {
+    return this.movements.pixRecipients(userId, accountId, month, search)
+  }
+
+  @Get('pix')
+  pixTransactions(
+    @CurrentUser() userId: string,
+    @Query('accountId') accountId?: string,
+    @Query('recipient') recipient?: string,
+    @Query('month') month?: string,
+  ): Promise<Transaction[]> {
+    return this.movements.pixTransactions(userId, accountId, recipient, month)
   }
 
   @Get('totals')
