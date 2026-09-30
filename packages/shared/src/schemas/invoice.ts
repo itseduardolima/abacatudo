@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { centsSchema } from './common'
+import { centsSchema, idSchema } from './common'
 
 // Fatura = Meu + Não é meu, sempre (03-regras-negocio § Só a minha parte).
 export const invoiceSchema = z
@@ -23,3 +23,18 @@ export const accountInvoiceSchema = z
   })
   .strict()
 export type AccountInvoice = z.infer<typeof accountInvoiceSchema>
+
+// Mensagem de conta por pessoa (03-regras-negocio § Mensagem de conta): o texto já vem pronto do backend.
+export const personStatementSchema = z
+  .object({ personId: idSchema, personName: z.string(), totalCents: centsSchema, text: z.string() })
+  .strict()
+export type PersonStatement = z.infer<typeof personStatementSchema>
+
+export const statementsResponseSchema = z
+  .object({
+    month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+    isForecast: z.boolean(),
+    statements: z.array(personStatementSchema),
+  })
+  .strict()
+export type StatementsResponse = z.infer<typeof statementsResponseSchema>

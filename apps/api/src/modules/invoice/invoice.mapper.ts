@@ -53,7 +53,7 @@ export function computeInvoice(rows: InvoiceRow[], selfPersonId: string): Invoic
 // real: superestimava a fatura em milhares de reais). Mantém só a parcela de menor número por grupo —
 // entre as que ainda não foram faturadas, é sempre a próxima a vencer; linha sem `installment` passa
 // direto.
-export function keepNextDueInstallmentOnly(rows: InvoiceRow[]): InvoiceRow[] {
+export function keepNextDueInstallmentOnly<T extends InvoiceRow>(rows: T[]): T[] {
   const lowestNumberByGroup = new Map<string, number>()
   for (const row of rows) {
     if (!row.installment) continue

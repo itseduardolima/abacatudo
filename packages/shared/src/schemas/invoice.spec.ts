@@ -1,4 +1,4 @@
-import { accountInvoiceSchema, invoiceSchema } from './invoice'
+import { accountInvoiceSchema, invoiceSchema, statementsResponseSchema } from './invoice'
 
 describe('invoiceSchema', () => {
   it('aceita a forma completa', () => {
@@ -23,5 +23,28 @@ describe('accountInvoiceSchema', () => {
   it('recusa mês fora do formato e campo desconhecido', () => {
     expect(accountInvoiceSchema.safeParse({ ...base, lastForecastMonth: '2027-13' }).success).toBe(false)
     expect(accountInvoiceSchema.safeParse({ ...base, lastForecastMonth: null, extra: 1 }).success).toBe(false)
+  })
+})
+
+describe('statementsResponseSchema', () => {
+  const statement = { personId: '3f9c6f2e-0a53-4f7a-9a52-6d3f6f0d4a11', personName: 'Ana', totalCents: 4500, text: 'x' }
+
+  it('aceita a resposta com mês AAAA-MM e uma mensagem por pessoa', () => {
+    expect(
+      statementsResponseSchema.safeParse({ month: '2026-09', isForecast: false, statements: [statement] }).success,
+    ).toBe(true)
+  })
+
+  it('recusa mês fora do formato e campo desconhecido', () => {
+    expect(statementsResponseSchema.safeParse({ month: '2026-13', isForecast: false, statements: [] }).success).toBe(
+      false,
+    )
+    expect(
+      statementsResponseSchema.safeParse({
+        month: '2026-09',
+        isForecast: false,
+        statements: [{ ...statement, phone: '1' }],
+      }).success,
+    ).toBe(false)
   })
 })

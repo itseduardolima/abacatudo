@@ -12,7 +12,7 @@ function accountsMock() {
 }
 
 function peopleMock() {
-  return { findSelf: jest.fn() } as unknown as jest.Mocked<PersonRepository>
+  return { findSelf: jest.fn(), findMany: jest.fn() } as unknown as jest.Mocked<PersonRepository>
 }
 
 function repoMock() {
@@ -21,6 +21,9 @@ function repoMock() {
     findOpenRows: jest.fn(),
     findForecastRows: jest.fn(),
     findLastInstallmentDueAt: jest.fn(),
+    findStatementOpenRows: jest.fn(),
+    findStatementForecastRows: jest.fn(),
+    findStatementCalendarRows: jest.fn(),
   } as unknown as jest.Mocked<InvoiceRepository>
 }
 
@@ -302,6 +305,128 @@ describe('InvoiceService', () => {
       await expect(service.getForAccount('user-2', 'acc-do-user-1', futureMonth)).rejects.toBeInstanceOf(NotFoundError)
       expect(accounts.findById).toHaveBeenCalledWith('user-2', 'acc-do-user-1')
       expect(repo.findForecastRows).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('getStatements', () => {
+    const currentMonth = monthKey(new Date())
+    const futureMonth = shiftMonthKey(currentMonth, 2)
+    const people = [
+      personRow(),
+      personRow({ id: 'ana', name: 'Ana', isSelf: false }),
+      personRow({ id: 'bia', name: 'Bia', isSelf: false }),
+    ]
+
+    function statementRow(overrides: Record<string, unknown> = {}) {
+      return {
+        kind: 'EXPENSE' as const,
+        amountCents: 1000,
+        personId: 'ana',
+        splits: [],
+        installment: null,
+        label: 'Compra',
+        installmentNumber: null,
+        installmentTotal: null,
+        sortAt: new Date('2026-09-10T12:00:00.000Z'),
+        ...overrides,
+      }
+    }
+
+    it('mês atual em conta PLUGGY: fatura aberta, só a próxima parcela de cada compra, um texto por pessoa', async () => {
+      const accounts = accountsMock()
+      accounts.findMany.mockResolvedValue([accountRow({ source: 'PLUGGY', name: 'Nubank gold', dueDay: 10 })])
+      const peopleRepo = peopleMock()
+      peopleRepo.findMany.mockResolvedValue(people)
+      const repo = repoMock()
+      repo.findStatementOpenRows.mockResolvedValue([
+        statementRow({
+          label: 'Air fryer',
+          amountCents: 21204,
+          installment: { groupKey: 'air', number: 3 },
+          installmentNumber: 3,
+          installmentTotal: 12,
+        }),
+        statementRow({
+          label: 'Air fryer',
+          amountCents: 21204,
+          installment: { groupKey: 'air', number: 4 },
+          installmentNumber: 4,
+          installmentTotal: 12,
+        }),
+        statementRow({ personId: 'bia', label: 'Mercado', amountCents: 5000 }),
+      ])
+      const service = new InvoiceService(repo, accounts, peopleRepo, pluggyMock())
+
+      const result = await service.getStatements('user-1')
+
+      expect(result).toMatchObject({ month: currentMonth, isForecast: false })
+      expect(result.statements.map((s) => [s.personName, s.totalCents])).toEqual([
+        ['Ana', 21204],
+        ['Bia', 5000],
+      ])
+      expect(result.statements[0]?.text).toContain('Air fryer: R$ 212,04 (3/12)')
+      expect(result.statements[0]?.text).toContain('Pagar até dia 10')
+      expect(result.statements[0]?.text).not.toContain('4/12')
+      expect(repo.findStatementForecastRows).not.toHaveBeenCalled()
+    })
+
+    it('mês futuro em conta PLUGGY: usa as parcelas previstas e marca como previsão', async () => {
+      const accounts = accountsMock()
+      accounts.findMany.mockResolvedValue([accountRow({ source: 'PLUGGY' })])
+      const peopleRepo = peopleMock()
+      peopleRepo.findMany.mockResolvedValue(people)
+      const repo = repoMock()
+      repo.findStatementForecastRows.mockResolvedValue([statementRow({ label: 'TV', amountCents: 34990 })])
+      const service = new InvoiceService(repo, accounts, peopleRepo, pluggyMock())
+
+      const result = await service.getStatements('user-1', futureMonth)
+
+      expect(result).toMatchObject({ month: futureMonth, isForecast: true })
+      expect(result.statements[0]?.text).toContain('(previsão)')
+      expect(repo.findStatementOpenRows).not.toHaveBeenCalled()
+    })
+
+    it('conta MANUAL usa o mês calendário', async () => {
+      const accounts = accountsMock()
+      accounts.findMany.mockResolvedValue([accountRow({ source: 'MANUAL' })])
+      const peopleRepo = peopleMock()
+      peopleRepo.findMany.mockResolvedValue(people)
+      const repo = repoMock()
+      repo.findStatementCalendarRows.mockResolvedValue([statementRow()])
+      const service = new InvoiceService(repo, accounts, peopleRepo, pluggyMock())
+
+      const result = await service.getStatements('user-1', currentMonth)
+
+      expect(repo.findStatementCalendarRows).toHaveBeenCalledWith('user-1', 'acc-1', {
+        start: expect.any(Date),
+        end: expect.any(Date),
+      })
+      expect(result.statements).toHaveLength(1)
+    })
+
+    it('mês inválido: 400 INVALID_MONTH, sem tocar no banco', async () => {
+      const accounts = accountsMock()
+      const service = new InvoiceService(repoMock(), accounts, peopleMock(), pluggyMock())
+
+      await expect(service.getStatements('user-1', '2026-13')).rejects.toMatchObject({ code: 'INVALID_MONTH' })
+      expect(accounts.findMany).not.toHaveBeenCalled()
+    })
+
+    it('dois usuários: as consultas de pessoas, contas e compras levam sempre o userId de quem pediu', async () => {
+      const accounts = accountsMock()
+      accounts.findMany.mockResolvedValue([accountRow({ userId: 'user-2', source: 'PLUGGY' })])
+      const peopleRepo = peopleMock()
+      peopleRepo.findMany.mockResolvedValue([])
+      const repo = repoMock()
+      repo.findStatementOpenRows.mockResolvedValue([])
+      const service = new InvoiceService(repo, accounts, peopleRepo, pluggyMock())
+
+      const result = await service.getStatements('user-2')
+
+      expect(peopleRepo.findMany).toHaveBeenCalledWith('user-2', true)
+      expect(accounts.findMany).toHaveBeenCalledWith('user-2', false)
+      expect(repo.findStatementOpenRows).toHaveBeenCalledWith('user-2', 'acc-1')
+      expect(result.statements).toEqual([])
     })
   })
 

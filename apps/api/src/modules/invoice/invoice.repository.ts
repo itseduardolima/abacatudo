@@ -1,7 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { installmentGroupKey } from '../../common/installment-group'
 import { PRISMA, type PrismaService } from '../../prisma/prisma.client'
+import type { Prisma } from '@prisma/client'
 import type { InvoiceRow } from './invoice.mapper'
+import type { StatementRow } from './statement.mapper'
 
 @Injectable()
 export class InvoiceRepository {
@@ -57,6 +59,56 @@ export class InvoiceRepository {
       include: { splits: { select: { personId: true, amountCents: true } } },
     })
     return rows.map((row) => toInvoiceRow(row, null))
+  }
+
+  findStatementOpenRows(userId: string, accountId: string): Promise<StatementRow[]> {
+    return this.statementRows({
+      userId,
+      billId: null,
+      kind: { in: ['EXPENSE', 'REFUND'] },
+      account: { id: accountId, type: 'CREDIT_CARD', source: 'PLUGGY' },
+    })
+  }
+
+  findStatementForecastRows(
+    userId: string,
+    accountId: string,
+    range: { start: Date; end: Date },
+  ): Promise<StatementRow[]> {
+    return this.statementRows({
+      userId,
+      billId: null,
+      installmentDueAt: { gte: range.start, lt: range.end },
+      kind: { in: ['EXPENSE', 'REFUND'] },
+      account: { id: accountId, type: 'CREDIT_CARD', source: 'PLUGGY' },
+    })
+  }
+
+  findStatementCalendarRows(
+    userId: string,
+    accountId: string,
+    range: { start: Date; end: Date },
+  ): Promise<StatementRow[]> {
+    return this.statementRows({
+      userId,
+      occurredAt: { gte: range.start, lt: range.end },
+      kind: { in: ['EXPENSE', 'REFUND'] },
+      account: { id: accountId, type: 'CREDIT_CARD' },
+    })
+  }
+
+  private async statementRows(where: Prisma.TransactionWhereInput): Promise<StatementRow[]> {
+    const rows = await this.prisma.transaction.findMany({
+      where,
+      include: { splits: { select: { personId: true, amountCents: true } } },
+    })
+    return rows.map((row) => ({
+      ...toInvoiceRow(row, installmentOf(row)),
+      label: row.displayName ?? row.merchant ?? row.description.replace(/\s*\d+\/\d+$/, ''),
+      installmentNumber: row.installmentNumber,
+      installmentTotal: row.installmentTotal,
+      sortAt: row.installmentDueAt ?? row.occurredAt,
+    }))
   }
 
   async findLastInstallmentDueAt(userId: string, accountId: string): Promise<Date | null> {

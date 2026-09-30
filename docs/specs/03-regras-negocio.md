@@ -286,7 +286,8 @@ e não registra se foi enviado, pago ou recebido.
   fatura prevista (só parcelas já lançadas) e sai marcado como previsão. Como a
   fatura aberta muda até o fechamento, o valor enviado pode diferir do final.
 - **Conteúdo**: só o total, cada compra com o valor e a parcela `n/N` (a
-  última vira `n/N - última`), uma seção por cartão, e "Pagar até dia X" com o
+  última vira `n/N - última`), uma seção por cartão (o nome do cartão só
+  aparece quando há mais de um), e "Pagar até dia X" com o
   `dueDay` do cartão (sem `dueDay`, a linha some).
 - **Nome na fatura**: a compra tem um apelido opcional (`displayName`) que
   substitui o nome do banco no texto. Vale para **todas as parcelas** da

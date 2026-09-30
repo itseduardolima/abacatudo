@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
-import type { AccountInvoice, Invoice } from '@gastos/shared'
+import type { AccountInvoice, Invoice, StatementsResponse } from '@gastos/shared'
 import { monthKey, resolveMonthRange } from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository, type AccountWithPluggyItem } from '../account/account.repository'
@@ -12,6 +12,7 @@ import {
   mergeInvoices,
 } from './invoice.mapper'
 import { InvoiceRepository } from './invoice.repository'
+import { buildPersonStatements, formatStatementText, type StatementRow } from './statement.mapper'
 
 @Injectable()
 export class InvoiceService {
@@ -42,6 +43,46 @@ export class InvoiceService {
     }
 
     return { ...(await this.invoiceForAccount(account, selfId, month)), isForecast: false, lastForecastMonth }
+  }
+
+  // Mensagem de conta por pessoa (03-regras-negocio § Mensagem de conta): mesma fatura que a tela mostra
+  // (aberta, ou prevista se o mês é futuro), só a parte de cada pessoa não-self. Nunca envia nada — só
+  // devolve o texto pronto; quem manda é o usuário, na mão.
+  async getStatements(userId: string, month?: string): Promise<StatementsResponse> {
+    const currentMonth = monthKey(new Date())
+    const targetMonth = month ? resolveMonthKey(month) : currentMonth
+    const isForecast = targetMonth > currentMonth
+    const range = resolveMonthRange(targetMonth)
+
+    const people = await this.people.findMany(userId, true)
+    const cardAccounts = (await this.accounts.findMany(userId, false)).filter((a) => a.type === 'CREDIT_CARD')
+
+    const cards = await Promise.all(
+      cardAccounts.map(async (account) => ({
+        accountId: account.id,
+        accountName: account.name,
+        dueDay: account.dueDay,
+        rows: await this.statementRows(account, range, isForecast),
+      })),
+    )
+
+    const statements = buildPersonStatements(cards, people).map((statement) => ({
+      personId: statement.personId,
+      personName: statement.personName,
+      totalCents: statement.totalCents,
+      text: formatStatementText(statement, targetMonth, isForecast),
+    }))
+    return { month: targetMonth, isForecast, statements }
+  }
+
+  private async statementRows(
+    account: AccountWithPluggyItem,
+    range: { start: Date; end: Date },
+    isForecast: boolean,
+  ): Promise<StatementRow[]> {
+    if (account.source !== 'PLUGGY') return this.repo.findStatementCalendarRows(account.userId, account.id, range)
+    if (isForecast) return this.repo.findStatementForecastRows(account.userId, account.id, range)
+    return keepNextDueInstallmentOnly(await this.repo.findStatementOpenRows(account.userId, account.id))
   }
 
   // "Meu" da fatura aberta, somado em todos os cartões (03-regras-negocio § Só a minha parte) — é o
