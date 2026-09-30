@@ -80,9 +80,24 @@ describe('BudgetMonthService', () => {
       expect(repo.createIfMissing).toHaveBeenCalledWith('user-1', '2026-10', expect.any(Object))
     })
 
-    it('mês muito no futuro (além do seguinte) sem configuração: zero, sem gravar nada', async () => {
+    it('mês além do seguinte: projeta o mês configurado mais recente, sem gravar nada', async () => {
       const repo = repoMock()
       repo.findByMonth.mockResolvedValue(null)
+      repo.findMostRecentBefore.mockResolvedValue(row({ month: '2026-10', incomeCents: 550000 }))
+      const service = new BudgetMonthService(repo)
+
+      const result = await service.getOrCreate('user-1', '2026-12')
+
+      expect(result).toMatchObject({ month: '2026-12', incomeCents: 550000 })
+      expect(repo.findMostRecentBefore).toHaveBeenCalledWith('user-1', '2026-12')
+      expect(repo.createIfMissing).not.toHaveBeenCalled()
+      expect(repo.upsert).not.toHaveBeenCalled()
+    })
+
+    it('mês além do seguinte sem nenhum mês configurado antes: zero, sem gravar nada', async () => {
+      const repo = repoMock()
+      repo.findByMonth.mockResolvedValue(null)
+      repo.findMostRecentBefore.mockResolvedValue(null)
       const service = new BudgetMonthService(repo)
 
       const result = await service.getOrCreate('user-1', '2026-12')
@@ -96,7 +111,6 @@ describe('BudgetMonthService', () => {
         variableCapCents: 0,
       })
       expect(repo.createIfMissing).not.toHaveBeenCalled()
-      expect(repo.findMostRecentBefore).not.toHaveBeenCalled()
     })
 
     it('mês passado sem configuração: zero, sem gravar nada', async () => {

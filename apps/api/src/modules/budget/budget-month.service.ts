@@ -14,13 +14,20 @@ export class BudgetMonthService {
   constructor(private readonly repo: BudgetMonthRepository) {}
 
   // Mês atual ou o próximo sem configuração ainda: cria copiando o mês configurado mais recente (virada
-  // de mês, e dá pra planejar 1 mês à frente). Fora dessa janela — passado, ou muito no futuro — nunca
-  // existiu de verdade: mostra zero sem gravar nada (03-regras-negocio). GET nunca cria linha pra um mês
-  // arbitrariamente distante só porque alguém perguntou.
+  // de mês, e dá pra planejar 1 mês à frente). Mês passado sem linha nunca existiu: zero, sem gravar nada.
+  // Mês futuro além do seguinte: projeta o mês configurado mais recente só na resposta (o teto de hoje
+  // continua valendo até o usuário mudar), sem gravar — GET nunca cria linha pra um mês arbitrariamente
+  // distante só porque alguém perguntou (03-regras-negocio).
   async getOrCreate(userId: string, month?: string): Promise<BudgetMonth> {
     const key = resolveKey(month)
     const row = await this.resolveRow(userId, key)
-    return row ? toBudgetMonthDto(row) : { month: key, ...ZERO, variableCapCents: 0 }
+    if (row) return toBudgetMonthDto(row)
+
+    if (key > monthKey(new Date())) {
+      const previous = await this.repo.findMostRecentBefore(userId, key)
+      if (previous) return { ...toBudgetMonthDto(previous), month: key }
+    }
+    return { month: key, ...ZERO, variableCapCents: 0 }
   }
 
   // Mês fechado é imutável: editar a renda de hoje nunca reescreve o passado.
