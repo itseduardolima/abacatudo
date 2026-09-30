@@ -251,6 +251,14 @@ API), mas a UI só expõe o benefício por enquanto.
   os Pix dele no mês. **Não classifica** favorecido como pessoa ou
   estabelecimento (sem heurística por nome ou CNPJ); marcar isso à mão é
   evolução futura.
+- **Para onde vai** (aba "Resumo", mês escolhido): as saídas agrupadas pelo
+  nome do estabelecimento (sem a cidade), do maior total para o menor, com
+  total, quantidade e data da última; os 10 maiores aparecem e o resto entra em
+  "outros". Fecham a conta três blocos à parte: **Pix enviados** (total, detalhe
+  na lista de Pix), **pagamento de fatura** e "outros". Invariante testada:
+  estabelecimentos + outros + Pix + pagamento de fatura = saídas do mês. Sem
+  categoria (categorias do benefício, se vierem, usam a mesma lista do cartão e
+  exigem exceção própria neste spec).
 - **Gastos que se repetem** (só estabelecimentos; **Pix fica de fora**, repetição
   de Pix é ruído e dado de terceiros):
   - **Recorrentes**: o mesmo detector de assinaturas do cartão (valor ±10%,
