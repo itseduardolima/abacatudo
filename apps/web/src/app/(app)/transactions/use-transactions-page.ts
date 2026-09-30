@@ -142,7 +142,10 @@ export function useTransactionsPage() {
       await updateDisplayName.mutateAsync({ id: editingId, displayName })
       setSheetView('detail')
     } catch (error) {
-      if (!(error instanceof ApiClientError)) throw error
+      if (!(error instanceof ApiClientError)) {
+        setNameError('Não foi possível salvar o nome agora.')
+        return
+      }
       const fieldErrors = error.error.details?.fieldErrors as Record<string, string[] | undefined> | undefined
       setNameError(fieldErrors?.displayName?.[0] ?? error.error.message)
     }

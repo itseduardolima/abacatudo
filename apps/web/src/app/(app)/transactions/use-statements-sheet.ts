@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useStatements } from '@/hooks/queries/use-statements'
 import { buildWhatsappUrl, isWhatsappUrlTooLong } from '@/lib/utils/whatsapp'
 
@@ -8,6 +8,11 @@ export function useStatementsSheet(month: string | undefined) {
   const [isOpen, setIsOpen] = useState(false)
   const [copiedPersonId, setCopiedPersonId] = useState<string | null>(null)
   const statements = useStatements(month, isOpen)
+
+  const close = useCallback(() => {
+    setIsOpen(false)
+    setCopiedPersonId(null)
+  }, [])
 
   const send = (text: string) => {
     window.open(buildWhatsappUrl(text), '_blank', 'noopener')
@@ -25,10 +30,7 @@ export function useStatementsSheet(month: string | undefined) {
   return {
     isOpen,
     open: () => setIsOpen(true),
-    close: () => {
-      setIsOpen(false)
-      setCopiedPersonId(null)
-    },
+    close,
     isLoading: statements.isPending,
     isError: statements.isError,
     statements: statements.data?.statements ?? [],
