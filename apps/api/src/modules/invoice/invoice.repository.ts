@@ -46,6 +46,29 @@ export class InvoiceRepository {
     return rows.map((row) => toInvoiceRow(row, installmentOf(row)))
   }
 
+  // Quinzena (03-regras-negocio § Orçamento mensal): lançamento sem billId de cartão PLUGGY cuja data
+  // (a do vencimento, se parcela) cai na janela. `after` corta a fatura já fechada, como em findOpenRows.
+  async findOpenRowsInRange(
+    userId: string,
+    accountId: string,
+    range: { start: Date; end: Date },
+    after?: Date,
+  ): Promise<InvoiceRow[]> {
+    const inRange = { gte: range.start, lt: range.end }
+    const rows = await this.prisma.transaction.findMany({
+      where: {
+        userId,
+        billId: null,
+        ...(after ? { occurredAt: { gte: after } } : {}),
+        kind: { in: ['EXPENSE', 'REFUND'] },
+        account: { id: accountId, type: 'CREDIT_CARD', source: 'PLUGGY' },
+        OR: [{ installmentDueAt: null, occurredAt: inRange }, { installmentDueAt: inRange }],
+      },
+      include: { splits: { select: { personId: true, amountCents: true } } },
+    })
+    return rows.map((row) => toInvoiceRow(row, null))
+  }
+
   // Fatura prevista (03-regras-negocio § Fatura prevista): parcelas ainda sem billId cuja data de
   // vencimento (installmentDueAt, a `date` do Pluggy) cai no mês pedido — nunca a compra inteira, nunca
   // CARD_PAYMENT.

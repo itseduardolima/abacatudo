@@ -21,6 +21,7 @@ export function useFixedExpensesPage() {
   const archiveFixedExpense = useArchiveFixedExpense()
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [ruleError, setRuleError] = useState<string | null>(null)
+  const [half, setHalf] = useState<'1' | '2'>('1')
   const submissionRef = useRef(0)
   const {
     register,
@@ -40,9 +41,10 @@ export function useFixedExpensesPage() {
     }
 
     try {
-      await createFixedExpense.mutateAsync({ name: values.name, amountCents })
+      await createFixedExpense.mutateAsync({ name: values.name, amountCents, half: half === '2' ? 2 : 1 })
       if (submission !== submissionRef.current) return
       reset()
+      setHalf('1')
       setIsFormOpen(false)
     } catch (error) {
       if (!(error instanceof ApiClientError)) throw error
@@ -67,6 +69,8 @@ export function useFixedExpensesPage() {
       setRuleError(null)
     },
     register,
+    half,
+    setHalf,
     errors,
     onSubmit,
     isSubmitting: createFixedExpense.isPending,

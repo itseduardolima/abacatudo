@@ -346,6 +346,7 @@ model FixedExpense {
   userId      String
   name        String
   amountCents Int
+  half        Int       @default(1)
   archivedAt  DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -384,6 +385,7 @@ model BudgetMonth {
   userId             String
   month              String
   incomeCents        Int      @default(0)
+  firstHalfIncomeCents Int    @default(0)
   benefitCents       Int      @default(0)
   fixedExpensesCents Int      @default(0)
   savingsGoalCents   Int      @default(0)

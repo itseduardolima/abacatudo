@@ -1215,6 +1215,9 @@ fatura) e `/movements` só com o resto — como o desenho previa.
 - [x] Fatura fechada fora do "Meu em [mês]": sem saldo anterior, `CARD_PAYMENT` não abate a aberta, e cartão com
       `closingDay` (Pic Pay) só conta lançamento depois do último fechamento (2026-10-02).
 
+- [x] Teto por quinzena: renda em dois salários (dia 15 e dia 30), gasto fixo com quinzena de pagamento, linha
+      da quinzena no card da Início (2026-10-02).
+
 ### Code review (2026-09-22) — 4 achados, todos corrigidos e reverificados ao vivo
 
 - **`lastErrorCode` era campo morto**: existia na coluna e no DTO, mas nada escrevia nele — conexão com

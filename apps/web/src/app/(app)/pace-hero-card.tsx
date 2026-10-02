@@ -47,6 +47,28 @@ export function PaceHeroCard({ pace }: { pace: BudgetPace }) {
         </span>
       </div>
 
+      {!isForecast && pace.halfPace && (
+        <div className="mt-4">
+          <div className="flex justify-between text-xs text-on-inverse-muted">
+            <span>
+              {pace.halfPace.half}ª quinzena ({pace.halfPace.startDay}–{pace.halfPace.endDay}){' '}
+              <MoneyText cents={pace.halfPace.spentCents} className="!text-on-inverse" />
+            </span>
+            <span>
+              Teto <MoneyText cents={pace.halfPace.capCents} className="!text-on-inverse" />
+            </span>
+          </div>
+          <div className="mt-1.5 h-2 rounded-pill bg-on-inverse-hairline">
+            <div
+              className="h-full rounded-pill bg-on-inverse-accent"
+              style={{
+                width: `${pace.halfPace.capCents > 0 ? Math.min((pace.halfPace.spentCents / pace.halfPace.capCents) * 100, 100) : 0}%`,
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="my-4 h-px bg-on-inverse-hairline" />
 
       <div>

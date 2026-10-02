@@ -9,6 +9,8 @@ export const budgetMonthSchema = z
   .object({
     month: monthKeySchema,
     incomeCents: centsSchema,
+    firstHalfIncomeCents: centsSchema,
+    secondHalfIncomeCents: centsSchema,
     benefitCents: centsSchema,
     fixedExpensesCents: centsSchema,
     savingsGoalCents: centsSchema,
@@ -21,6 +23,18 @@ export type BudgetMonth = z.infer<typeof budgetMonthSchema>
 // backend (dinheiro nunca é calculado no frontend), o front só narra.
 export const budgetPaceStatusSchema = z.enum(['ON_TRACK', 'OVER_PACE'])
 export type BudgetPaceStatus = z.infer<typeof budgetPaceStatusSchema>
+
+export const halfPaceSchema = z
+  .object({
+    half: z.union([z.literal(1), z.literal(2)]),
+    startDay: z.number().int().positive(),
+    endDay: z.number().int().positive(),
+    capCents: centsSchema,
+    spentCents: centsSchema,
+    remainingCents: centsSchema,
+  })
+  .strict()
+export type HalfPace = z.infer<typeof halfPaceSchema>
 
 export const budgetPaceSchema = z
   .object({
@@ -37,13 +51,15 @@ export const budgetPaceSchema = z
     diffCents: centsSchema,
     status: budgetPaceStatusSchema,
     perDayRemainingCents: centsSchema,
+    halfPace: halfPaceSchema.nullable(),
   })
   .strict()
 export type BudgetPace = z.infer<typeof budgetPaceSchema>
 
 export const updateBudgetMonthInputSchema = z
   .object({
-    incomeCents: centsSchema.nonnegative(),
+    firstHalfIncomeCents: centsSchema.nonnegative(),
+    secondHalfIncomeCents: centsSchema.nonnegative(),
     benefitCents: centsSchema.nonnegative(),
     fixedExpensesCents: centsSchema.nonnegative(),
     savingsGoalCents: centsSchema.nonnegative(),

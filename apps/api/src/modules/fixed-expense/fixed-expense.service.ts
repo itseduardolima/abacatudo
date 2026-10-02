@@ -11,7 +11,7 @@ export class FixedExpenseService {
   constructor(private readonly repo: FixedExpenseRepository) {}
 
   async create(userId: string, input: CreateFixedExpenseInput): Promise<FixedExpense> {
-    return toDto(await this.repo.create(userId, input.name, input.amountCents))
+    return toDto(await this.repo.create(userId, input.name, input.amountCents, input.half))
   }
 
   async list(userId: string, includeArchived: boolean): Promise<FixedExpense[]> {
@@ -22,6 +22,11 @@ export class FixedExpenseService {
   async sumActiveCents(userId: string): Promise<number> {
     const rows = await this.repo.findMany(userId, false)
     return rows.reduce((total, row) => total + row.amountCents, 0)
+  }
+
+  async sumActiveCentsByHalf(userId: string, half: 1 | 2): Promise<number> {
+    const rows = await this.repo.findMany(userId, false)
+    return rows.filter((row) => row.half === half).reduce((total, row) => total + row.amountCents, 0)
   }
 
   async archive(userId: string, id: string): Promise<void> {
@@ -35,6 +40,7 @@ function toDto(row: FixedExpenseRow): FixedExpense {
     id: row.id,
     name: row.name,
     amountCents: row.amountCents,
+    half: row.half === 2 ? 2 : 1,
     archivedAt: row.archivedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
   }

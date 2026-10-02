@@ -9,7 +9,8 @@ import { ApiClientError } from '@/lib/api-client'
 import { formatMoney, parseMoneyInput } from '@/lib/utils/format-money'
 
 interface FormValues {
-  income: string
+  firstHalf: string
+  secondHalf: string
   benefit: string
 }
 
@@ -28,7 +29,7 @@ export function useIncomePage() {
     reset,
     setError,
     formState: { errors, isDirty },
-  } = useForm<FormValues>({ defaultValues: { income: '', benefit: '' } })
+  } = useForm<FormValues>({ defaultValues: { firstHalf: '', secondHalf: '', benefit: '' } })
 
   const benefitAccount = accounts.data?.find((account) => account.isBenefitAccount) ?? null
   const benefitFromAccountCents = benefitAccount?.balanceCents ?? null
@@ -42,15 +43,21 @@ export function useIncomePage() {
   useEffect(() => {
     if (!budgetMonth.data || isDirtyRef.current) return
     reset({
-      income: formatMoney(budgetMonth.data.incomeCents).replace('R$ ', ''),
+      firstHalf: formatMoney(budgetMonth.data.firstHalfIncomeCents).replace('R$ ', ''),
+      secondHalf: formatMoney(budgetMonth.data.secondHalfIncomeCents).replace('R$ ', ''),
       benefit: formatMoney(benefitFromAccountCents ?? budgetMonth.data.benefitCents).replace('R$ ', ''),
     })
   }, [budgetMonth.data, benefitFromAccountCents, reset])
 
   const onSubmit = handleSubmit(async (values) => {
-    const incomeCents = parseMoneyInput(values.income)
-    if (Number.isNaN(incomeCents)) {
-      setError('income', { message: 'Informe um valor válido.' })
+    const firstHalfIncomeCents = parseMoneyInput(values.firstHalf)
+    if (Number.isNaN(firstHalfIncomeCents)) {
+      setError('firstHalf', { message: 'Informe um valor válido.' })
+      return
+    }
+    const secondHalfIncomeCents = parseMoneyInput(values.secondHalf)
+    if (Number.isNaN(secondHalfIncomeCents)) {
+      setError('secondHalf', { message: 'Informe um valor válido.' })
       return
     }
 
@@ -61,11 +68,20 @@ export function useIncomePage() {
     }
 
     try {
-      await updateBudgetMonth.mutateAsync({ incomeCents, benefitCents, fixedExpensesCents: 0, savingsGoalCents: 0 })
+      await updateBudgetMonth.mutateAsync({
+        firstHalfIncomeCents,
+        secondHalfIncomeCents,
+        benefitCents,
+        fixedExpensesCents: 0,
+        savingsGoalCents: 0,
+      })
     } catch (error) {
       if (!(error instanceof ApiClientError)) throw error
       const fieldErrors = error.error.details?.fieldErrors as Record<string, string[] | undefined> | undefined
-      if (fieldErrors?.incomeCents?.[0]) setError('income', { message: fieldErrors.incomeCents[0] })
+      if (fieldErrors?.firstHalfIncomeCents?.[0])
+        setError('firstHalf', { message: fieldErrors.firstHalfIncomeCents[0] })
+      else if (fieldErrors?.secondHalfIncomeCents?.[0])
+        setError('secondHalf', { message: fieldErrors.secondHalfIncomeCents[0] })
       else if (fieldErrors?.benefitCents?.[0]) setError('benefit', { message: fieldErrors.benefitCents[0] })
     }
   })

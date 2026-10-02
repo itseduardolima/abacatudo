@@ -6,6 +6,7 @@ import { BackIcon, IconButton } from '@/components/ui/IconButton'
 import { InlineAlert } from '@/components/ui/InlineAlert'
 import { Input } from '@/components/ui/Input'
 import { MoneyInput } from '@/components/ui/MoneyInput'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { MoneyText } from '@/components/finance/MoneyText'
 import { useFixedExpensesPage } from './use-fixed-expenses-page'
 
@@ -17,6 +18,8 @@ export default function FixedExpensesPage() {
     openForm,
     closeForm,
     register,
+    half,
+    setHalf,
     errors,
     onSubmit,
     isSubmitting,
@@ -48,7 +51,12 @@ export default function FixedExpensesPage() {
               <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-surface text-ink">
                 <Repeat size={18} strokeWidth={1.8} />
               </span>
-              <p className="flex-1 font-semibold text-ink">{expense.name}</p>
+              <div className="flex-1">
+                <p className="font-semibold text-ink">{expense.name}</p>
+                <p className="text-xs text-muted">
+                  Paga {expense.half === 1 ? 'na 1ª quinzena (dia 15)' : 'na 2ª quinzena (dia 30)'}
+                </p>
+              </div>
               <MoneyText cents={expense.amountCents} />
               <Button
                 type="button"
@@ -77,6 +85,15 @@ export default function FixedExpensesPage() {
           {ruleError && <InlineAlert>{ruleError}</InlineAlert>}
           <Input label="Nome" placeholder="Aluguel" error={errors.name?.message} {...register('name')} />
           <MoneyInput label="Valor mensal" error={errors.amount?.message} {...register('amount')} />
+          <SegmentedControl
+            label="Quinzena de pagamento"
+            options={[
+              { value: '1', label: 'Dia 15' },
+              { value: '2', label: 'Dia 30' },
+            ]}
+            value={half}
+            onChange={setHalf}
+          />
           <div className="mt-2 flex gap-3">
             <Button type="submit" state={isSubmitting ? 'loading' : 'idle'}>
               Salvar

@@ -4,11 +4,13 @@ import type { BudgetMonthService } from './budget-month.service'
 import type { FixedExpenseService } from '../fixed-expense/fixed-expense.service'
 import type { InvoiceService } from '../invoice/invoice.service'
 
-function budgetMonthMock(incomeCents: number) {
+function budgetMonthMock(incomeCents: number, month = '2026-09') {
   return {
     getOrCreate: jest.fn().mockResolvedValue({
-      month: '2026-09',
+      month,
       incomeCents,
+      firstHalfIncomeCents: incomeCents / 2,
+      secondHalfIncomeCents: incomeCents / 2,
       benefitCents: 0,
       fixedExpensesCents: 0,
       savingsGoalCents: 0,
@@ -19,11 +21,17 @@ function budgetMonthMock(incomeCents: number) {
 
 function invoicesMock(mineCents: number) {
   const summary: Invoice = { totalCents: mineCents + 1000, mineCents, notMineCents: 1000 }
-  return { getSummary: jest.fn().mockResolvedValue(summary) } as unknown as jest.Mocked<InvoiceService>
+  return {
+    getSummary: jest.fn().mockResolvedValue(summary),
+    getHalfMineCents: jest.fn().mockResolvedValue(mineCents / 2),
+  } as unknown as jest.Mocked<InvoiceService>
 }
 
 function fixedExpensesMock(sumCents: number) {
-  return { sumActiveCents: jest.fn().mockResolvedValue(sumCents) } as unknown as jest.Mocked<FixedExpenseService>
+  return {
+    sumActiveCents: jest.fn().mockResolvedValue(sumCents),
+    sumActiveCentsByHalf: jest.fn().mockResolvedValue(sumCents / 2),
+  } as unknown as jest.Mocked<FixedExpenseService>
 }
 
 describe('BudgetPaceService', () => {
@@ -47,6 +55,14 @@ describe('BudgetPaceService', () => {
     expect(result.spentCents).toBe(70_000)
     expect(result.cardsMineCents).toBe(50_000)
     expect(result.month).toBe('2026-09')
+    expect(result.halfPace).toEqual({
+      half: 1,
+      startDay: 1,
+      endDay: 15,
+      capCents: 150_000,
+      spentCents: 35_000,
+      remainingCents: 115_000,
+    })
   })
 
   it('sem gasto fixo nenhum, gasto é só a fatura', async () => {
@@ -60,5 +76,26 @@ describe('BudgetPaceService', () => {
     expect(budgetMonth.getOrCreate).toHaveBeenCalledWith('user-1', '2026-08')
     expect(invoices.getSummary).toHaveBeenCalledWith('user-1', '2026-08')
     expect(result.spentCents).toBe(15_000)
+  })
+
+  it('quinzena só existe no mês atual: mês futuro não traz halfPace', async () => {
+    const service = new BudgetPaceService(
+      budgetMonthMock(100_000, '2026-10'),
+      invoicesMock(10_000),
+      fixedExpensesMock(0),
+    )
+
+    const result = await service.getPace('user-1', '2026-10')
+
+    expect(result.halfPace).toBeNull()
+  })
+
+  it('a partir do dia 16 a quinzena é a 2ª, com o teto do segundo salário', async () => {
+    jest.setSystemTime(new Date('2026-09-20T12:00:00.000Z'))
+    const service = new BudgetPaceService(budgetMonthMock(565_144), invoicesMock(10_000), fixedExpensesMock(0))
+
+    const result = await service.getPace('user-1')
+
+    expect(result.halfPace).toMatchObject({ half: 2, startDay: 16, endDay: 30, capCents: 282_572 })
   })
 })

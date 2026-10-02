@@ -17,6 +17,7 @@ function row(overrides: Partial<FixedExpenseRow> = {}): FixedExpenseRow {
     userId: 'user-1',
     name: 'Aluguel',
     amountCents: 120000,
+    half: 1,
     archivedAt: null,
     createdAt: new Date('2026-09-01T00:00:00.000Z'),
     updatedAt: new Date('2026-09-01T00:00:00.000Z'),
@@ -30,14 +31,15 @@ describe('FixedExpenseService', () => {
     repo.create.mockResolvedValue(row())
     const service = new FixedExpenseService(repo)
 
-    await expect(service.create('user-1', { name: 'Aluguel', amountCents: 120000 })).resolves.toEqual({
+    await expect(service.create('user-1', { name: 'Aluguel', amountCents: 120000, half: 2 })).resolves.toEqual({
       id: 'fe-1',
       name: 'Aluguel',
       amountCents: 120000,
+      half: 1,
       archivedAt: null,
       createdAt: '2026-09-01T00:00:00.000Z',
     })
-    expect(repo.create).toHaveBeenCalledWith('user-1', 'Aluguel', 120000)
+    expect(repo.create).toHaveBeenCalledWith('user-1', 'Aluguel', 120000, 2)
   })
 
   it('list: mapeia todas as linhas', async () => {

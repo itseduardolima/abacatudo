@@ -6,8 +6,8 @@ import { PRISMA, type PrismaService } from '../../prisma/prisma.client'
 export class FixedExpenseRepository {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaService) {}
 
-  create(userId: string, name: string, amountCents: number): Promise<FixedExpense> {
-    return this.prisma.fixedExpense.create({ data: { userId, name, amountCents } })
+  create(userId: string, name: string, amountCents: number, half: number): Promise<FixedExpense> {
+    return this.prisma.fixedExpense.create({ data: { userId, name, amountCents, half } })
   }
 
   findMany(userId: string, includeArchived: boolean): Promise<FixedExpense[]> {

@@ -16,7 +16,9 @@ export default function IncomePage() {
         </IconButton>
         <div>
           <h1 className="display-number text-[2rem] text-ink">Renda</h1>
-          <p className="text-sm text-muted">A renda mensal vira o teto do ritmo, na Início.</p>
+          <p className="text-sm text-muted">
+            A soma dos salários vira o teto do mês, e cada um é o teto da sua quinzena, na Início.
+          </p>
         </div>
       </div>
 
@@ -24,7 +26,16 @@ export default function IncomePage() {
 
       {!isLoading && (
         <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
-          <MoneyInput label="Renda mensal" error={errors.income?.message} {...register('income')} />
+          <MoneyInput
+            label="Salário da 1ª quinzena (dia 15)"
+            error={errors.firstHalf?.message}
+            {...register('firstHalf')}
+          />
+          <MoneyInput
+            label="Salário da 2ª quinzena (dia 30)"
+            error={errors.secondHalf?.message}
+            {...register('secondHalf')}
+          />
           <MoneyInput
             label="Renda de benefícios"
             error={errors.benefit?.message}

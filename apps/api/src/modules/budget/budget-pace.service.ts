@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common'
 import type { BudgetPace } from '@gastos/shared'
-import { dayOfMonth, monthKey } from '../../common/date/timezone'
+import { dayOfMonth, halfMonthRange, halfOfDay, monthKey } from '../../common/date/timezone'
 import { FixedExpenseService } from '../fixed-expense/fixed-expense.service'
 import { InvoiceService } from '../invoice/invoice.service'
 import { BudgetMonthService } from './budget-month.service'
+import { computeHalfPace } from './half-pace.mapper'
 import { computePace } from './pace.mapper'
 
 @Injectable()
@@ -25,13 +26,33 @@ export class BudgetPaceService {
       this.fixedExpenses.sumActiveCents(userId),
     ])
 
-    return computePace({
+    const pace = computePace({
       monthKeyValue: budget.month,
       currentMonthKey: monthKey(new Date()),
       todayDayOfMonth: dayOfMonth(new Date()),
       capCents: budget.incomeCents,
       spentCents: invoice.mineCents + fixedExpensesCents,
       cardsMineCents: invoice.mineCents,
+    })
+    return { ...pace, halfPace: await this.halfPace(userId, budget, pace.daysInMonth) }
+  }
+
+  private async halfPace(
+    userId: string,
+    budget: { month: string; firstHalfIncomeCents: number; secondHalfIncomeCents: number },
+    daysInMonth: number,
+  ) {
+    if (budget.month !== monthKey(new Date())) return null
+    const half = halfOfDay(dayOfMonth(new Date()))
+    const [cardsCents, fixedCents] = await Promise.all([
+      this.invoices.getHalfMineCents(userId, halfMonthRange(budget.month, half)),
+      this.fixedExpenses.sumActiveCentsByHalf(userId, half),
+    ])
+    return computeHalfPace({
+      half,
+      daysInMonth,
+      capCents: half === 1 ? budget.firstHalfIncomeCents : budget.secondHalfIncomeCents,
+      spentCents: cardsCents + fixedCents,
     })
   }
 }
