@@ -22,15 +22,7 @@ export function PaceHeroCard({ pace }: { pace: BudgetPace }) {
         <MoneyText cents={pace.spentCents} className="!text-on-inverse-accent" />
       </p>
 
-      <div className="mt-7 flex justify-between text-xs text-on-inverse-muted">
-        <span>
-          Nos cartões <MoneyText cents={pace.cardsMineCents} className="!text-on-inverse" />
-        </span>
-        <span>
-          Teto <MoneyText cents={pace.capCents} className="!text-on-inverse" />
-        </span>
-      </div>
-      <div className="relative mt-1.5 h-3.5 rounded-pill bg-on-inverse-hairline">
+      <div className="relative mt-7 h-3.5 rounded-pill bg-on-inverse-hairline">
         <div
           className="h-full rounded-pill bg-on-inverse-accent"
           style={{ width: `${pace.capCents > 0 ? Math.min((pace.spentCents / pace.capCents) * 100, 100) : 0}%` }}
@@ -42,22 +34,11 @@ export function PaceHeroCard({ pace }: { pace: BudgetPace }) {
           />
         )}
       </div>
-      {firstHalfPercent !== null && (
-        <div className="relative mt-1.5 h-9 text-xs text-on-inverse-muted">
-          <div
-            className="absolute -translate-x-1/2 whitespace-nowrap text-center"
-            style={{ left: `${firstHalfPercent}%` }}
-          >
-            <p>
-              Teto dia 15 <MoneyText cents={pace.firstHalfCapCents} className="!text-on-inverse" />
-            </p>
-            {pace.firstHalfSpentCents !== null && (
-              <p>
-                Gasto <MoneyText cents={pace.firstHalfSpentCents} className="!text-on-inverse" />
-              </p>
-            )}
-          </div>
-        </div>
+      {firstHalfPercent !== null && pace.firstHalfSpentCents !== null && (
+        <p className="mt-2.5 text-xs text-on-inverse-muted">
+          1ª quinzena <MoneyText cents={pace.firstHalfSpentCents} className="!text-on-inverse" /> de{' '}
+          <MoneyText cents={pace.firstHalfCapCents} className="!text-on-inverse" />
+        </p>
       )}
 
       <div className="my-4 h-px bg-on-inverse-hairline" />
