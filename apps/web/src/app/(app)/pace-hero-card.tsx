@@ -6,6 +6,10 @@ import { currentMonthKey, formatMonthName } from '@/lib/utils/format-month'
 // item é o saldo de benefício, quando existe).
 export function PaceHeroCard({ pace }: { pace: BudgetPace }) {
   const isForecast = pace.month > currentMonthKey()
+  const firstHalfSpentPercent =
+    pace.capCents > 0 && pace.firstHalfSpentCents !== null
+      ? Math.min((pace.firstHalfSpentCents / pace.capCents) * 100, 100)
+      : null
   const firstHalfPercent =
     pace.capCents > 0 && pace.firstHalfCapCents > 0
       ? Math.min((pace.firstHalfCapCents / pace.capCents) * 100, 100)
@@ -33,9 +37,16 @@ export function PaceHeroCard({ pace }: { pace: BudgetPace }) {
             style={{ left: `${firstHalfPercent}%` }}
           />
         )}
+        {firstHalfSpentPercent !== null && (
+          <div
+            className="absolute -top-1 h-5 w-0.5 -translate-x-1/2 rounded-full bg-on-inverse-marker"
+            style={{ left: `${firstHalfSpentPercent}%` }}
+          />
+        )}
       </div>
       {firstHalfPercent !== null && pace.firstHalfSpentCents !== null && (
-        <p className="mt-2.5 text-xs text-on-inverse-muted">
+        <p className="mt-2.5 flex items-center gap-1.5 text-xs text-on-inverse-muted">
+          <span aria-hidden className="h-2 w-2 rounded-full bg-on-inverse-marker" />
           1ª quinzena <MoneyText cents={pace.firstHalfSpentCents} className="!text-on-inverse" /> de{' '}
           <MoneyText cents={pace.firstHalfCapCents} className="!text-on-inverse" />
         </p>
