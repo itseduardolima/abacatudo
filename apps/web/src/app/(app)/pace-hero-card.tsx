@@ -40,7 +40,7 @@ export function PaceHeroCard({ pace }: { pace: BudgetPace }) {
       </div>
       <div className="mt-2.5 flex justify-between text-xs text-on-inverse-muted">
         <span>
-          Nos cartões <MoneyText cents={pace.cardsTotalCents} className="!text-on-inverse" />
+          Nos cartões <MoneyText cents={pace.cardsMineCents} className="!text-on-inverse" />
         </span>
         <span>
           Teto <MoneyText cents={pace.capCents} className="!text-on-inverse" />

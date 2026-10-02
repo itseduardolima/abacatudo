@@ -389,8 +389,7 @@ teto variável = renda mensal (fixa + benefícios)
 - **Ritmo**: compara o gasto do mês (fatura aberta somada em todos os
   cartões + gastos fixos ativos) com o esperado linear até hoje, sobre o
   teto; sinaliza se está acima. O card da Início mostra também **quanto foi gasto
-  nos cartões de crédito, somando todos** (fatura do banco de cada cartão, com o
-  que não é meu incluso), calculado no backend (`cardsTotalCents`). O card acompanha
+  nos cartões de crédito, somando todos, só a minha parte** (sem o que não é meu), calculado no backend (`cardsMineCents`). O card acompanha
   o mês escolhido nas setas da Início: num **mês futuro** mostra o **previsto**
   (fatura prevista de cada cartão, com parcelas lançadas e estimadas, mais os gastos fixos)
   contra o teto daquele mês, sem selo "No ritmo" nem marcador de hoje. Só existe
