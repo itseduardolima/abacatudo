@@ -34,7 +34,11 @@ export class BudgetPaceService {
       spentCents: invoice.mineCents + fixedExpensesCents,
       cardsMineCents: invoice.mineCents,
     })
-    return { ...pace, halfPace: await this.halfPace(userId, budget, pace.daysInMonth) }
+    return {
+      ...pace,
+      firstHalfCapCents: budget.firstHalfIncomeCents,
+      halfPace: await this.halfPace(userId, budget, pace.daysInMonth),
+    }
   }
 
   private async halfPace(

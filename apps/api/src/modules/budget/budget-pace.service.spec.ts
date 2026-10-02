@@ -55,6 +55,7 @@ describe('BudgetPaceService', () => {
     expect(result.spentCents).toBe(70_000)
     expect(result.cardsMineCents).toBe(50_000)
     expect(result.month).toBe('2026-09')
+    expect(result.firstHalfCapCents).toBe(150_000)
     expect(result.halfPace).toEqual({
       half: 1,
       startDay: 1,

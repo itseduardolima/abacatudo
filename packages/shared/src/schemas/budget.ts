@@ -51,6 +51,7 @@ export const budgetPaceSchema = z
     diffCents: centsSchema,
     status: budgetPaceStatusSchema,
     perDayRemainingCents: centsSchema,
+    firstHalfCapCents: centsSchema,
     halfPace: halfPaceSchema.nullable(),
   })
   .strict()

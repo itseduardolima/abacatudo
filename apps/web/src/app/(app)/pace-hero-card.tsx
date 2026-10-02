@@ -6,9 +6,10 @@ import { currentMonthKey, formatMonthName } from '@/lib/utils/format-month'
 // item é o saldo de benefício, quando existe).
 export function PaceHeroCard({ pace }: { pace: BudgetPace }) {
   const isForecast = pace.month > currentMonthKey()
-  const half = isForecast ? null : pace.halfPace
-  const barSpentCents = half ? half.spentCents : pace.spentCents
-  const barCapCents = half ? half.capCents : pace.capCents
+  const firstHalfPercent =
+    pace.capCents > 0 && pace.firstHalfCapCents > 0
+      ? Math.min((pace.firstHalfCapCents / pace.capCents) * 100, 100)
+      : null
 
   return (
     <div className="rounded-card-lg bg-inverse px-5 py-6 text-on-inverse">
@@ -23,26 +24,31 @@ export function PaceHeroCard({ pace }: { pace: BudgetPace }) {
 
       <div className="mt-7 flex justify-between text-xs text-on-inverse-muted">
         <span>
-          {half
-            ? `${half.half}ª quinzena (${half.startDay}–${half.endDay})`
-            : isForecast
-              ? 'Previsto no mês'
-              : 'No mês'}{' '}
-          <MoneyText cents={barSpentCents} className="!text-on-inverse" />
+          Nos cartões <MoneyText cents={pace.cardsMineCents} className="!text-on-inverse" />
         </span>
         <span>
-          Teto <MoneyText cents={barCapCents} className="!text-on-inverse" />
+          Teto <MoneyText cents={pace.capCents} className="!text-on-inverse" />
         </span>
       </div>
-      <div className="mt-1.5 h-3.5 rounded-pill bg-on-inverse-hairline">
+      <div className="relative mt-1.5 h-3.5 rounded-pill bg-on-inverse-hairline">
         <div
           className="h-full rounded-pill bg-on-inverse-accent"
-          style={{ width: `${barCapCents > 0 ? Math.min((barSpentCents / barCapCents) * 100, 100) : 0}%` }}
+          style={{ width: `${pace.capCents > 0 ? Math.min((pace.spentCents / pace.capCents) * 100, 100) : 0}%` }}
         />
+        {firstHalfPercent !== null && (
+          <div
+            className="absolute -top-1 h-5 w-0.5 -translate-x-1/2 rounded-full bg-on-inverse"
+            style={{ left: `${firstHalfPercent}%` }}
+          />
+        )}
       </div>
-      <p className="mt-2.5 text-xs text-on-inverse-muted">
-        Nos cartões <MoneyText cents={pace.cardsMineCents} className="!text-on-inverse" />
-      </p>
+      {firstHalfPercent !== null && (
+        <p className="relative mt-1.5 h-4 text-xs text-on-inverse-muted" aria-label="Teto do dia 15">
+          <span className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: `${firstHalfPercent}%` }}>
+            Dia 15 <MoneyText cents={pace.firstHalfCapCents} className="!text-on-inverse" />
+          </span>
+        </p>
+      )}
 
       <div className="my-4 h-px bg-on-inverse-hairline" />
 
