@@ -186,7 +186,7 @@ function TransactionsContent() {
               </div>
             </div>
           </div>
-          {forecast.isForecast && invoice.estimatedCents > 0 && (
+          {invoice.estimatedCents > 0 && (
             <p className="text-xs text-muted">
               Inclui <MoneyText cents={invoice.estimatedCents} className="!text-xs" /> de parcelas estimadas (o banco
               ainda não lançou).
@@ -290,7 +290,7 @@ function TransactionsContent() {
         </div>
       ))}
 
-      {forecast.isForecast && <EstimatedInstallmentsSection data={estimatedInstallments} />}
+      <EstimatedInstallmentsSection data={estimatedInstallments} />
 
       {statementsSheet.isOpen && (
         <StatementsSheet

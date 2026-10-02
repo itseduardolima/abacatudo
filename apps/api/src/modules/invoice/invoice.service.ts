@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import type { AccountInvoice, EstimatedInstallmentsResponse, Invoice, StatementsResponse } from '@gastos/shared'
-import { lastClosingCutoff, monthKey, resolveMonthRange } from '../../common/date/timezone'
+import { lastClosingCutoff, monthKey, nextClosingCutoff, resolveMonthRange } from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository, type AccountWithPluggyItem } from '../account/account.repository'
 import { PersonRepository } from '../person/person.repository'
@@ -50,11 +50,16 @@ export class InvoiceService {
     }
 
     const targetMonth = month ? resolveMonthKey(month) : monthKey(new Date())
-    const items = this.isForecastFor(account, targetMonth)
-      ? (await this.estimatedInstallments(account, resolveMonthRange(targetMonth))).sort(
-          (a, b) => a.dueAt.getTime() - b.dueAt.getTime() || a.label.localeCompare(b.label, 'pt-BR'),
-        )
-      : []
+    const isForecast = this.isForecastFor(account, targetMonth)
+    const isCurrent = targetMonth === monthKey(new Date())
+    const candidates = isForecast
+      ? await this.estimatedInstallments(account, resolveMonthRange(targetMonth))
+      : isCurrent
+        ? await this.openEstimatedInstallments(account)
+        : []
+    const items = candidates.sort(
+      (a, b) => a.dueAt.getTime() - b.dueAt.getTime() || a.label.localeCompare(b.label, 'pt-BR'),
+    )
 
     return {
       month: targetMonth,
@@ -161,8 +166,15 @@ export class InvoiceService {
       return { ...computeInvoice(rows, selfPersonId), estimatedCents: 0 }
     }
 
-    const rows = await this.repo.findOpenRows(account.userId, account.id, openAfter(account))
-    return { ...computeInvoice(keepNextDueInstallmentOnly(rows), selfPersonId), estimatedCents: 0 }
+    const [rows, estimated] = await Promise.all([
+      this.repo.findOpenRows(account.userId, account.id, openAfter(account)),
+      this.openEstimatedInstallments(account),
+    ])
+    const estimatedRows = estimated.map(toInvoiceRow)
+    return {
+      ...computeInvoice([...keepNextDueInstallmentOnly(rows), ...estimatedRows], selfPersonId),
+      estimatedCents: computeInvoice(estimatedRows, selfPersonId).totalCents,
+    }
   }
 
   // Parcelas estimadas (03-regras-negocio § Fatura prevista) só de mês posterior ao atual, e só do cartão
@@ -178,6 +190,14 @@ export class InvoiceService {
       (item) =>
         monthKey(item.dueAt) > currentMonth && (!range || (item.dueAt >= range.start && item.dueAt < range.end)),
     )
+  }
+
+  private async openEstimatedInstallments(account: AccountWithPluggyItem): Promise<InstallmentSource[]> {
+    if (account.source !== 'PLUGGY' || !account.closingDay) return []
+    const from = lastClosingCutoff(account.closingDay)
+    const until = nextClosingCutoff(account.closingDay)
+    const sources = await this.repo.findInstallmentSources(account.userId, account.id)
+    return estimateInstallments(sources).filter((item) => item.dueAt >= from && item.dueAt < until)
   }
 
   private async lastForecastMonth(account: AccountWithPluggyItem): Promise<string | null> {

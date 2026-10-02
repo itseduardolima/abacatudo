@@ -117,3 +117,7 @@ export function lastClosingCutoff(closingDay: number, now: Date = new Date()): D
   const [y, m] = closingIn(year, month) <= day ? [year, month] : month === 1 ? [year - 1, 12] : [year, month - 1]
   return zonedTimeToUtc(y, m, closingIn(y, m) + 1)
 }
+
+export function nextClosingCutoff(closingDay: number, now: Date = new Date()): Date {
+  return lastClosingCutoff(closingDay, new Date(lastClosingCutoff(closingDay, now).getTime() + 32 * 86_400_000))
+}

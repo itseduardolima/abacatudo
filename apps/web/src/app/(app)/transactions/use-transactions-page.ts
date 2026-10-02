@@ -70,7 +70,7 @@ export function useTransactionsPage() {
   const forecastMonth = forecast.isForecast ? forecast.month : undefined
   const invoice = useInvoice(selectedAccountId, forecastMonth)
   const transactions = useTransactions(forecastMonth)
-  const estimatedInstallments = useEstimatedInstallments(selectedAccountId, forecastMonth)
+  const estimatedInstallments = useEstimatedInstallments(selectedAccountId, forecast.month)
   const [segment, setSegment] = useState<Segment>('all')
 
   const [editingId, setEditingId] = useState<string | null>(null)

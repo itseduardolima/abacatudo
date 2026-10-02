@@ -336,6 +336,34 @@ describe('InvoiceService', () => {
       return { service: new InvoiceService(repo, accounts, people), repo }
     }
 
+    it('fatura aberta de cartão com closingDay inclui a próxima parcela ainda não lançada pelo banco', async () => {
+      const accounts = accountsMock()
+      accounts.findById.mockResolvedValue(accountRow({ source: 'PLUGGY', closingDay: 2 }))
+      const people = peopleMock()
+      people.findSelf.mockResolvedValue(personRow())
+      const repo = repoMock()
+      repo.findOpenRows.mockResolvedValue([])
+      const next = lastClosingCutoff(2)
+      repo.findInstallmentSources.mockResolvedValue([
+        {
+          groupKey: 'jim',
+          number: 1,
+          total: 12,
+          dueAt: new Date(next.getTime() - 15 * 86_400_000),
+          amountCents: 7999,
+          kind: 'EXPENSE',
+          personId: 'self-1',
+          splits: [],
+          label: 'JIM',
+        },
+      ])
+      const service = new InvoiceService(repo, accounts, people)
+
+      const result = await service.getForAccount('user-1', 'acc-1', monthKey(new Date()))
+
+      expect(result).toMatchObject({ totalCents: 7999, mineCents: 7999, estimatedCents: 7999 })
+    })
+
     it('mês futuro soma as estimadas às lançadas e informa quanto é estimado', async () => {
       const { service } = setup(
         [source()],
