@@ -25,3 +25,6 @@ export const createFixedExpenseInputSchema = z
   })
   .strict()
 export type CreateFixedExpenseInput = z.infer<typeof createFixedExpenseInputSchema>
+
+export const updateFixedExpenseInputSchema = createFixedExpenseInputSchema
+export type UpdateFixedExpenseInput = CreateFixedExpenseInput

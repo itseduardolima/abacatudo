@@ -2,11 +2,13 @@
 
 import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import type { FixedExpense } from '@gastos/shared'
 import { useArchiveFixedExpense } from '@/hooks/queries/use-archive-fixed-expense'
+import { useUpdateFixedExpense } from '@/hooks/queries/use-update-fixed-expense'
 import { useCreateFixedExpense } from '@/hooks/queries/use-create-fixed-expense'
 import { useFixedExpenses } from '@/hooks/queries/use-fixed-expenses'
 import { ApiClientError } from '@/lib/api-client'
-import { parseMoneyInput } from '@/lib/utils/format-money'
+import { formatMoney, parseMoneyInput } from '@/lib/utils/format-money'
 
 interface FormValues {
   name: string
@@ -19,6 +21,9 @@ export function useFixedExpensesPage() {
   const fixedExpenses = useFixedExpenses()
   const createFixedExpense = useCreateFixedExpense()
   const archiveFixedExpense = useArchiveFixedExpense()
+  const updateFixedExpense = useUpdateFixedExpense()
+  const [menuId, setMenuId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [ruleError, setRuleError] = useState<string | null>(null)
   const [half, setHalf] = useState<'1' | '2'>('1')
@@ -41,10 +46,13 @@ export function useFixedExpensesPage() {
     }
 
     try {
-      await createFixedExpense.mutateAsync({ name: values.name, amountCents, half: half === '2' ? 2 : 1 })
+      const input = { name: values.name, amountCents, half: half === '2' ? (2 as const) : (1 as const) }
+      if (editingId) await updateFixedExpense.mutateAsync({ id: editingId, ...input })
+      else await createFixedExpense.mutateAsync(input)
       if (submission !== submissionRef.current) return
       reset()
       setHalf('1')
+      setEditingId(null)
       setIsFormOpen(false)
     } catch (error) {
       if (!(error instanceof ApiClientError)) throw error
@@ -65,6 +73,8 @@ export function useFixedExpensesPage() {
     closeForm: () => {
       submissionRef.current++
       setIsFormOpen(false)
+      setEditingId(null)
+      setHalf('1')
       reset()
       setRuleError(null)
     },
@@ -73,9 +83,25 @@ export function useFixedExpensesPage() {
     setHalf,
     errors,
     onSubmit,
-    isSubmitting: createFixedExpense.isPending,
+    isSubmitting: createFixedExpense.isPending || updateFixedExpense.isPending,
+    isEditing: editingId !== null,
+    menuExpense: fixedExpenses.data?.find((expense) => expense.id === menuId) ?? null,
+    openMenu: (id: string) => setMenuId(id),
+    closeMenu: () => setMenuId(null),
+    startEdit: (expense: FixedExpense) => {
+      submissionRef.current++
+      setRuleError(null)
+      setMenuId(null)
+      setEditingId(expense.id)
+      setHalf(expense.half === 2 ? '2' : '1')
+      reset({ name: expense.name, amount: formatMoney(expense.amountCents).replace('R$ ', '') })
+      setIsFormOpen(true)
+    },
     ruleError,
-    archive: (id: string) => archiveFixedExpense.mutate(id),
+    archive: (id: string) => {
+      setMenuId(null)
+      archiveFixedExpense.mutate(id)
+    },
     archivingId: archiveFixedExpense.isPending ? archiveFixedExpense.variables : undefined,
   }
 }

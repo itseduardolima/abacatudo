@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import type { FixedExpense as FixedExpenseRow } from '@prisma/client'
-import type { CreateFixedExpenseInput, FixedExpense } from '@gastos/shared'
+import type { CreateFixedExpenseInput, FixedExpense, UpdateFixedExpenseInput } from '@gastos/shared'
 import { NotFoundError } from '../../common/errors/domain.error'
 import { FixedExpenseRepository } from './fixed-expense.repository'
 
@@ -12,6 +12,14 @@ export class FixedExpenseService {
 
   async create(userId: string, input: CreateFixedExpenseInput): Promise<FixedExpense> {
     return toDto(await this.repo.create(userId, input.name, input.amountCents, input.half))
+  }
+
+  async update(userId: string, id: string, input: UpdateFixedExpenseInput): Promise<FixedExpense> {
+    const result = await this.repo.update(userId, id, input)
+    if (result.count === 0) throw NOT_FOUND()
+    const row = await this.repo.findById(userId, id)
+    if (!row) throw NOT_FOUND()
+    return toDto(row)
   }
 
   async list(userId: string, includeArchived: boolean): Promise<FixedExpense[]> {

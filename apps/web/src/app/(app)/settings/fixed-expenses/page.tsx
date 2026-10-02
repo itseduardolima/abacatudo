@@ -1,6 +1,6 @@
 'use client'
 
-import { Repeat, X } from 'lucide-react'
+import { EllipsisVertical, Repeat } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { BackIcon, IconButton } from '@/components/ui/IconButton'
 import { InlineAlert } from '@/components/ui/InlineAlert'
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { MoneyText } from '@/components/finance/MoneyText'
+import { FixedExpenseActionsSheet } from './fixed-expense-actions-sheet'
 import { useFixedExpensesPage } from './use-fixed-expenses-page'
 
 export default function FixedExpensesPage() {
@@ -24,6 +25,11 @@ export default function FixedExpensesPage() {
     onSubmit,
     isSubmitting,
     ruleError,
+    isEditing,
+    menuExpense,
+    openMenu,
+    closeMenu,
+    startEdit,
     archive,
     archivingId,
   } = useFixedExpensesPage()
@@ -64,10 +70,10 @@ export default function FixedExpensesPage() {
                 size="sm"
                 className="w-[34px] !px-0"
                 state={archivingId === expense.id ? 'loading' : 'idle'}
-                onClick={() => archive(expense.id)}
-                aria-label={`Remover ${expense.name}`}
+                onClick={() => openMenu(expense.id)}
+                aria-label={`Mais ações de ${expense.name}`}
               >
-                <X size={18} strokeWidth={1.8} />
+                <EllipsisVertical size={18} strokeWidth={1.8} />
               </Button>
             </li>
           ))}
@@ -78,6 +84,15 @@ export default function FixedExpensesPage() {
         <Button variant="outline" onClick={openForm}>
           Novo gasto fixo
         </Button>
+      )}
+
+      {menuExpense && (
+        <FixedExpenseActionsSheet
+          expense={menuExpense}
+          onEdit={() => startEdit(menuExpense)}
+          onRemove={() => archive(menuExpense.id)}
+          onClose={closeMenu}
+        />
       )}
 
       {isFormOpen && (
@@ -96,7 +111,7 @@ export default function FixedExpensesPage() {
           />
           <div className="mt-2 flex gap-3">
             <Button type="submit" state={isSubmitting ? 'loading' : 'idle'}>
-              Salvar
+              {isEditing ? 'Salvar alterações' : 'Salvar'}
             </Button>
             <Button type="button" variant="link" onClick={closeForm}>
               Cancelar

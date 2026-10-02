@@ -17,6 +17,18 @@ export class FixedExpenseRepository {
     })
   }
 
+  update(
+    userId: string,
+    id: string,
+    data: { name: string; amountCents: number; half: number },
+  ): Promise<Prisma.BatchPayload> {
+    return this.prisma.fixedExpense.updateMany({ where: { userId, id, archivedAt: null }, data })
+  }
+
+  findById(userId: string, id: string): Promise<FixedExpense | null> {
+    return this.prisma.fixedExpense.findFirst({ where: { userId, id } })
+  }
+
   archive(userId: string, id: string): Promise<Prisma.BatchPayload> {
     return this.prisma.fixedExpense.updateMany({ where: { userId, id }, data: { archivedAt: new Date() } })
   }

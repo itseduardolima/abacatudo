@@ -8,6 +8,8 @@ function repoMock() {
     create: jest.fn(),
     findMany: jest.fn(),
     archive: jest.fn(),
+    update: jest.fn(),
+    findById: jest.fn(),
   } as unknown as jest.Mocked<FixedExpenseRepository>
 }
 
@@ -84,5 +86,28 @@ describe('FixedExpenseService', () => {
     const service = new FixedExpenseService(repo)
 
     await expect(service.archive('user-1', 'fe-1')).resolves.toBeUndefined()
+  })
+
+  it('update: grava nome, valor e quinzena e devolve o DTO', async () => {
+    const repo = repoMock()
+    repo.update.mockResolvedValue({ count: 1 })
+    repo.findById.mockResolvedValue(row({ half: 2, amountCents: 130000 }))
+    const service = new FixedExpenseService(repo)
+
+    const result = await service.update('user-1', 'fe-1', { name: 'Aluguel', amountCents: 130000, half: 2 })
+
+    expect(repo.update).toHaveBeenCalledWith('user-1', 'fe-1', { name: 'Aluguel', amountCents: 130000, half: 2 })
+    expect(result).toMatchObject({ id: 'fe-1', half: 2, amountCents: 130000 })
+  })
+
+  it('update: gasto de outro usuário ou inexistente é 404 e nada é lido', async () => {
+    const repo = repoMock()
+    repo.update.mockResolvedValue({ count: 0 })
+    const service = new FixedExpenseService(repo)
+
+    await expect(service.update('user-2', 'fe-1', { name: 'Aluguel', amountCents: 1, half: 1 })).rejects.toBeInstanceOf(
+      NotFoundError,
+    )
+    expect(repo.findById).not.toHaveBeenCalled()
   })
 })
