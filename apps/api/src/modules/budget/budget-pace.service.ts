@@ -33,20 +33,29 @@ export class BudgetPaceService {
       spentCents: invoice.mineCents + fixedExpensesCents,
       cardsMineCents: invoice.mineCents,
     })
-    const firstHalfSpentCents = await this.firstHalfSpentCents(userId, budget.month)
+    const isCurrentMonth = budget.month === monthKey(new Date())
+    const currentHalf = dayOfMonth(new Date()) <= 15 ? 1 : 2
+    const [firstHalfSpentCents, currentHalfSpentCents] = isCurrentMonth
+      ? await Promise.all([
+          this.halfSpentCents(userId, budget.month, 1),
+          currentHalf === 1 ? undefined : this.halfSpentCents(userId, budget.month, 2),
+        ])
+      : [null, undefined]
+    const currentHalfCapCents = currentHalf === 1 ? budget.firstHalfIncomeCents : budget.secondHalfIncomeCents
+    const currentHalfSpent = currentHalf === 1 ? firstHalfSpentCents : (currentHalfSpentCents ?? null)
     return {
       ...pace,
       firstHalfCapCents: budget.firstHalfIncomeCents,
       firstHalfSpentCents,
-      firstHalfRemainingCents: firstHalfSpentCents === null ? null : budget.firstHalfIncomeCents - firstHalfSpentCents,
+      currentHalf: isCurrentMonth ? (currentHalf as 1 | 2) : null,
+      currentHalfRemainingCents: currentHalfSpent === null ? null : currentHalfCapCents - currentHalfSpent,
     }
   }
 
-  private async firstHalfSpentCents(userId: string, month: string): Promise<number | null> {
-    if (month !== monthKey(new Date())) return null
+  private async halfSpentCents(userId: string, month: string, half: 1 | 2): Promise<number> {
     const [cardsCents, fixedCents] = await Promise.all([
-      this.invoices.getHalfMineCents(userId, halfMonthRange(month, 1)),
-      this.fixedExpenses.sumActiveCentsByHalf(userId, 1),
+      this.invoices.getHalfMineCents(userId, halfMonthRange(month, half)),
+      this.fixedExpenses.sumActiveCentsByHalf(userId, half),
     ])
     return cardsCents + fixedCents
   }

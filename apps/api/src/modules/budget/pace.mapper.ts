@@ -21,7 +21,7 @@ export function computePace(input: {
   capCents: number
   spentCents: number
   cardsMineCents: number
-}): Omit<BudgetPace, 'firstHalfSpentCents' | 'firstHalfRemainingCents' | 'firstHalfCapCents'> {
+}): Omit<BudgetPace, 'firstHalfSpentCents' | 'currentHalf' | 'currentHalfRemainingCents' | 'firstHalfCapCents'> {
   const daysInMonth = daysInMonthFor(input.monthKeyValue)
 
   let daysElapsed: number

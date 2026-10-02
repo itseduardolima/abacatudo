@@ -57,7 +57,8 @@ describe('BudgetPaceService', () => {
     expect(result.month).toBe('2026-09')
     expect(result.firstHalfCapCents).toBe(150_000)
     expect(result.firstHalfSpentCents).toBe(35_000)
-    expect(result.firstHalfRemainingCents).toBe(115_000)
+    expect(result.currentHalf).toBe(1)
+    expect(result.currentHalfRemainingCents).toBe(115_000)
   })
 
   it('sem gasto fixo nenhum, gasto é só a fatura', async () => {
@@ -83,6 +84,18 @@ describe('BudgetPaceService', () => {
     const result = await service.getPace('user-1', '2026-10')
 
     expect(result.firstHalfSpentCents).toBeNull()
-    expect(result.firstHalfRemainingCents).toBeNull()
+    expect(result.currentHalf).toBeNull()
+    expect(result.currentHalfRemainingCents).toBeNull()
+  })
+
+  it('a partir do dia 16, o que sobra é o da 2ª quinzena, contra o segundo salário', async () => {
+    jest.setSystemTime(new Date('2026-09-20T12:00:00.000Z'))
+    const service = new BudgetPaceService(budgetMonthMock(300_000), invoicesMock(50_000), fixedExpensesMock(20_000))
+
+    const result = await service.getPace('user-1')
+
+    expect(result.currentHalf).toBe(2)
+    expect(result.currentHalfRemainingCents).toBe(150_000 - 35_000)
+    expect(result.firstHalfSpentCents).toBe(35_000)
   })
 })

@@ -391,7 +391,8 @@ teto variável = renda mensal (fixa + benefícios)
   (1ª, 2ª ou dividido meio a meio, o centavo ímpar na 2ª; editável). No mês atual, o gasto da quinzena = minha parte nas compras de cartão **com data dentro da
   quinzena** (parcela pela data de vencimento, fatura fechada fora) + gastos fixos daquela quinzena, contra o
   salário dela. O card mostra, na barra do mês, um marcador no teto do dia 15 com o quanto já foi gasto na 1ª quinzena
-  (só no mês atual).
+  (só no mês atual). Ao lado do "Sobram" do mês, "Sobram até dia 15" (1ª quinzena) ou "até dia 30" (2ª): o salário da
+  quinzena atual menos o gasto dela.
 - **Ritmo**: compara o gasto do mês (fatura aberta somada em todos os
   cartões + gastos fixos ativos) com o esperado linear até hoje, sobre o
   teto; sinaliza se está acima. O card da Início mostra também **quanto foi gasto

@@ -55,11 +55,11 @@ export function PaceHeroCard({ pace }: { pace: BudgetPace }) {
       <div className="my-4 h-px bg-on-inverse-hairline" />
 
       <div className="flex justify-between gap-4">
-        {pace.firstHalfRemainingCents !== null && (
+        {pace.currentHalf !== null && pace.currentHalfRemainingCents !== null && (
           <div>
-            <p className="text-sm text-on-inverse-muted">Sobram até dia 15</p>
+            <p className="text-sm text-on-inverse-muted">Sobram até dia {pace.currentHalf === 1 ? 15 : 30}</p>
             <p className="mt-1 text-xl font-bold text-on-inverse">
-              <MoneyText cents={pace.firstHalfRemainingCents} className="!text-on-inverse" />
+              <MoneyText cents={pace.currentHalfRemainingCents} className="!text-on-inverse" />
             </p>
           </div>
         )}
