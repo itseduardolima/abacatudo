@@ -33,10 +33,12 @@ export class BudgetPaceService {
       spentCents: invoice.mineCents + fixedExpensesCents,
       cardsMineCents: invoice.mineCents,
     })
+    const firstHalfSpentCents = await this.firstHalfSpentCents(userId, budget.month)
     return {
       ...pace,
       firstHalfCapCents: budget.firstHalfIncomeCents,
-      firstHalfSpentCents: await this.firstHalfSpentCents(userId, budget.month),
+      firstHalfSpentCents,
+      firstHalfRemainingCents: firstHalfSpentCents === null ? null : budget.firstHalfIncomeCents - firstHalfSpentCents,
     }
   }
 

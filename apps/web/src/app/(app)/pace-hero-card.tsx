@@ -44,12 +44,17 @@ export function PaceHeroCard({ pace }: { pace: BudgetPace }) {
           />
         )}
       </div>
-      {firstHalfPercent !== null && pace.firstHalfSpentCents !== null && (
-        <p className="mt-2.5 flex items-center gap-1.5 text-xs text-on-inverse-muted">
-          <span aria-hidden className="h-2 w-2 rounded-full bg-on-inverse-marker" />
-          1ª quinzena <MoneyText cents={pace.firstHalfSpentCents} className="!text-on-inverse" /> de{' '}
-          <MoneyText cents={pace.firstHalfCapCents} className="!text-on-inverse" />
-        </p>
+      {firstHalfPercent !== null && pace.firstHalfSpentCents !== null && pace.firstHalfRemainingCents !== null && (
+        <div className="mt-2.5 flex flex-col gap-1 text-xs text-on-inverse-muted">
+          <p className="flex items-center gap-1.5">
+            <span aria-hidden className="h-2 w-2 rounded-full bg-on-inverse-marker" />
+            1ª quinzena <MoneyText cents={pace.firstHalfSpentCents} className="!text-on-inverse" /> de{' '}
+            <MoneyText cents={pace.firstHalfCapCents} className="!text-on-inverse" />
+          </p>
+          <p>
+            Sobram até o dia 15 <MoneyText cents={pace.firstHalfRemainingCents} className="!text-on-inverse" />
+          </p>
+        </div>
       )}
 
       <div className="my-4 h-px bg-on-inverse-hairline" />

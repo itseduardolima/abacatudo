@@ -57,6 +57,7 @@ describe('BudgetPaceService', () => {
     expect(result.month).toBe('2026-09')
     expect(result.firstHalfCapCents).toBe(150_000)
     expect(result.firstHalfSpentCents).toBe(35_000)
+    expect(result.firstHalfRemainingCents).toBe(115_000)
   })
 
   it('sem gasto fixo nenhum, gasto é só a fatura', async () => {
@@ -82,5 +83,6 @@ describe('BudgetPaceService', () => {
     const result = await service.getPace('user-1', '2026-10')
 
     expect(result.firstHalfSpentCents).toBeNull()
+    expect(result.firstHalfRemainingCents).toBeNull()
   })
 })

@@ -41,6 +41,7 @@ export const budgetPaceSchema = z
     perDayRemainingCents: centsSchema,
     firstHalfCapCents: centsSchema,
     firstHalfSpentCents: centsSchema.nullable(),
+    firstHalfRemainingCents: centsSchema.nullable(),
   })
   .strict()
 export type BudgetPace = z.infer<typeof budgetPaceSchema>
