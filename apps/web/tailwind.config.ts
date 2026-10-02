@@ -21,6 +21,7 @@ const config: Config = {
         'on-inverse-accent': 'var(--color-on-inverse-accent)',
         'on-inverse-muted': 'var(--color-on-inverse-muted)',
         'on-inverse-hairline': 'var(--color-on-inverse-hairline)',
+        'on-inverse-marker': 'var(--color-on-inverse-marker)',
         'accent-tint-on-inverse': 'var(--color-accent-tint-on-inverse)',
         border: 'var(--color-border)',
         'border-strong': 'var(--color-border-strong)',
