@@ -1,10 +1,4 @@
-import {
-  computeInvoice,
-  computeInvoiceWithCarryover,
-  keepNextDueInstallmentOnly,
-  mergeInvoices,
-  type InvoiceRow,
-} from './invoice.mapper'
+import { computeInvoice, keepNextDueInstallmentOnly, mergeInvoices, type InvoiceRow } from './invoice.mapper'
 
 const SELF = 'self-1'
 const FAMILY = 'family-1'
@@ -143,30 +137,5 @@ describe('mergeInvoices', () => {
 
   it('sem faturas, tudo zero', () => {
     expect(mergeInvoices([])).toEqual({ totalCents: 0, mineCents: 0, notMineCents: 0 })
-  })
-})
-
-describe('computeInvoiceWithCarryover', () => {
-  it('cenário real (conferido contra o OFX de um Nubank de verdade)', () => {
-    // 184080 = última fatura fechada; 37868 em compra avulsa; 81739 é a soma das próximas parcelas de
-    // cada compra parcelada (já filtrado por keepNextDueInstallmentOnly); 246199 em pagamentos.
-    const rows: InvoiceRow[] = [
-      row({ kind: 'EXPENSE', amountCents: 37868, personId: SELF }),
-      row({ kind: 'EXPENSE', amountCents: 81739, personId: SELF, installment: { groupKey: 'g', number: 3 } }),
-      row({ kind: 'CARD_PAYMENT', amountCents: 246199, personId: SELF }),
-    ]
-    const result = computeInvoiceWithCarryover(rows, SELF, 184080)
-    expect(result).toEqual({ totalCents: 57488, mineCents: 57488, notMineCents: 0 })
-  })
-
-  it('sem saldo anterior (carryover 0), é só a movimentação', () => {
-    const result = computeInvoiceWithCarryover([row({ amountCents: 1000, personId: SELF })], SELF, 0)
-    expect(result).toEqual({ totalCents: 1000, mineCents: 1000, notMineCents: 0 })
-  })
-
-  it('gasto de terceiro no ciclo atual ainda conta pra "não é meu", saldo anterior nunca entra nisso', () => {
-    const rows: InvoiceRow[] = [row({ kind: 'EXPENSE', amountCents: 700, personId: FAMILY })]
-    const result = computeInvoiceWithCarryover(rows, SELF, 184080)
-    expect(result).toEqual({ totalCents: 184780, mineCents: 184080, notMineCents: 700 })
   })
 })

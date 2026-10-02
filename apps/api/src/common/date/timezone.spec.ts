@@ -1,4 +1,4 @@
-import { dateKey, dayFromDateString, monthKey, monthRange, shiftMonthKey } from './timezone'
+import { lastClosingCutoff, dateKey, dayFromDateString, monthKey, monthRange, shiftMonthKey } from './timezone'
 
 describe('monthKey / dateKey', () => {
   it('compra às 23h30 do dia 31 (horário de Manaus) não cai no mês seguinte por fuso', () => {
@@ -86,5 +86,20 @@ describe('dayFromDateString', () => {
   it('timestamp completo é preservado', () => {
     const result = dayFromDateString('2026-09-21T23:10:00.000Z')
     expect(result.toISOString()).toBe('2026-09-21T23:10:00.000Z')
+  })
+})
+
+describe('lastClosingCutoff', () => {
+  it('no dia do fechamento, a fatura aberta começa no dia seguinte (Manaus)', () => {
+    expect(lastClosingCutoff(2, new Date('2026-10-02T18:33:00.000Z')).toISOString()).toBe('2026-10-03T04:00:00.000Z')
+  })
+
+  it('antes do fechamento do mês, vale o fechamento do mês anterior', () => {
+    expect(lastClosingCutoff(20, new Date('2026-10-02T18:33:00.000Z')).toISOString()).toBe('2026-09-21T04:00:00.000Z')
+  })
+
+  it('em janeiro, volta pra dezembro; dia 31 em mês curto cai no último dia', () => {
+    expect(lastClosingCutoff(20, new Date('2026-01-05T15:00:00.000Z')).toISOString()).toBe('2025-12-21T04:00:00.000Z')
+    expect(lastClosingCutoff(31, new Date('2026-03-01T15:00:00.000Z')).toISOString()).toBe('2026-03-01T04:00:00.000Z')
   })
 })

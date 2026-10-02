@@ -1,30 +1,20 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import type { AccountInvoice, EstimatedInstallmentsResponse, Invoice, StatementsResponse } from '@gastos/shared'
-import { monthKey, resolveMonthRange } from '../../common/date/timezone'
+import { lastClosingCutoff, monthKey, resolveMonthRange } from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository, type AccountWithPluggyItem } from '../account/account.repository'
-import { PluggyClient } from '../banking/pluggy/pluggy.client'
 import { PersonRepository } from '../person/person.repository'
-import {
-  computeInvoice,
-  computeInvoiceWithCarryover,
-  keepNextDueInstallmentOnly,
-  mergeInvoices,
-  type InvoiceRow,
-} from './invoice.mapper'
+import { computeInvoice, keepNextDueInstallmentOnly, mergeInvoices, type InvoiceRow } from './invoice.mapper'
 import { estimateInstallments, type InstallmentSource } from './installment-forecast.mapper'
 import { InvoiceRepository } from './invoice.repository'
 import { buildPersonStatements, formatStatementText, type StatementRow } from './statement.mapper'
 
 @Injectable()
 export class InvoiceService {
-  private readonly logger = new Logger(InvoiceService.name)
-
   constructor(
     private readonly repo: InvoiceRepository,
     private readonly accounts: AccountRepository,
     private readonly people: PersonRepository,
-    private readonly pluggy: PluggyClient,
   ) {}
 
   async getForAccount(userId: string, accountId: string | undefined, month?: string): Promise<AccountInvoice> {
@@ -123,7 +113,9 @@ export class InvoiceService {
       ])
       return [...real, ...estimated.map(toStatementRow)]
     }
-    return keepNextDueInstallmentOnly(await this.repo.findStatementOpenRows(account.userId, account.id))
+    return keepNextDueInstallmentOnly(
+      await this.repo.findStatementOpenRows(account.userId, account.id, openAfter(account)),
+    )
   }
 
   // "Meu" da fatura aberta, somado em todos os cartões (03-regras-negocio § Só a minha parte) — é o
@@ -140,14 +132,8 @@ export class InvoiceService {
     return mergeInvoices(invoices)
   }
 
-  // PLUGGY: "quanto falta pagar" = saldo da última fatura fechada (Pluggy /bills) + movimentação local
-  // ainda sem billId (findOpenRows), só a parcela que vence agora em compra parcelada
-  // (keepNextDueInstallmentOnly — sem isso, uma compra em 6x aparecia inteira, não só a parcela da vez).
-  // Fórmula toda verificada ao vivo contra o OFX exportado de um Nubank real, batendo exato (o resíduo
-  // que sobrava era só uma compra recente que a API do Pluggy ainda não tinha sincronizado — nada a ver
-  // com a conta). Sem fatura fechada ainda (cartão novo) ou Pluggy fora do ar, usa toda a movimentação
-  // local sem saldo anterior, em vez de quebrar a tela. MANUAL/IMPORT: nunca tem banco de verdade por
-  // trás, mês calendário é a aproximação possível.
+  // PLUGGY: fatura aberta = lançamentos sem billId (e, com closingDay, só depois do último fechamento),
+  // só a parcela da vez em compra parcelada. Fatura já fechada não entra. MANUAL/IMPORT: mês calendário.
   private isForecastFor(account: AccountWithPluggyItem, month?: string): boolean {
     return account.source === 'PLUGGY' && Boolean(month) && resolveMonthKey(month as string) > monthKey(new Date())
   }
@@ -175,14 +161,8 @@ export class InvoiceService {
       return { ...computeInvoice(rows, selfPersonId), estimatedCents: 0 }
     }
 
-    const [rows, carryoverCents] = await Promise.all([
-      this.repo.findOpenRows(account.userId, account.id),
-      this.lastClosedBillCarryoverCents(account),
-    ])
-    return {
-      ...computeInvoiceWithCarryover(keepNextDueInstallmentOnly(rows), selfPersonId, carryoverCents),
-      estimatedCents: 0,
-    }
+    const rows = await this.repo.findOpenRows(account.userId, account.id, openAfter(account))
+    return { ...computeInvoice(keepNextDueInstallmentOnly(rows), selfPersonId), estimatedCents: 0 }
   }
 
   // Parcelas estimadas (03-regras-negocio § Fatura prevista) só de mês posterior ao atual, e só do cartão
@@ -200,19 +180,6 @@ export class InvoiceService {
     )
   }
 
-  private async lastClosedBillCarryoverCents(account: AccountWithPluggyItem): Promise<number> {
-    if (!account.externalAccountId) return 0
-    try {
-      const bill = await this.pluggy.getLastClosedBill(account.externalAccountId)
-      return bill?.totalAmount == null ? 0 : Math.round(Math.abs(bill.totalAmount) * 100)
-    } catch (error) {
-      this.logger.warn(
-        `Não foi possível buscar a última fatura fechada no Pluggy pra conta ${account.id}: ${String(error)}`,
-      )
-      return 0
-    }
-  }
-
   private async lastForecastMonth(account: AccountWithPluggyItem): Promise<string | null> {
     if (account.source !== 'PLUGGY') return null
     const [last, estimated] = await Promise.all([
@@ -228,6 +195,10 @@ export class InvoiceService {
     if (!self) throw new DomainError('SELF_PERSON_NOT_FOUND', 'Pessoa "Eu" não encontrada.', 500)
     return self.id
   }
+}
+
+function openAfter(account: AccountWithPluggyItem): Date | undefined {
+  return account.closingDay ? lastClosingCutoff(account.closingDay) : undefined
 }
 
 function resolveMonthKey(month: string): string {

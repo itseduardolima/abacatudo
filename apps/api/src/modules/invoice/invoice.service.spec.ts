@@ -1,8 +1,7 @@
 import type { Account as AccountRow, Person as PersonRow } from '@prisma/client'
-import { monthKey, shiftMonthKey } from '../../common/date/timezone'
+import { lastClosingCutoff, monthKey, shiftMonthKey } from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import type { AccountRepository, AccountWithPluggyItem } from '../account/account.repository'
-import type { PluggyClient } from '../banking/pluggy/pluggy.client'
 import type { PersonRepository } from '../person/person.repository'
 import { InvoiceService } from './invoice.service'
 import type { InvoiceRepository } from './invoice.repository'
@@ -26,10 +25,6 @@ function repoMock() {
     findStatementForecastRows: jest.fn(),
     findStatementCalendarRows: jest.fn(),
   } as unknown as jest.Mocked<InvoiceRepository>
-}
-
-function pluggyMock() {
-  return { getLastClosedBill: jest.fn() } as unknown as jest.Mocked<PluggyClient>
 }
 
 function accountRow(overrides: Partial<AccountRow> = {}): AccountWithPluggyItem {
@@ -72,7 +67,7 @@ describe('InvoiceService', () => {
   describe('getForAccount', () => {
     it('400 sem accountId, antes de tocar no banco', async () => {
       const accounts = accountsMock()
-      const service = new InvoiceService(repoMock(), accounts, peopleMock(), pluggyMock())
+      const service = new InvoiceService(repoMock(), accounts, peopleMock())
 
       await expect(service.getForAccount('user-1', undefined, '2026-09')).rejects.toBeInstanceOf(DomainError)
       expect(accounts.findById).not.toHaveBeenCalled()
@@ -81,7 +76,7 @@ describe('InvoiceService', () => {
     it('404 quando a conta não existe (ou não é do usuário)', async () => {
       const accounts = accountsMock()
       accounts.findById.mockResolvedValue(null)
-      const service = new InvoiceService(repoMock(), accounts, peopleMock(), pluggyMock())
+      const service = new InvoiceService(repoMock(), accounts, peopleMock())
 
       await expect(service.getForAccount('user-1', 'acc-1', '2026-09')).rejects.toBeInstanceOf(NotFoundError)
     })
@@ -89,7 +84,7 @@ describe('InvoiceService', () => {
     it('422 quando a conta não é cartão de crédito', async () => {
       const accounts = accountsMock()
       accounts.findById.mockResolvedValue(accountRow({ type: 'CHECKING' }))
-      const service = new InvoiceService(repoMock(), accounts, peopleMock(), pluggyMock())
+      const service = new InvoiceService(repoMock(), accounts, peopleMock())
 
       await expect(service.getForAccount('user-1', 'acc-1', '2026-09')).rejects.toBeInstanceOf(DomainError)
     })
@@ -104,17 +99,15 @@ describe('InvoiceService', () => {
         { kind: 'EXPENSE', amountCents: 1000, personId: 'self-1', splits: [], installment: null },
         { kind: 'EXPENSE', amountCents: 700, personId: 'family-1', splits: [], installment: null },
       ])
-      const pluggy = pluggyMock()
-      const service = new InvoiceService(repo, accounts, people, pluggy)
+      const service = new InvoiceService(repo, accounts, people)
 
       const result = await service.getForAccount('user-1', 'acc-1', '2026-09')
 
       expect(repo.findRows).toHaveBeenCalledWith('user-1', { start: expect.any(Date), end: expect.any(Date) }, 'acc-1')
-      expect(pluggy.getLastClosedBill).not.toHaveBeenCalled()
       expect(result).toMatchObject({ totalCents: 1700, mineCents: 1000, notMineCents: 700 })
     })
 
-    it('conta PLUGGY: soma o saldo da última fatura fechada com a movimentação sem billId, só a próxima parcela de cada compra', async () => {
+    it('conta PLUGGY: só a movimentação sem billId, só a próxima parcela de cada compra, sem fatura fechada', async () => {
       const accounts = accountsMock()
       accounts.findById.mockResolvedValue(accountRow({ source: 'PLUGGY', externalAccountId: 'ext-1' }))
       const people = peopleMock()
@@ -136,17 +129,26 @@ describe('InvoiceService', () => {
           splits: [],
           installment: { groupKey: 'compra-1', number: 4 },
         },
-        { kind: 'CARD_PAYMENT', amountCents: 40000, personId: 'self-1', splits: [], installment: null },
       ])
-      const pluggy = pluggyMock()
-      pluggy.getLastClosedBill.mockResolvedValue({ id: 'bill-1', dueDate: '2026-09-03', totalAmount: 1000 })
-      const service = new InvoiceService(repo, accounts, people, pluggy)
+      const service = new InvoiceService(repo, accounts, people)
 
       const result = await service.getForAccount('user-1', 'acc-1', '2026-09')
 
-      expect(pluggy.getLastClosedBill).toHaveBeenCalledWith('ext-1')
-      // 100000 (carryover) + 100000 + 5000 (só a parcela 3, a 4 é futura, descartada) - 40000 = 165000
-      expect(result).toMatchObject({ totalCents: 165000, mineCents: 165000, notMineCents: 0 })
+      expect(result).toMatchObject({ totalCents: 105000, mineCents: 105000, notMineCents: 0 })
+    })
+
+    it('conta PLUGGY com closingDay: só o que veio depois do último fechamento entra na fatura aberta', async () => {
+      const accounts = accountsMock()
+      accounts.findById.mockResolvedValue(accountRow({ source: 'PLUGGY', closingDay: 2 }))
+      const people = peopleMock()
+      people.findSelf.mockResolvedValue(personRow())
+      const repo = repoMock()
+      repo.findOpenRows.mockResolvedValue([])
+      const service = new InvoiceService(repo, accounts, people)
+
+      await service.getForAccount('user-1', 'acc-1', monthKey(new Date()))
+
+      expect(repo.findOpenRows).toHaveBeenCalledWith('user-1', 'acc-1', lastClosingCutoff(2))
     })
 
     it('conta PLUGGY sem fatura fechada ainda (cartão novo): sem saldo anterior', async () => {
@@ -158,9 +160,7 @@ describe('InvoiceService', () => {
       repo.findOpenRows.mockResolvedValue([
         { kind: 'EXPENSE', amountCents: 5000, personId: 'self-1', splits: [], installment: null },
       ])
-      const pluggy = pluggyMock()
-      pluggy.getLastClosedBill.mockResolvedValue(null)
-      const service = new InvoiceService(repo, accounts, people, pluggy)
+      const service = new InvoiceService(repo, accounts, people)
 
       const result = await service.getForAccount('user-1', 'acc-1', '2026-09')
 
@@ -176,9 +176,7 @@ describe('InvoiceService', () => {
       repo.findOpenRows.mockResolvedValue([
         { kind: 'EXPENSE', amountCents: 5000, personId: 'self-1', splits: [], installment: null },
       ])
-      const pluggy = pluggyMock()
-      pluggy.getLastClosedBill.mockRejectedValue(new Error('boom'))
-      const service = new InvoiceService(repo, accounts, people, pluggy)
+      const service = new InvoiceService(repo, accounts, people)
 
       const result = await service.getForAccount('user-1', 'acc-1', '2026-09')
 
@@ -211,8 +209,7 @@ describe('InvoiceService', () => {
         },
       ])
       repo.findLastInstallmentDueAt.mockResolvedValue(new Date(`${shiftMonthKey(currentMonth, 5)}-15T12:00:00.000Z`))
-      const pluggy = pluggyMock()
-      const service = new InvoiceService(repo, accounts, people, pluggy)
+      const service = new InvoiceService(repo, accounts, people)
 
       const result = await service.getForAccount('user-1', 'acc-1', futureMonth)
 
@@ -221,7 +218,6 @@ describe('InvoiceService', () => {
         end: expect.any(Date),
       })
       expect(repo.findOpenRows).not.toHaveBeenCalled()
-      expect(pluggy.getLastClosedBill).not.toHaveBeenCalled()
       expect(result).toEqual({
         totalCents: 20000,
         mineCents: 11000,
@@ -241,7 +237,7 @@ describe('InvoiceService', () => {
       const repo = repoMock()
       repo.findForecastRows.mockResolvedValue([])
       repo.findLastInstallmentDueAt.mockResolvedValue(null)
-      const service = new InvoiceService(repo, accounts, people, pluggyMock())
+      const service = new InvoiceService(repo, accounts, people)
 
       await expect(service.getForAccount('user-1', 'acc-1', futureMonth)).resolves.toEqual({
         totalCents: 0,
@@ -261,9 +257,7 @@ describe('InvoiceService', () => {
       const repo = repoMock()
       repo.findOpenRows.mockResolvedValue([])
       repo.findLastInstallmentDueAt.mockResolvedValue(new Date(`${shiftMonthKey(currentMonth, 3)}-10T12:00:00.000Z`))
-      const pluggy = pluggyMock()
-      pluggy.getLastClosedBill.mockResolvedValue(null)
-      const service = new InvoiceService(repo, accounts, people, pluggy)
+      const service = new InvoiceService(repo, accounts, people)
 
       const result = await service.getForAccount('user-1', 'acc-1', currentMonth)
 
@@ -278,7 +272,7 @@ describe('InvoiceService', () => {
       people.findSelf.mockResolvedValue(personRow())
       const repo = repoMock()
       repo.findRows.mockResolvedValue([])
-      const service = new InvoiceService(repo, accounts, people, pluggyMock())
+      const service = new InvoiceService(repo, accounts, people)
 
       const result = await service.getForAccount('user-1', 'acc-1', futureMonth)
 
@@ -292,7 +286,7 @@ describe('InvoiceService', () => {
       accounts.findById.mockResolvedValue(accountRow({ source: 'PLUGGY', externalAccountId: 'ext-1' }))
       const people = peopleMock()
       people.findSelf.mockResolvedValue(personRow())
-      const service = new InvoiceService(repoMock(), accounts, people, pluggyMock())
+      const service = new InvoiceService(repoMock(), accounts, people)
 
       await expect(service.getForAccount('user-1', 'acc-1', '2026-13')).rejects.toMatchObject({
         code: 'INVALID_MONTH',
@@ -303,7 +297,7 @@ describe('InvoiceService', () => {
       const accounts = accountsMock()
       accounts.findById.mockResolvedValue(null)
       const repo = repoMock()
-      const service = new InvoiceService(repo, accounts, peopleMock(), pluggyMock())
+      const service = new InvoiceService(repo, accounts, peopleMock())
 
       await expect(service.getForAccount('user-2', 'acc-do-user-1', futureMonth)).rejects.toBeInstanceOf(NotFoundError)
       expect(accounts.findById).toHaveBeenCalledWith('user-2', 'acc-do-user-1')
@@ -339,7 +333,7 @@ describe('InvoiceService', () => {
       repo.findForecastRows.mockResolvedValue(realRows as never)
       repo.findLastInstallmentDueAt.mockResolvedValue(null)
       repo.findStatementForecastRows.mockResolvedValue([])
-      return { service: new InvoiceService(repo, accounts, people, pluggyMock()), repo }
+      return { service: new InvoiceService(repo, accounts, people), repo }
     }
 
     it('mês futuro soma as estimadas às lançadas e informa quanto é estimado', async () => {
@@ -424,7 +418,7 @@ describe('InvoiceService', () => {
     it('getEstimates: 404 de outro usuário e 400 sem conta', async () => {
       const accounts = accountsMock()
       accounts.findById.mockResolvedValue(null)
-      const service = new InvoiceService(repoMock(), accounts, peopleMock(), pluggyMock())
+      const service = new InvoiceService(repoMock(), accounts, peopleMock())
 
       await expect(service.getEstimates('user-2', 'acc-do-user-1', nextMonth)).rejects.toBeInstanceOf(NotFoundError)
       await expect(service.getEstimates('user-1', undefined, nextMonth)).rejects.toMatchObject({
@@ -490,7 +484,7 @@ describe('InvoiceService', () => {
         }),
         statementRow({ personId: 'bia', label: 'Mercado', amountCents: 5000 }),
       ])
-      const service = new InvoiceService(repo, accounts, peopleRepo, pluggyMock())
+      const service = new InvoiceService(repo, accounts, peopleRepo)
 
       const result = await service.getStatements('user-1')
 
@@ -512,7 +506,7 @@ describe('InvoiceService', () => {
       peopleRepo.findMany.mockResolvedValue(people)
       const repo = repoMock()
       repo.findStatementForecastRows.mockResolvedValue([statementRow({ label: 'TV', amountCents: 34990 })])
-      const service = new InvoiceService(repo, accounts, peopleRepo, pluggyMock())
+      const service = new InvoiceService(repo, accounts, peopleRepo)
 
       const result = await service.getStatements('user-1', futureMonth)
 
@@ -528,7 +522,7 @@ describe('InvoiceService', () => {
       peopleRepo.findMany.mockResolvedValue(people)
       const repo = repoMock()
       repo.findStatementCalendarRows.mockResolvedValue([statementRow()])
-      const service = new InvoiceService(repo, accounts, peopleRepo, pluggyMock())
+      const service = new InvoiceService(repo, accounts, peopleRepo)
 
       const result = await service.getStatements('user-1', currentMonth)
 
@@ -541,7 +535,7 @@ describe('InvoiceService', () => {
 
     it('mês inválido: 400 INVALID_MONTH, sem tocar no banco', async () => {
       const accounts = accountsMock()
-      const service = new InvoiceService(repoMock(), accounts, peopleMock(), pluggyMock())
+      const service = new InvoiceService(repoMock(), accounts, peopleMock())
 
       await expect(service.getStatements('user-1', '2026-13')).rejects.toMatchObject({ code: 'INVALID_MONTH' })
       expect(accounts.findMany).not.toHaveBeenCalled()
@@ -554,13 +548,13 @@ describe('InvoiceService', () => {
       peopleRepo.findMany.mockResolvedValue([])
       const repo = repoMock()
       repo.findStatementOpenRows.mockResolvedValue([])
-      const service = new InvoiceService(repo, accounts, peopleRepo, pluggyMock())
+      const service = new InvoiceService(repo, accounts, peopleRepo)
 
       const result = await service.getStatements('user-2')
 
       expect(peopleRepo.findMany).toHaveBeenCalledWith('user-2', true)
       expect(accounts.findMany).toHaveBeenCalledWith('user-2', false)
-      expect(repo.findStatementOpenRows).toHaveBeenCalledWith('user-2', 'acc-1')
+      expect(repo.findStatementOpenRows).toHaveBeenCalledWith('user-2', 'acc-1', undefined)
       expect(result.statements).toEqual([])
     })
   })
@@ -582,14 +576,12 @@ describe('InvoiceService', () => {
       repo.findRows.mockResolvedValue([
         { kind: 'EXPENSE', amountCents: 500, personId: 'self-1', splits: [], installment: null },
       ])
-      const pluggy = pluggyMock()
-      pluggy.getLastClosedBill.mockResolvedValue(null)
-      const service = new InvoiceService(repo, accounts, people, pluggy)
+      const service = new InvoiceService(repo, accounts, people)
 
       const result = await service.getSummary('user-1')
 
       expect(accounts.findMany).toHaveBeenCalledWith('user-1', false)
-      expect(repo.findOpenRows).toHaveBeenCalledWith('user-1', 'acc-pluggy')
+      expect(repo.findOpenRows).toHaveBeenCalledWith('user-1', 'acc-pluggy', undefined)
       expect(repo.findRows).toHaveBeenCalledWith(
         'user-1',
         { start: expect.any(Date), end: expect.any(Date) },
@@ -618,13 +610,11 @@ describe('InvoiceService', () => {
           ? [{ kind: 'EXPENSE', amountCents: 10000, personId: 'self-1', splits: [], installment: null }]
           : [{ kind: 'EXPENSE', amountCents: 4000, personId: 'family-1', splits: [], installment: null }],
       )
-      const pluggy = pluggyMock()
-      const service = new InvoiceService(repo, accounts, people, pluggy)
+      const service = new InvoiceService(repo, accounts, people)
 
       const result = await service.getSummary('user-1', futureMonth)
 
       expect(repo.findOpenRows).not.toHaveBeenCalled()
-      expect(pluggy.getLastClosedBill).not.toHaveBeenCalled()
       expect(result).toEqual({ totalCents: 14000, mineCents: 10000, notMineCents: 4000 })
     })
 
@@ -635,20 +625,18 @@ describe('InvoiceService', () => {
       accounts.findMany.mockResolvedValue([accountRow({ id: 'card-a', source: 'PLUGGY', externalAccountId: 'ext-a' })])
       const repo = repoMock()
       repo.findOpenRows.mockResolvedValue([])
-      const pluggy = pluggyMock()
-      pluggy.getLastClosedBill.mockResolvedValue(null)
-      const service = new InvoiceService(repo, accounts, people, pluggy)
+      const service = new InvoiceService(repo, accounts, people)
 
       await service.getSummary('user-1', shiftMonthKey(monthKey(new Date()), -1))
 
       expect(repo.findForecastRows).not.toHaveBeenCalled()
-      expect(repo.findOpenRows).toHaveBeenCalledWith('user-1', 'card-a')
+      expect(repo.findOpenRows).toHaveBeenCalledWith('user-1', 'card-a', undefined)
     })
 
     it('sem Pessoa self, falha alto (invariante quebrada)', async () => {
       const people = peopleMock()
       people.findSelf.mockResolvedValue(null)
-      const service = new InvoiceService(repoMock(), accountsMock(), people, pluggyMock())
+      const service = new InvoiceService(repoMock(), accountsMock(), people)
 
       await expect(service.getSummary('user-1')).rejects.toBeInstanceOf(DomainError)
     })

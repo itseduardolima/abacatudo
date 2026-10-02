@@ -108,3 +108,12 @@ export function shiftMonthKey(monthKeyValue: string, delta: number): string {
 export function dayFromDateString(date: string): Date {
   return /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T12:00:00.000Z`) : new Date(date)
 }
+
+// Início do dia seguinte ao último fechamento (dia `closingDay`, já ocorrido hoje ou antes) em
+// America/Manaus: o que for lançado a partir daqui pertence à fatura aberta. Dia > fim do mês cai no último dia.
+export function lastClosingCutoff(closingDay: number, now: Date = new Date()): Date {
+  const { year, month, day } = zonedParts(now)
+  const closingIn = (y: number, m: number) => Math.min(closingDay, new Date(Date.UTC(y, m, 0)).getUTCDate())
+  const [y, m] = closingIn(year, month) <= day ? [year, month] : month === 1 ? [year - 1, 12] : [year, month - 1]
+  return zonedTimeToUtc(y, m, closingIn(y, m) + 1)
+}

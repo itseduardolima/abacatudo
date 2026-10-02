@@ -32,12 +32,13 @@ export class InvoiceRepository {
   // CARD_PAYMENT (só aqui — nunca em findRows): pagamento antecipado abate o que falta pagar da fatura
   // aberta (computeInvoice trata o sinal). Traz description/occurredAt/installmentTotal pra
   // keepNextDueInstallmentOnly identificar qual parcela é a próxima a vencer.
-  async findOpenRows(userId: string, accountId?: string): Promise<InvoiceRow[]> {
+  async findOpenRows(userId: string, accountId?: string, after?: Date): Promise<InvoiceRow[]> {
     const rows = await this.prisma.transaction.findMany({
       where: {
         userId,
         billId: null,
-        kind: { in: ['EXPENSE', 'REFUND', 'CARD_PAYMENT'] },
+        ...(after ? { occurredAt: { gte: after } } : {}),
+        kind: { in: ['EXPENSE', 'REFUND'] },
         account: { type: 'CREDIT_CARD', source: 'PLUGGY', ...(accountId ? { id: accountId } : {}) },
       },
       include: { splits: { select: { personId: true, amountCents: true } } },
@@ -62,10 +63,11 @@ export class InvoiceRepository {
     return rows.map((row) => toInvoiceRow(row, null))
   }
 
-  findStatementOpenRows(userId: string, accountId: string): Promise<StatementRow[]> {
+  findStatementOpenRows(userId: string, accountId: string, after?: Date): Promise<StatementRow[]> {
     return this.statementRows({
       userId,
       billId: null,
+      ...(after ? { occurredAt: { gte: after } } : {}),
       kind: { in: ['EXPENSE', 'REFUND'] },
       account: { id: accountId, type: 'CREDIT_CARD', source: 'PLUGGY' },
     })

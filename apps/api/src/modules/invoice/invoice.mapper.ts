@@ -68,20 +68,6 @@ export function keepNextDueInstallmentOnly<T extends InvoiceRow>(rows: T[]): T[]
   )
 }
 
-// Quanto falta pagar = saldo da última fatura fechada (o Pluggy só materializa fatura depois que ela
-// fecha — nunca a aberta) + a movimentação local ainda sem billId (computeInvoice já sabe somar isso,
-// CARD_PAYMENT incluso). O saldo anterior inteiro vira "meu" — não dá pra saber de quem era o gasto de
-// uma fatura que já fechou há meses (simplificação consciente, documentada no TODO); "não é meu" só nasce
-// da atribuição de pessoa nas transações ainda abertas.
-export function computeInvoiceWithCarryover(rows: InvoiceRow[], selfPersonId: string, carryoverCents: number): Invoice {
-  const movement = computeInvoice(rows, selfPersonId)
-  return {
-    totalCents: carryoverCents + movement.totalCents,
-    mineCents: carryoverCents + movement.mineCents,
-    notMineCents: movement.notMineCents,
-  }
-}
-
 // Soma a fatura de vários cartões numa só (getSummary): cada `Invoice` já respeita sua própria invariante,
 // e a soma delas continua respeitando (soma de somas).
 export function mergeInvoices(invoices: Invoice[]): Invoice {
