@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common'
 import type { Prisma, Transaction } from '@prisma/client'
-import { monthKey, monthRange } from '../../common/date/timezone'
+import { lastClosingCutoff, monthKey, monthRange } from '../../common/date/timezone'
 import { keepCurrentInstallmentsOnly } from '../../common/installment-group'
 import { PRISMA, type PrismaService } from '../../prisma/prisma.client'
 
@@ -36,9 +36,16 @@ export class TransactionRepository {
         ],
       },
       orderBy: { occurredAt: 'desc' },
-      include: SPLITS_SELECT,
+      include: { ...SPLITS_SELECT, account: { select: { closingDay: true } } },
     })
-    return keepCurrentInstallmentsOnly(rows)
+    const open = rows.filter(
+      (row) =>
+        row.billId !== null ||
+        !row.account.closingDay ||
+        row.occurredAt >= lastClosingCutoff(row.account.closingDay) ||
+        (row.occurredAt >= range.start && row.occurredAt < range.end),
+    )
+    return keepCurrentInstallmentsOnly(open.map(({ account: _account, ...row }) => row))
   }
 
   // Fatura prevista (03-regras-negocio § Fatura prevista): só as parcelas ainda sem billId cuja data de
