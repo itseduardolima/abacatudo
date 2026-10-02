@@ -140,6 +140,26 @@ describe('MovementService', () => {
       expect(repo.findMany).not.toHaveBeenCalled()
     })
 
+    it('report da conta de benefício: o período vai do dia 30 do mês anterior até o dia 29, com entrada de 30/09 em outubro', async () => {
+      const repo = repoMock()
+      repo.findMany.mockResolvedValue([movementRow({ kind: 'INCOME', amountCents: 150000 })])
+      const accounts = accountsMock()
+      accounts.findById.mockResolvedValue(account({ isBenefitAccount: true }))
+      const service = new MovementService(repo, accounts)
+
+      const result = await service.report('user-1', 'acc-benefit', '2026-10')
+
+      expect(repo.findMany).toHaveBeenCalledWith(
+        'user-1',
+        { start: new Date('2026-09-30T04:00:00.000Z'), end: new Date('2026-10-30T04:00:00.000Z') },
+        { accountId: 'acc-benefit' },
+      )
+      expect(result.incomeCents).toBe(150000)
+      expect(result.daily).toHaveLength(30)
+      expect(result.daily[0]?.day).toBe('2026-09-30')
+      expect(result.daily.at(-1)?.day).toBe('2026-10-29')
+    })
+
     it('report: devolve saldo, última sincronização e os totais do mês da conta pedida', async () => {
       const repo = repoMock()
       repo.findMany.mockResolvedValue([

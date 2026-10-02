@@ -86,8 +86,8 @@ export default function BenefitPage() {
                 <p className="mt-2 text-sm text-on-inverse-muted">
                   Dá <MoneyText cents={report.pace.perDayCents} className="!text-on-inverse" /> por dia{' '}
                   {report.pace.daysRemaining === 1
-                    ? 'no dia que resta do mês'
-                    : `nos ${report.pace.daysRemaining} dias que restam do mês`}
+                    ? 'no dia que falta pro próximo depósito'
+                    : `nos ${report.pace.daysRemaining} dias até o próximo depósito`}
                 </p>
               )}
               {(report?.lastSyncAt ?? benefitAccount.lastSyncAt) && (

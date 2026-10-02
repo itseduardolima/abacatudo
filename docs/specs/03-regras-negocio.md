@@ -237,6 +237,10 @@ orçamento, o ritmo do cartão, os relatórios do cartão nem a IA. Os endpoints
 recebem `accountId` (para outra conta corrente entrar depois sem refazer a
 API), mas a UI só expõe o benefício por enquanto.
 
+- **Período do benefício**: o dinheiro do mês entra no dia 30 do mês anterior, então o "mês" da conta de
+  benefício vai do **dia 30 do mês anterior** (inclusive) ao **dia 30 do mês** (exclusive), em `America/Manaus`
+  (dia 30 em mês curto cai no último dia). Vale para extrato, resumo, saídas por dia, Pix e hábitos; o ritmo
+  do benefício divide o saldo pelos dias até o próximo dia 30.
 - **Extrato**: a mesma lista de Movimentações filtrada pela conta, com o
   **saldo atual** e "atualizado em" (do sync) no topo; mês selecionável.
 - **Resumo do mês** (aba "Resumo"): entradas, saídas e resultado; **ritmo do

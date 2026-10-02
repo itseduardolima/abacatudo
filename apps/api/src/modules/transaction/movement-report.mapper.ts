@@ -31,6 +31,8 @@ export function computeMovementReport(input: {
   currentMonthKey: string
   todayDayOfMonth: number
   dayKeyOf: (date: Date) => string
+  days?: string[]
+  daysRemaining?: number | null
 }): Pick<MovementReport, 'incomeCents' | 'expenseCents' | 'resultCents' | 'pace' | 'daily'> {
   const daysInMonth = daysInMonthFor(input.month)
   const expenseByDay = new Map<string, number>()
@@ -47,16 +49,16 @@ export function computeMovementReport(input: {
   }
 
   let cumulativeExpenseCents = 0
-  const daily = Array.from({ length: daysInMonth }, (_, index) => {
-    const day = `${input.month}-${pad(index + 1)}`
+  const days = input.days ?? Array.from({ length: daysInMonth }, (_, index) => `${input.month}-${pad(index + 1)}`)
+  const daily = days.map((day) => {
     const dayExpense = expenseByDay.get(day) ?? 0
     cumulativeExpenseCents += dayExpense
     return { day, expenseCents: dayExpense, cumulativeExpenseCents }
   })
 
   let pace: MovementReport['pace'] = null
-  if (input.month === input.currentMonthKey && input.balanceCents !== null) {
-    const daysRemaining = daysInMonth - (input.todayDayOfMonth - 1)
+  if (input.month === input.currentMonthKey && input.balanceCents !== null && input.daysRemaining !== null) {
+    const daysRemaining = input.daysRemaining ?? daysInMonth - (input.todayDayOfMonth - 1)
     pace = {
       daysRemaining,
       perDayCents: daysRemaining > 0 ? Math.max(0, Math.round(input.balanceCents / daysRemaining)) : 0,

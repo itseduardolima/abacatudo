@@ -7,7 +7,16 @@ import type {
   PixRecipientsResponse,
   Transaction,
 } from '@gastos/shared'
-import { dateKey, dayOfMonth, monthKey, monthRange, resolveMonthRange, shiftMonthKey } from '../../common/date/timezone'
+import {
+  BENEFIT_DEPOSIT_DAY,
+  benefitPeriodRange,
+  dateKey,
+  dayOfMonth,
+  monthKey,
+  monthRange,
+  resolveMonthRange,
+  shiftMonthKey,
+} from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository } from '../account/account.repository'
 import { detectSubscriptions } from '../insight/subscription.mapper'
@@ -37,7 +46,7 @@ export class MovementService {
   ) {}
 
   async listByMonth(userId: string, query: MovementListQuery): Promise<Transaction[]> {
-    const range = resolveMonthRange(query.month)
+    const range = await this.rangeFor(userId, query.accountId, query.month)
     const direction = resolveDirection(query.direction)
     const rows = await this.repo.findMany(userId, range, {
       accountId: query.accountId,
@@ -56,9 +65,11 @@ export class MovementService {
   // Só conta que não é cartão de crédito; nunca alimenta orçamento nem IA.
   async report(userId: string, accountId: string | undefined, month?: string): Promise<MovementReport> {
     const account = await this.movementAccount(userId, accountId)
-    const range = resolveMonthRange(month)
+    const range = periodRange(account, month)
     const targetMonth = month ?? monthKey(new Date())
     const rows = await this.repo.findMany(userId, range, { accountId: account.id })
+    const benefit = account.isBenefitAccount
+    const today = dayOfMonth(new Date())
 
     return {
       accountId: account.id,
@@ -72,6 +83,12 @@ export class MovementService {
         currentMonthKey: monthKey(new Date()),
         todayDayOfMonth: dayOfMonth(new Date()),
         dayKeyOf: dateKey,
+        ...(benefit
+          ? {
+              days: daysBetween(range),
+              daysRemaining: today < BENEFIT_DEPOSIT_DAY ? BENEFIT_DEPOSIT_DAY - today : null,
+            }
+          : {}),
       }),
     }
   }
@@ -85,7 +102,10 @@ export class MovementService {
     search?: string,
   ): Promise<PixRecipientsResponse> {
     const account = await this.movementAccount(userId, accountId)
-    const rows = await this.repo.findMany(userId, resolveMonthRange(month), { accountId: account.id, direction: 'OUT' })
+    const rows = await this.repo.findMany(userId, periodRange(account, month), {
+      accountId: account.id,
+      direction: 'OUT',
+    })
     const recipients = groupPixRecipients(rows, search)
     return {
       month: month ?? monthKey(new Date()),
@@ -102,7 +122,10 @@ export class MovementService {
   ): Promise<Transaction[]> {
     if (!recipient) throw new DomainError('RECIPIENT_REQUIRED', 'Informe o favorecido.', 400)
     const account = await this.movementAccount(userId, accountId)
-    const rows = await this.repo.findMany(userId, resolveMonthRange(month), { accountId: account.id, direction: 'OUT' })
+    const rows = await this.repo.findMany(userId, periodRange(account, month), {
+      accountId: account.id,
+      direction: 'OUT',
+    })
     return filterPixRowsByRecipient(rows, recipient).map((row) => toTransactionDto(row))
   }
 
@@ -110,7 +133,10 @@ export class MovementService {
   // § Extrato e relatório da conta de benefício). Só descritivo; nunca alimenta orçamento nem IA.
   async spending(userId: string, accountId: string | undefined, month?: string): Promise<MovementSpending> {
     const account = await this.movementAccount(userId, accountId)
-    const rows = await this.repo.findMany(userId, resolveMonthRange(month), { accountId: account.id, direction: 'OUT' })
+    const rows = await this.repo.findMany(userId, periodRange(account, month), {
+      accountId: account.id,
+      direction: 'OUT',
+    })
     return { month: month ?? monthKey(new Date()), ...spendingBreakdown(rows) }
   }
 
@@ -121,7 +147,7 @@ export class MovementService {
   async habits(userId: string, accountId: string | undefined, month?: string): Promise<MovementHabits> {
     const account = await this.movementAccount(userId, accountId)
     const currentMonth = monthKey(new Date())
-    const monthRows = await this.repo.findMany(userId, resolveMonthRange(month), {
+    const monthRows = await this.repo.findMany(userId, periodRange(account, month), {
       accountId: account.id,
       direction: 'OUT',
     })
@@ -150,6 +176,12 @@ export class MovementService {
     return { recurring, frequent: frequentEstablishments(monthRows) }
   }
 
+  private async rangeFor(userId: string, accountId: string | undefined, month?: string) {
+    if (!accountId) return resolveMonthRange(month)
+    const account = await this.accounts.findById(userId, accountId)
+    return account ? periodRange(account, month) : resolveMonthRange(month)
+  }
+
   private async movementAccount(userId: string, accountId: string | undefined) {
     if (!accountId) throw new DomainError('ACCOUNT_ID_REQUIRED', 'Informe accountId.', 400)
     const account = await this.accounts.findById(userId, accountId)
@@ -167,4 +199,16 @@ function resolveDirection(direction?: string): 'IN' | 'OUT' | undefined {
     throw new DomainError('INVALID_DIRECTION', 'Direção inválida (esperado IN ou OUT).', 400)
   }
   return direction
+}
+
+function periodRange(account: { isBenefitAccount: boolean }, month?: string): { start: Date; end: Date } {
+  const key = month ?? monthKey(new Date())
+  resolveMonthRange(key)
+  return account.isBenefitAccount ? benefitPeriodRange(key) : resolveMonthRange(key)
+}
+
+function daysBetween(range: { start: Date; end: Date }): string[] {
+  const days: string[] = []
+  for (let at = range.start.getTime(); at < range.end.getTime(); at += 86_400_000) days.push(dateKey(new Date(at)))
+  return days
 }
