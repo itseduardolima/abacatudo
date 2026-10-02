@@ -44,26 +44,31 @@ export function PaceHeroCard({ pace }: { pace: BudgetPace }) {
           />
         )}
       </div>
-      {firstHalfPercent !== null && pace.firstHalfSpentCents !== null && pace.firstHalfRemainingCents !== null && (
-        <div className="mt-2.5 flex flex-col gap-1 text-xs text-on-inverse-muted">
-          <p className="flex items-center gap-1.5">
-            <span aria-hidden className="h-2 w-2 rounded-full bg-on-inverse-marker" />
-            1ª quinzena <MoneyText cents={pace.firstHalfSpentCents} className="!text-on-inverse" /> de{' '}
-            <MoneyText cents={pace.firstHalfCapCents} className="!text-on-inverse" />
-          </p>
-          <p>
-            Sobram até o dia 15 <MoneyText cents={pace.firstHalfRemainingCents} className="!text-on-inverse" />
-          </p>
-        </div>
+      {firstHalfPercent !== null && pace.firstHalfSpentCents !== null && (
+        <p className="mt-2.5 flex items-center gap-1.5 text-xs text-on-inverse-muted">
+          <span aria-hidden className="h-2 w-2 rounded-full bg-on-inverse-marker" />
+          1ª quinzena <MoneyText cents={pace.firstHalfSpentCents} className="!text-on-inverse" /> de{' '}
+          <MoneyText cents={pace.firstHalfCapCents} className="!text-on-inverse" />
+        </p>
       )}
 
       <div className="my-4 h-px bg-on-inverse-hairline" />
 
-      <div>
-        <p className="text-sm text-on-inverse-muted">Sobram</p>
-        <p className="mt-1 text-xl font-bold text-on-inverse">
-          <MoneyText cents={pace.remainingCents} className="!text-on-inverse" />
-        </p>
+      <div className="flex justify-between gap-4">
+        {pace.firstHalfRemainingCents !== null && (
+          <div>
+            <p className="text-sm text-on-inverse-muted">Sobram até dia 15</p>
+            <p className="mt-1 text-xl font-bold text-on-inverse">
+              <MoneyText cents={pace.firstHalfRemainingCents} className="!text-on-inverse" />
+            </p>
+          </div>
+        )}
+        <div className="ml-auto text-right">
+          <p className="text-sm text-on-inverse-muted">Sobram</p>
+          <p className="mt-1 text-xl font-bold text-on-inverse">
+            <MoneyText cents={pace.remainingCents} className="!text-on-inverse" />
+          </p>
+        </div>
       </div>
     </div>
   )
