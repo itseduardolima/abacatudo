@@ -110,4 +110,17 @@ describe('FixedExpenseService', () => {
     )
     expect(repo.findById).not.toHaveBeenCalled()
   })
+
+  it('sumActiveCentsByHalf: gasto dividido (3) conta metade em cada quinzena, o centavo ímpar na 2ª', async () => {
+    const repo = repoMock()
+    repo.findMany.mockResolvedValue([
+      row({ amountCents: 10001, half: 3 }),
+      row({ id: 'fe-2', amountCents: 5000, half: 1 }),
+      row({ id: 'fe-3', amountCents: 7000, half: 2 }),
+    ])
+    const service = new FixedExpenseService(repo)
+
+    await expect(service.sumActiveCentsByHalf('user-1', 1)).resolves.toBe(5000 + 5000)
+    await expect(service.sumActiveCentsByHalf('user-1', 2)).resolves.toBe(5001 + 7000)
+  })
 })

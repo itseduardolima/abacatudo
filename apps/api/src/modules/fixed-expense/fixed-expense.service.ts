@@ -34,7 +34,12 @@ export class FixedExpenseService {
 
   async sumActiveCentsByHalf(userId: string, half: 1 | 2): Promise<number> {
     const rows = await this.repo.findMany(userId, false)
-    return rows.filter((row) => row.half === half).reduce((total, row) => total + row.amountCents, 0)
+    return rows.reduce((total, row) => {
+      if (row.half === half) return total + row.amountCents
+      if (row.half !== 3) return total
+      const firstShare = Math.floor(row.amountCents / 2)
+      return total + (half === 1 ? firstShare : row.amountCents - firstShare)
+    }, 0)
   }
 
   async archive(userId: string, id: string): Promise<void> {
@@ -48,7 +53,7 @@ function toDto(row: FixedExpenseRow): FixedExpense {
     id: row.id,
     name: row.name,
     amountCents: row.amountCents,
-    half: row.half === 2 ? 2 : 1,
+    half: row.half === 2 || row.half === 3 ? row.half : 1,
     archivedAt: row.archivedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
   }

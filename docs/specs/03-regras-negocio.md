@@ -388,7 +388,7 @@ teto variável = renda mensal (fixa + benefícios)
   etc.), a linha `CARD_PAYMENT` e gastos de outras Persons.
 - **Quinzena**: a renda é informada em dois salários, o da 1ª quinzena (dia 15, cobre os dias 1–15) e o da
   2ª (dia 30, cobre 16–fim do mês); o teto mensal é a soma. Cada gasto fixo tem uma quinzena de pagamento
-  (1ª ou 2ª, editável). No mês atual, o gasto da quinzena = minha parte nas compras de cartão **com data dentro da
+  (1ª, 2ª ou dividido meio a meio, o centavo ímpar na 2ª; editável). No mês atual, o gasto da quinzena = minha parte nas compras de cartão **com data dentro da
   quinzena** (parcela pela data de vencimento, fatura fechada fora) + gastos fixos daquela quinzena, contra o
   salário dela. Teto por quinzena, **sem acumular** o que sobra. Não existe em mês futuro nem passado.
 - **Ritmo**: compara o gasto do mês (fatura aberta somada em todos os

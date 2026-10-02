@@ -3,7 +3,7 @@ import { centsSchema, idSchema } from './common'
 
 // Gasto fixo mensal (aluguel, internet...): sem `month` próprio — conta todo mês até ser arquivado
 // (03-regras-negocio § Orçamento mensal).
-export const payHalfSchema = z.union([z.literal(1), z.literal(2)])
+export const payHalfSchema = z.union([z.literal(1), z.literal(2), z.literal(3)])
 
 export const fixedExpenseSchema = z
   .object({

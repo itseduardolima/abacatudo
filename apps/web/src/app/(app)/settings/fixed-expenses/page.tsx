@@ -11,6 +11,12 @@ import { MoneyText } from '@/components/finance/MoneyText'
 import { FixedExpenseActionsSheet } from './fixed-expense-actions-sheet'
 import { useFixedExpensesPage } from './use-fixed-expenses-page'
 
+const PAY_HALF_LABEL = {
+  1: 'na 1ª quinzena (dia 15)',
+  2: 'na 2ª quinzena (dia 30)',
+  3: 'metade em cada quinzena',
+} as const
+
 export default function FixedExpensesPage() {
   const {
     fixedExpenses,
@@ -59,9 +65,7 @@ export default function FixedExpensesPage() {
               </span>
               <div className="flex-1">
                 <p className="font-semibold text-ink">{expense.name}</p>
-                <p className="text-xs text-muted">
-                  Paga {expense.half === 1 ? 'na 1ª quinzena (dia 15)' : 'na 2ª quinzena (dia 30)'}
-                </p>
+                <p className="text-xs text-muted">Paga {PAY_HALF_LABEL[expense.half]}</p>
               </div>
               <MoneyText cents={expense.amountCents} />
               <Button
@@ -105,6 +109,7 @@ export default function FixedExpensesPage() {
             options={[
               { value: '1', label: 'Dia 15' },
               { value: '2', label: 'Dia 30' },
+              { value: '3', label: 'Dividido' },
             ]}
             value={half}
             onChange={setHalf}
