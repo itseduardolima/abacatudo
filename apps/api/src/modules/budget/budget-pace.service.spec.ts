@@ -56,14 +56,7 @@ describe('BudgetPaceService', () => {
     expect(result.cardsMineCents).toBe(50_000)
     expect(result.month).toBe('2026-09')
     expect(result.firstHalfCapCents).toBe(150_000)
-    expect(result.halfPace).toEqual({
-      half: 1,
-      startDay: 1,
-      endDay: 15,
-      capCents: 150_000,
-      spentCents: 35_000,
-      remainingCents: 115_000,
-    })
+    expect(result.firstHalfSpentCents).toBe(35_000)
   })
 
   it('sem gasto fixo nenhum, gasto é só a fatura', async () => {
@@ -79,7 +72,7 @@ describe('BudgetPaceService', () => {
     expect(result.spentCents).toBe(15_000)
   })
 
-  it('quinzena só existe no mês atual: mês futuro não traz halfPace', async () => {
+  it('gasto da 1ª quinzena só existe no mês atual', async () => {
     const service = new BudgetPaceService(
       budgetMonthMock(100_000, '2026-10'),
       invoicesMock(10_000),
@@ -88,15 +81,6 @@ describe('BudgetPaceService', () => {
 
     const result = await service.getPace('user-1', '2026-10')
 
-    expect(result.halfPace).toBeNull()
-  })
-
-  it('a partir do dia 16 a quinzena é a 2ª, com o teto do segundo salário', async () => {
-    jest.setSystemTime(new Date('2026-09-20T12:00:00.000Z'))
-    const service = new BudgetPaceService(budgetMonthMock(565_144), invoicesMock(10_000), fixedExpensesMock(0))
-
-    const result = await service.getPace('user-1')
-
-    expect(result.halfPace).toMatchObject({ half: 2, startDay: 16, endDay: 30, capCents: 282_572 })
+    expect(result.firstHalfSpentCents).toBeNull()
   })
 })

@@ -390,7 +390,8 @@ teto variável = renda mensal (fixa + benefícios)
   2ª (dia 30, cobre 16–fim do mês); o teto mensal é a soma. Cada gasto fixo tem uma quinzena de pagamento
   (1ª, 2ª ou dividido meio a meio, o centavo ímpar na 2ª; editável). No mês atual, o gasto da quinzena = minha parte nas compras de cartão **com data dentro da
   quinzena** (parcela pela data de vencimento, fatura fechada fora) + gastos fixos daquela quinzena, contra o
-  salário dela. Teto por quinzena, **sem acumular** o que sobra. Não existe em mês futuro nem passado.
+  salário dela. O card mostra, na barra do mês, um marcador no teto do dia 15 com o quanto já foi gasto na 1ª quinzena
+  (só no mês atual).
 - **Ritmo**: compara o gasto do mês (fatura aberta somada em todos os
   cartões + gastos fixos ativos) com o esperado linear até hoje, sobre o
   teto; sinaliza se está acima. O card da Início mostra também **quanto foi gasto

@@ -24,18 +24,6 @@ export type BudgetMonth = z.infer<typeof budgetMonthSchema>
 export const budgetPaceStatusSchema = z.enum(['ON_TRACK', 'OVER_PACE'])
 export type BudgetPaceStatus = z.infer<typeof budgetPaceStatusSchema>
 
-export const halfPaceSchema = z
-  .object({
-    half: z.union([z.literal(1), z.literal(2)]),
-    startDay: z.number().int().positive(),
-    endDay: z.number().int().positive(),
-    capCents: centsSchema,
-    spentCents: centsSchema,
-    remainingCents: centsSchema,
-  })
-  .strict()
-export type HalfPace = z.infer<typeof halfPaceSchema>
-
 export const budgetPaceSchema = z
   .object({
     month: monthKeySchema,
@@ -52,7 +40,7 @@ export const budgetPaceSchema = z
     status: budgetPaceStatusSchema,
     perDayRemainingCents: centsSchema,
     firstHalfCapCents: centsSchema,
-    halfPace: halfPaceSchema.nullable(),
+    firstHalfSpentCents: centsSchema.nullable(),
   })
   .strict()
 export type BudgetPace = z.infer<typeof budgetPaceSchema>

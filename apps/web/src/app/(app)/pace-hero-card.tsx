@@ -43,11 +43,21 @@ export function PaceHeroCard({ pace }: { pace: BudgetPace }) {
         )}
       </div>
       {firstHalfPercent !== null && (
-        <p className="relative mt-1.5 h-4 text-xs text-on-inverse-muted" aria-label="Teto do dia 15">
-          <span className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: `${firstHalfPercent}%` }}>
-            Dia 15 <MoneyText cents={pace.firstHalfCapCents} className="!text-on-inverse" />
-          </span>
-        </p>
+        <div className="relative mt-1.5 h-9 text-xs text-on-inverse-muted">
+          <div
+            className="absolute -translate-x-1/2 whitespace-nowrap text-center"
+            style={{ left: `${firstHalfPercent}%` }}
+          >
+            <p>
+              Teto dia 15 <MoneyText cents={pace.firstHalfCapCents} className="!text-on-inverse" />
+            </p>
+            {pace.firstHalfSpentCents !== null && (
+              <p>
+                Gasto <MoneyText cents={pace.firstHalfSpentCents} className="!text-on-inverse" />
+              </p>
+            )}
+          </div>
+        </div>
       )}
 
       <div className="my-4 h-px bg-on-inverse-hairline" />

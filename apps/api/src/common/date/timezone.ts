@@ -129,7 +129,3 @@ export function halfMonthRange(monthKeyValue: string, half: 1 | 2): { start: Dat
   const middle = zonedTimeToUtc(year, month, 16)
   return half === 1 ? { start, end: middle } : { start: middle, end }
 }
-
-export function halfOfDay(day: number): 1 | 2 {
-  return day <= 15 ? 1 : 2
-}
