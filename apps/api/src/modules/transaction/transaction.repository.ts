@@ -6,6 +6,21 @@ import { PRISMA, type PrismaService } from '../../prisma/prisma.client'
 
 const SPLITS_SELECT = { splits: { select: { personId: true, amountCents: true } } } as const
 
+export function isInOpenCycle(
+  row: {
+    billId: string | null
+    occurredAt: Date
+    installmentDueAt: Date | null
+    account: { closingDay: number | null }
+  },
+  range: { start: Date; end: Date },
+  now: Date = new Date(),
+): boolean {
+  if (row.billId !== null || !row.account.closingDay) return true
+  if (row.occurredAt >= range.start && row.occurredAt < range.end) return true
+  return (row.installmentDueAt ?? row.occurredAt) >= lastClosingCutoff(row.account.closingDay, now)
+}
+
 export type TransactionWithSplits = Transaction & { splits: { personId: string; amountCents: number }[] }
 
 // Só CREDIT_CARD (03-regras-negocio § Escopo) — o resto é MovementRepository, mesma tabela. `create` é a
@@ -38,13 +53,7 @@ export class TransactionRepository {
       orderBy: { occurredAt: 'desc' },
       include: { ...SPLITS_SELECT, account: { select: { closingDay: true } } },
     })
-    const open = rows.filter(
-      (row) =>
-        row.billId !== null ||
-        !row.account.closingDay ||
-        row.occurredAt >= lastClosingCutoff(row.account.closingDay) ||
-        (row.occurredAt >= range.start && row.occurredAt < range.end),
-    )
+    const open = rows.filter((row) => isInOpenCycle(row, range))
     return keepCurrentInstallmentsOnly(open.map(({ account: _account, ...row }) => row))
   }
 

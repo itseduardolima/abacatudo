@@ -6,6 +6,11 @@ import type { InvoiceRow } from './invoice.mapper'
 import type { InstallmentSource } from './installment-forecast.mapper'
 import type { StatementRow } from './statement.mapper'
 
+function openSince(after?: Date): Prisma.TransactionWhereInput {
+  if (!after) return {}
+  return { OR: [{ installmentDueAt: null, occurredAt: { gte: after } }, { installmentDueAt: { gte: after } }] }
+}
+
 @Injectable()
 export class InvoiceRepository {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaService) {}
@@ -37,7 +42,7 @@ export class InvoiceRepository {
       where: {
         userId,
         billId: null,
-        ...(after ? { occurredAt: { gte: after } } : {}),
+        ...openSince(after),
         kind: { in: ['EXPENSE', 'REFUND'] },
         account: { type: 'CREDIT_CARD', source: 'PLUGGY', ...(accountId ? { id: accountId } : {}) },
       },
@@ -59,10 +64,12 @@ export class InvoiceRepository {
       where: {
         userId,
         billId: null,
-        ...(after ? { occurredAt: { gte: after } } : {}),
         kind: { in: ['EXPENSE', 'REFUND'] },
         account: { id: accountId, type: 'CREDIT_CARD', source: 'PLUGGY' },
-        OR: [{ installmentDueAt: null, occurredAt: inRange }, { installmentDueAt: inRange }],
+        AND: [
+          openSince(after),
+          { OR: [{ installmentDueAt: null, occurredAt: inRange }, { installmentDueAt: inRange }] },
+        ],
       },
       include: { splits: { select: { personId: true, amountCents: true } } },
     })
@@ -90,7 +97,7 @@ export class InvoiceRepository {
     return this.statementRows({
       userId,
       billId: null,
-      ...(after ? { occurredAt: { gte: after } } : {}),
+      ...openSince(after),
       kind: { in: ['EXPENSE', 'REFUND'] },
       account: { id: accountId, type: 'CREDIT_CARD', source: 'PLUGGY' },
     })
