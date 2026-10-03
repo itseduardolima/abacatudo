@@ -254,6 +254,8 @@ Idêntico ao `pdv-web`:
 ## 11. Scan de dependências e superfície
 
 - `pnpm audit --audit-level=high` no CI em todo PR; Dependabot semanal
+  Exceção registrada: `GHSA-vfj7-8cjw-p6xm` (`braces`) ignorado em `pnpm-workspace.yaml` por não haver versão
+  corrigida no npm e a dependência ser só de desenvolvimento; remover quando sair `braces` >= 3.0.4.
   (`.github/dependabot.yml`) para npm, actions e Docker.
 - Imagens fixadas em versão (`node:22-alpine`, `postgres:16-alpine`,
   `caddy:2-alpine`), sem `latest` implícito.

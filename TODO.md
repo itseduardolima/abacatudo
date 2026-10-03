@@ -1218,6 +1218,10 @@ fatura) e `/movements` só com o resto — como o desenho previa.
 - [x] Teto por quinzena: renda em dois salários (dia 15 e dia 30), gasto fixo com quinzena de pagamento, linha
       da quinzena no card da Início (2026-10-02).
 
+- [x] CI: `pnpm audit` falhava no `braces` (GHSA-vfj7-8cjw-p6xm, sem versão corrigida no npm; só ferramenta de dev do
+      `apps/web`). Aviso ignorado de forma explícita em `pnpm-workspace.yaml`; remover quando sair `braces` >= 3.0.4
+      (2026-10-03).
+
 ### Code review (2026-09-22) — 4 achados, todos corrigidos e reverificados ao vivo
 
 - **`lastErrorCode` era campo morto**: existia na coluna e no DTO, mas nada escrevia nele — conexão com
