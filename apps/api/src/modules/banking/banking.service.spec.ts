@@ -322,6 +322,23 @@ describe('BankingService', () => {
     expect(updateData).not.toHaveProperty('name')
   })
 
+  it('manualSync: fechamento e vencimento que o Pluggy não manda (null) não apagam o que foi informado à mão', async () => {
+    const items = itemsMock()
+    items.findById.mockResolvedValue(itemRow())
+    const accounts = accountsMock()
+    accounts.upsertFromSync.mockResolvedValue(accountRow())
+    const pluggy = pluggyMock()
+    pluggy.listAccounts.mockResolvedValue([{ id: 'ext-acc-1', type: 'CREDIT', name: 'Pic Pay', creditData: null }])
+    pluggy.listTransactions.mockResolvedValue({ results: [], next: null })
+
+    await newService({ items, accounts, pluggy }).manualSync('user-1', 'item-1')
+
+    const updateData = accounts.upsertFromSync.mock.calls[0]?.[3]
+    expect(updateData).not.toHaveProperty('closingDay')
+    expect(updateData).not.toHaveProperty('dueDay')
+    expect(updateData).not.toHaveProperty('creditLimitCents')
+  })
+
   it('manualSync: sincroniza conta e transações por upsert atômico, sem duplicar', async () => {
     const items = itemsMock()
     items.findById.mockResolvedValue(itemRow())

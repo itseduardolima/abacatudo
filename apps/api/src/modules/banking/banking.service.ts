@@ -191,7 +191,13 @@ export class BankingService {
       // balanceCents fora do update quando o Pluggy não mandou saldo nesse sync (fields.balanceCents null):
       // uma omissão pontual do lado do Pluggy não pode apagar o último saldo bom que já tínhamos — cartão
       // de crédito nunca manda saldo mesmo (sempre null), então nunca atualiza aqui, o que já é o esperado.
-      const { balanceCents, ...updateFieldsWithoutBalance } = fields
+      const { balanceCents, closingDay, dueDay, creditLimitCents, ...updateBase } = fields
+      const updateFieldsWithoutBalance = {
+        ...updateBase,
+        ...(closingDay != null ? { closingDay } : {}),
+        ...(dueDay != null ? { dueDay } : {}),
+        ...(creditLimitCents != null ? { creditLimitCents } : {}),
+      }
       // pluggyItemId também no update: sem isso, uma conta que já existia (upsert bate no update, não no
       // create) nunca troca de dono quando reconectar (8.4) cria um Item novo — ficava presa apontando pro
       // Item antigo revogado, e disconnected/lastSyncAt (8.5/8.6) mentiam mesmo com o Item novo sincronizando
