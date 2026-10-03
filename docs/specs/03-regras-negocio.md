@@ -138,8 +138,9 @@ Detalhe e números em [07-integracao-bancaria](./07-integracao-bancaria.md) § F
   mês corrente e dos totais, e só aparece em "parcelas futuras" e na **fatura prevista** (ver "Fatura prevista").
 - **Fatura**: agrupa por `billId`; as pendentes (sem `billId`) pertencem à fatura aberta. A fatura já fechada
   **não entra** em "Meu em [mês]", no ritmo nem no total do cartão, e `CARD_PAYMENT` não abate a aberta. Cartão
-  com `closingDay` (ex.: Pic Pay, que o Pluggy não manda fatura): só lançamento depois do último fechamento
-  (dia seguinte, `America/Manaus`) é fatura aberta.
+  com `closingDay` (ex.: Pic Pay, que o Pluggy não manda fatura): só lançamento a partir do último fechamento
+  (o **próprio dia de fechamento** já conta, como no Nubank; parcela vale pela data de vencimento, não pela
+  da compra; `America/Manaus`) é fatura aberta.
 - **Cartão adicional**: o final do cartão de cada transação (`cardNumber`) já resolve a pessoa via
   `CardHolderHint`, antes de qualquer classificação manual.
 
