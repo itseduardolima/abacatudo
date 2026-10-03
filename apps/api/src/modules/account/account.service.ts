@@ -32,7 +32,7 @@ export class AccountService {
     return toDto(row)
   }
 
-  // PATCH único pros campos editáveis (nome, benefício, logo do banco) — só mexe no que veio no body, nunca
+  // PATCH único pros campos editáveis (nome, benefício, logo do banco, fechamento e vencimento) — só mexe no que veio no body, nunca
   // sobrescreve o outro campo com o valor atual (teria corrida se dois PATCH parciais chegassem juntos).
   async update(userId: string, id: string, input: UpdateAccountInput): Promise<Account> {
     const existing = await this.repo.findById(userId, id)
@@ -52,6 +52,16 @@ export class AccountService {
 
     if (input.bankLogo !== undefined) {
       await this.repo.update(userId, id, { bankLogo: input.bankLogo })
+    }
+
+    if (input.closingDay !== undefined || input.dueDay !== undefined) {
+      if (existing.type !== 'CREDIT_CARD') {
+        throw new DomainError('NOT_A_CREDIT_CARD', 'Fechamento e vencimento só existem em cartão de crédito.', 422)
+      }
+      await this.repo.update(userId, id, {
+        ...(input.closingDay !== undefined ? { closingDay: input.closingDay } : {}),
+        ...(input.dueDay !== undefined ? { dueDay: input.dueDay } : {}),
+      })
     }
 
     const refreshed = await this.repo.findById(userId, id)

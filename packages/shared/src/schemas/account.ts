@@ -55,6 +55,8 @@ export const updateAccountInputSchema = z
     name: accountNameSchema.optional(),
     isBenefitAccount: z.boolean().optional(),
     bankLogo: bankLogoSchema.nullable().optional(),
+    closingDay: dayOfMonthSchema.optional(),
+    dueDay: dayOfMonthSchema.optional(),
   })
   .strict()
 export type UpdateAccountInput = z.infer<typeof updateAccountInputSchema>

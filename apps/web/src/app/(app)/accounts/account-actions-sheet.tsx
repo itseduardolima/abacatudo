@@ -1,13 +1,14 @@
 'use client'
 
 import type { Account } from '@gastos/shared'
-import { Pencil, Tag, Trash2, Wallet } from 'lucide-react'
+import { CalendarDays, Pencil, Tag, Trash2, Wallet } from 'lucide-react'
 import { useEffect } from 'react'
 
 export function AccountActionsSheet({
   account,
   onRename,
   onPickLogo,
+  onBilling,
   onToggleBenefit,
   onRemove,
   onClose,
@@ -15,6 +16,7 @@ export function AccountActionsSheet({
   account: Account
   onRename: () => void
   onPickLogo: () => void
+  onBilling: () => void
   onToggleBenefit: () => void
   onRemove: () => void
   onClose: () => void
@@ -51,6 +53,12 @@ export function AccountActionsSheet({
           <Tag size={18} strokeWidth={1.8} className="text-ink" />
           <span className="font-medium text-ink">Bandeira do banco</span>
         </button>
+        {account.type === 'CREDIT_CARD' && (
+          <button type="button" onClick={onBilling} className={itemClass}>
+            <CalendarDays size={18} strokeWidth={1.8} className="text-ink" />
+            <span className="font-medium text-ink">Fechamento e vencimento</span>
+          </button>
+        )}
         {account.type === 'CHECKING' && (
           <button type="button" onClick={onToggleBenefit} className={itemClass}>
             <Wallet size={18} strokeWidth={1.8} className="text-ink" />

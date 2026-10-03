@@ -31,6 +31,10 @@ export function useAccountsPage() {
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState('')
   const [renameError, setRenameError] = useState<string | null>(null)
+  const [billingId, setBillingId] = useState<string | null>(null)
+  const [closingDayDraft, setClosingDayDraft] = useState('')
+  const [dueDayDraft, setDueDayDraft] = useState('')
+  const [billingErrors, setBillingErrors] = useState<{ closingDay?: string; dueDay?: string; general?: string }>({})
   const {
     register,
     handleSubmit,
@@ -120,6 +124,32 @@ export function useAccountsPage() {
     }
   }
 
+  const closeBilling = () => {
+    setBillingId(null)
+    setBillingErrors({})
+  }
+
+  const onSaveBilling = async () => {
+    if (!billingId) return
+    setBillingErrors({})
+    const input = {
+      ...(closingDayDraft.trim() ? { closingDay: Number(closingDayDraft) } : {}),
+      ...(dueDayDraft.trim() ? { dueDay: Number(dueDayDraft) } : {}),
+    }
+    try {
+      await updateAccount.mutateAsync({ id: billingId, input })
+      closeBilling()
+    } catch (error) {
+      if (!(error instanceof ApiClientError)) throw error
+      const fieldErrors = error.error.details?.fieldErrors as Record<string, string[] | undefined> | undefined
+      setBillingErrors({
+        closingDay: fieldErrors?.closingDay?.[0],
+        dueDay: fieldErrors?.dueDay?.[0],
+        general: fieldErrors?.closingDay || fieldErrors?.dueDay ? undefined : error.error.message,
+      })
+    }
+  }
+
   return {
     accounts: accounts.data ?? [],
     isLoadingAccounts: accounts.isPending,
@@ -161,6 +191,20 @@ export function useAccountsPage() {
       setRenameDraft(currentName)
       setRenameError(null)
     },
+    billingId,
+    closingDayDraft,
+    dueDayDraft,
+    setClosingDayDraft,
+    setDueDayDraft,
+    billingErrors,
+    openBilling: (id: string, closingDay: number | null, dueDay: number | null) => {
+      setBillingId(id)
+      setClosingDayDraft(closingDay ? String(closingDay) : '')
+      setDueDayDraft(dueDay ? String(dueDay) : '')
+      setBillingErrors({})
+    },
+    closeBilling,
+    onSaveBilling: () => void onSaveBilling(),
     closeRename,
     onSaveRename: () => void onSaveRename(),
     // Bandeira do banco (DESIGN_SYSTEM § Logos de bancos) — marca manual, nunca por heurística de nome.

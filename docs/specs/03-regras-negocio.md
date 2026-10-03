@@ -97,6 +97,8 @@ nunca se misturam com a gestão.
   observação). Conta `MANUAL`/`IMPORT` aceita edição completa.
 - Cartão de crédito guarda `closingDay`, `dueDay` e `creditLimitCents` (do
   banco quando disponível, senão informado).
+  Fechamento e vencimento são editáveis em Contas (`⋮` > Fechamento e vencimento) e, quando o banco não
+  informa (Pic Pay), o sync **não** apaga o que o usuário digitou.
 - **Cartão adicional / virtual**: `CardHolderHint` mapeia os 4 últimos
   dígitos de um cartão a uma Person — toda transação daquele cartão já chega
   com a pessoa preenchida (a forma mais limpa de separar, ver "Atribuição de

@@ -268,6 +268,39 @@ describe('AccountService', () => {
     })
   })
 
+  describe('update — fechamento e vencimento', () => {
+    it('grava só o que veio, em cartão de crédito', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValueOnce(row()).mockResolvedValueOnce(row({ closingDay: 2, dueDay: 10 }))
+      const service = new AccountService(repo)
+
+      const result = await service.update('user-1', 'acc-1', { closingDay: 2, dueDay: 10 })
+
+      expect(repo.update).toHaveBeenCalledWith('user-1', 'acc-1', { closingDay: 2, dueDay: 10 })
+      expect(result).toMatchObject({ closingDay: 2, dueDay: 10 })
+    })
+
+    it('conta que não é cartão de crédito é rejeitada, sem gravar nada', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValueOnce(row({ type: 'CHECKING' }))
+      const service = new AccountService(repo)
+
+      await expect(service.update('user-1', 'acc-1', { closingDay: 2 })).rejects.toMatchObject({
+        code: 'NOT_A_CREDIT_CARD',
+      })
+      expect(repo.update).not.toHaveBeenCalled()
+    })
+
+    it('conta de outro usuário é 404', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValueOnce(null)
+      const service = new AccountService(repo)
+
+      await expect(service.update('user-2', 'acc-1', { dueDay: 10 })).rejects.toBeInstanceOf(NotFoundError)
+      expect(repo.update).not.toHaveBeenCalled()
+    })
+  })
+
   describe('update — bankLogo', () => {
     it('grava o logo escolhido', async () => {
       const repo = repoMock()

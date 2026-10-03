@@ -3,6 +3,7 @@
 import type { Account, AccountType } from '@gastos/shared'
 import { AlertTriangle, Check, EllipsisVertical } from 'lucide-react'
 import { AccountActionsSheet } from './account-actions-sheet'
+import { AccountBillingSheet } from './account-billing-sheet'
 import { AccountNameSheet } from './account-name-sheet'
 import { BankLogoPicker } from './bank-logo-picker'
 import { Button } from '@/components/ui/Button'
@@ -43,6 +44,15 @@ export default function AccountsPage() {
     openLogoPicker,
     closeLogoPicker,
     selectBankLogo,
+    billingId,
+    closingDayDraft,
+    dueDayDraft,
+    setClosingDayDraft,
+    setDueDayDraft,
+    billingErrors,
+    openBilling,
+    closeBilling,
+    onSaveBilling,
     menuAccountId,
     openMenu,
     closeMenu,
@@ -232,6 +242,10 @@ export default function AccountsPage() {
             closeMenu()
             openLogoPicker(menuAccount.id)
           }}
+          onBilling={() => {
+            closeMenu()
+            openBilling(menuAccount.id, menuAccount.closingDay, menuAccount.dueDay)
+          }}
           onToggleBenefit={() => {
             closeMenu()
             toggleBenefitAccount(menuAccount.id, !menuAccount.isBenefitAccount)
@@ -241,6 +255,20 @@ export default function AccountsPage() {
             archive(menuAccount.id)
           }}
           onClose={closeMenu}
+        />
+      )}
+
+      {billingId && (
+        <AccountBillingSheet
+          accountName={accounts.find((account) => account.id === billingId)?.name ?? ''}
+          closingDay={closingDayDraft}
+          dueDay={dueDayDraft}
+          onChangeClosingDay={setClosingDayDraft}
+          onChangeDueDay={setDueDayDraft}
+          onSave={onSaveBilling}
+          onClose={closeBilling}
+          isSaving={isRenaming}
+          errors={billingErrors}
         />
       )}
 
