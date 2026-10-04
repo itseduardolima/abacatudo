@@ -25,6 +25,7 @@ function row(
     type: 'CREDIT_CARD',
     source: 'MANUAL',
     closingDay: 20,
+    lastClosingAt: null,
     dueDay: 27,
     creditLimitCents: 500000,
     balanceCents: null,
@@ -278,6 +279,32 @@ describe('AccountService', () => {
 
       expect(repo.update).toHaveBeenCalledWith('user-1', 'acc-1', { closingDay: 2, dueDay: 10 })
       expect(result).toMatchObject({ closingDay: 2, dueDay: 10 })
+    })
+
+    it('grava a data do último fechamento à meia-noite de Brasília e devolve AAAA-MM-DD', async () => {
+      const repo = repoMock()
+      repo.findById
+        .mockResolvedValueOnce(row())
+        .mockResolvedValueOnce(row({ lastClosingAt: new Date('2026-09-26T03:00:00.000Z') }))
+      const service = new AccountService(repo)
+
+      const result = await service.update('user-1', 'acc-1', { lastClosingDate: '2026-09-26' })
+
+      expect(repo.update).toHaveBeenCalledWith('user-1', 'acc-1', {
+        lastClosingAt: new Date('2026-09-26T03:00:00.000Z'),
+      })
+      expect(result.lastClosingDate).toBe('2026-09-26')
+    })
+
+    it('data de fechamento que não existe é rejeitada', async () => {
+      const repo = repoMock()
+      repo.findById.mockResolvedValueOnce(row())
+      const service = new AccountService(repo)
+
+      await expect(service.update('user-1', 'acc-1', { lastClosingDate: '2026-02-31' })).rejects.toMatchObject({
+        code: 'INVALID_CLOSING_DATE',
+      })
+      expect(repo.update).not.toHaveBeenCalled()
     })
 
     it('conta que não é cartão de crédito é rejeitada, sem gravar nada', async () => {

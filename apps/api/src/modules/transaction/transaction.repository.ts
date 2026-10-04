@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common'
 import type { Prisma, Transaction } from '@prisma/client'
-import { lastClosingCutoff, monthKey, monthRange } from '../../common/date/timezone'
+import { monthKey, monthRange, openCycleStart, type ClosingConfig } from '../../common/date/timezone'
 import { keepCurrentInstallmentsOnly } from '../../common/installment-group'
 import { PRISMA, type PrismaService } from '../../prisma/prisma.client'
 
@@ -11,14 +11,15 @@ export function isInOpenCycle(
     billId: string | null
     occurredAt: Date
     installmentDueAt: Date | null
-    account: { closingDay: number | null }
+    account: ClosingConfig
   },
   range: { start: Date; end: Date },
   now: Date = new Date(),
 ): boolean {
-  if (row.billId !== null || !row.account.closingDay) return true
+  const cycleStart = openCycleStart(row.account, now)
+  if (row.billId !== null || !cycleStart) return true
   if (row.occurredAt >= range.start && row.occurredAt < range.end) return true
-  return (row.installmentDueAt ?? row.occurredAt) >= lastClosingCutoff(row.account.closingDay, now)
+  return (row.installmentDueAt ?? row.occurredAt) >= cycleStart
 }
 
 export type TransactionWithSplits = Transaction & { splits: { personId: string; amountCents: number }[] }
@@ -51,7 +52,7 @@ export class TransactionRepository {
         ],
       },
       orderBy: { occurredAt: 'desc' },
-      include: { ...SPLITS_SELECT, account: { select: { closingDay: true } } },
+      include: { ...SPLITS_SELECT, account: { select: { closingDay: true, lastClosingAt: true } } },
     })
     const open = rows.filter((row) => isInOpenCycle(row, range))
     return keepCurrentInstallmentsOnly(open.map(({ account: _account, ...row }) => row))

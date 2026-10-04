@@ -23,6 +23,7 @@ export const accountSchema = z
     type: accountTypeSchema,
     source: accountSourceSchema,
     closingDay: z.number().int().nullable(),
+    lastClosingDate: z.string().nullable(),
     dueDay: z.number().int().nullable(),
     creditLimitCents: centsSchema.nullable(),
     // Saldo sincronizado pelo Pluggy (Fase 4, TODO.md) — sempre null pra conta MANUAL/IMPORT.
@@ -57,6 +58,11 @@ export const updateAccountInputSchema = z
     bankLogo: bankLogoSchema.nullable().optional(),
     closingDay: dayOfMonthSchema.optional(),
     dueDay: dayOfMonthSchema.optional(),
+    lastClosingDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.')
+      .nullable()
+      .optional(),
   })
   .strict()
 export type UpdateAccountInput = z.infer<typeof updateAccountInputSchema>

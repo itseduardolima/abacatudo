@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import type { AccountInvoice, EstimatedInstallmentsResponse, Invoice, StatementsResponse } from '@gastos/shared'
-import { lastClosingCutoff, monthKey, nextClosingCutoff, resolveMonthRange } from '../../common/date/timezone'
+import { monthKey, openCycleEnd, openCycleStart, resolveMonthRange } from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository, type AccountWithPluggyItem } from '../account/account.repository'
 import { PersonRepository } from '../person/person.repository'
@@ -214,9 +214,9 @@ export class InvoiceService {
   }
 
   private async openEstimatedInstallments(account: AccountWithPluggyItem): Promise<InstallmentSource[]> {
-    if (account.source !== 'PLUGGY' || !account.closingDay) return []
-    const from = lastClosingCutoff(account.closingDay)
-    const until = nextClosingCutoff(account.closingDay)
+    const from = openCycleStart(account)
+    const until = openCycleEnd(account)
+    if (account.source !== 'PLUGGY' || !from || !until) return []
     const sources = await this.repo.findInstallmentSources(account.userId, account.id)
     return estimateInstallments(sources).filter((item) => item.dueAt >= from && item.dueAt < until)
   }
@@ -239,7 +239,7 @@ export class InvoiceService {
 }
 
 function openAfter(account: AccountWithPluggyItem): Date | undefined {
-  return account.closingDay ? lastClosingCutoff(account.closingDay) : undefined
+  return openCycleStart(account) ?? undefined
 }
 
 function resolveMonthKey(month: string): string {

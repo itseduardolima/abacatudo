@@ -113,6 +113,7 @@ function accountRow(overrides: Partial<AccountRow> = {}): AccountRow {
     type: 'CREDIT_CARD',
     source: 'PLUGGY',
     closingDay: 20,
+    lastClosingAt: null,
     dueDay: 27,
     creditLimitCents: 500000,
     balanceCents: null,

@@ -54,13 +54,14 @@ export class AccountService {
       await this.repo.update(userId, id, { bankLogo: input.bankLogo })
     }
 
-    if (input.closingDay !== undefined || input.dueDay !== undefined) {
+    if (input.closingDay !== undefined || input.dueDay !== undefined || input.lastClosingDate !== undefined) {
       if (existing.type !== 'CREDIT_CARD') {
         throw new DomainError('NOT_A_CREDIT_CARD', 'Fechamento e vencimento só existem em cartão de crédito.', 422)
       }
       await this.repo.update(userId, id, {
         ...(input.closingDay !== undefined ? { closingDay: input.closingDay } : {}),
         ...(input.dueDay !== undefined ? { dueDay: input.dueDay } : {}),
+        ...(input.lastClosingDate !== undefined ? { lastClosingAt: parseClosingDate(input.lastClosingDate) } : {}),
       })
     }
 
@@ -89,6 +90,7 @@ function toDto(row: AccountWithPluggyItem): Account {
     type: row.type,
     source: row.source,
     closingDay: row.closingDay,
+    lastClosingDate: row.lastClosingAt?.toISOString().slice(0, 10) ?? null,
     dueDay: row.dueDay,
     creditLimitCents: row.creditLimitCents,
     balanceCents: row.balanceCents,
@@ -100,4 +102,13 @@ function toDto(row: AccountWithPluggyItem): Account {
     disconnected: row.pluggyItem?.status === 'DISCONNECTED',
     bankConnectionId: row.pluggyItemId,
   }
+}
+
+function parseClosingDate(value: string | null): Date | null {
+  if (value === null) return null
+  const date = new Date(`${value}T03:00:00.000Z`)
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+    throw new DomainError('INVALID_CLOSING_DATE', 'Data de fechamento inválida.', 422)
+  }
+  return date
 }

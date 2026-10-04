@@ -1222,6 +1222,9 @@ fatura) e `/movements` só com o resto — como o desenho previa.
       `apps/web`). Aviso ignorado de forma explícita em `pnpm-workspace.yaml`; remover quando sair `braces` >= 3.0.4
       (2026-10-03).
 
+- [x] Data do último fechamento por cartão (Contas > `⋮`): manda sobre o dia fixo, porque o banco antecipa o fechamento
+      em fim de semana (Nubank fechou em 26/09, não 27). Conferido contra o OFX do Nubank (2026-10-03).
+
 ### Code review (2026-09-22) — 4 achados, todos corrigidos e reverificados ao vivo
 
 - **`lastErrorCode` era campo morto**: existia na coluna e no DTO, mas nada escrevia nele — conexão com

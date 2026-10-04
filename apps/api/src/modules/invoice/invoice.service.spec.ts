@@ -35,6 +35,7 @@ function accountRow(overrides: Partial<AccountRow> = {}): AccountWithPluggyItem 
     type: 'CREDIT_CARD',
     source: 'MANUAL',
     closingDay: null,
+    lastClosingAt: null,
     dueDay: null,
     creditLimitCents: null,
     balanceCents: null,

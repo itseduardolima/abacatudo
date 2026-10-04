@@ -175,6 +175,7 @@ model Account {
   // Só fazem sentido em CREDIT_CARD; a API rejeita se vierem para CHECKING/CASH (mass assignment é do
   // schema Zod, ver packages/shared/src/schemas/account.ts).
   closingDay        Int?
+  lastClosingAt     DateTime?
   dueDay            Int?
   creditLimitCents  Int?
   // Saldo sincronizado pelo Pluggy (Fase 4) — só populado em CHECKING via runSync; conta MANUAL/IMPORT

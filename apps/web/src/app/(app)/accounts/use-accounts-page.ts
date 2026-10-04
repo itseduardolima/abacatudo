@@ -34,7 +34,13 @@ export function useAccountsPage() {
   const [billingId, setBillingId] = useState<string | null>(null)
   const [closingDayDraft, setClosingDayDraft] = useState('')
   const [dueDayDraft, setDueDayDraft] = useState('')
-  const [billingErrors, setBillingErrors] = useState<{ closingDay?: string; dueDay?: string; general?: string }>({})
+  const [lastClosingDateDraft, setLastClosingDateDraft] = useState('')
+  const [billingErrors, setBillingErrors] = useState<{
+    closingDay?: string
+    dueDay?: string
+    lastClosingDate?: string
+    general?: string
+  }>({})
   const {
     register,
     handleSubmit,
@@ -135,6 +141,7 @@ export function useAccountsPage() {
     const input = {
       ...(closingDayDraft.trim() ? { closingDay: Number(closingDayDraft) } : {}),
       ...(dueDayDraft.trim() ? { dueDay: Number(dueDayDraft) } : {}),
+      lastClosingDate: lastClosingDateDraft || null,
     }
     try {
       await updateAccount.mutateAsync({ id: billingId, input })
@@ -145,7 +152,11 @@ export function useAccountsPage() {
       setBillingErrors({
         closingDay: fieldErrors?.closingDay?.[0],
         dueDay: fieldErrors?.dueDay?.[0],
-        general: fieldErrors?.closingDay || fieldErrors?.dueDay ? undefined : error.error.message,
+        lastClosingDate: fieldErrors?.lastClosingDate?.[0],
+        general:
+          fieldErrors?.closingDay || fieldErrors?.dueDay || fieldErrors?.lastClosingDate
+            ? undefined
+            : error.error.message,
       })
     }
   }
@@ -194,13 +205,16 @@ export function useAccountsPage() {
     billingId,
     closingDayDraft,
     dueDayDraft,
+    lastClosingDateDraft,
+    setLastClosingDateDraft,
     setClosingDayDraft,
     setDueDayDraft,
     billingErrors,
-    openBilling: (id: string, closingDay: number | null, dueDay: number | null) => {
+    openBilling: (id: string, closingDay: number | null, dueDay: number | null, lastClosingDate: string | null) => {
       setBillingId(id)
       setClosingDayDraft(closingDay ? String(closingDay) : '')
       setDueDayDraft(dueDay ? String(dueDay) : '')
+      setLastClosingDateDraft(lastClosingDate ?? '')
       setBillingErrors({})
     },
     closeBilling,

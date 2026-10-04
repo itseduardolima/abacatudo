@@ -8,7 +8,7 @@ function row(overrides: Partial<Parameters<typeof isInOpenCycle>[0]> = {}) {
     billId: null,
     occurredAt: new Date('2026-10-03T15:00:00.000Z'),
     installmentDueAt: null,
-    account: { closingDay: 27 },
+    account: { closingDay: 27, lastClosingAt: null },
     ...overrides,
   }
 }
@@ -41,7 +41,7 @@ describe('isInOpenCycle', () => {
   it('cartão sem closingDay ou com billId segue a regra de sempre', () => {
     expect(
       isInOpenCycle(
-        row({ account: { closingDay: null }, occurredAt: new Date('2026-01-01T00:00:00.000Z') }),
+        row({ account: { closingDay: null, lastClosingAt: null }, occurredAt: new Date('2026-01-01T00:00:00.000Z') }),
         OCTOBER,
         NOW,
       ),
@@ -49,5 +49,15 @@ describe('isInOpenCycle', () => {
     expect(
       isInOpenCycle(row({ billId: 'bill-1', occurredAt: new Date('2026-01-01T00:00:00.000Z') }), OCTOBER, NOW),
     ).toBe(true)
+  })
+
+  it('a data do último fechamento informada à mão manda sobre o dia fixo', () => {
+    const account = { closingDay: 27, lastClosingAt: new Date('2026-09-26T03:00:00.000Z') }
+    const installment = row({
+      account,
+      occurredAt: new Date('2026-06-25T15:00:00.000Z'),
+      installmentDueAt: new Date('2026-09-26T15:00:00.000Z'),
+    })
+    expect(isInOpenCycle(installment, OCTOBER, NOW)).toBe(true)
   })
 })
