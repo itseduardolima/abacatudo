@@ -18,7 +18,14 @@ describe('invoiceSchema', () => {
 })
 
 describe('accountInvoiceSchema', () => {
-  const base = { totalCents: 100, mineCents: 60, notMineCents: 40, estimatedCents: 0, isForecast: true }
+  const base = {
+    totalCents: 100,
+    mineCents: 60,
+    notMineCents: 40,
+    estimatedCents: 0,
+    advancePaidCents: 0,
+    isForecast: true,
+  }
 
   it('aceita mês AAAA-MM ou null em lastForecastMonth', () => {
     expect(accountInvoiceSchema.safeParse({ ...base, lastForecastMonth: '2027-05' }).success).toBe(true)
