@@ -23,7 +23,6 @@ export const accountSchema = z
     type: accountTypeSchema,
     source: accountSourceSchema,
     closingDay: z.number().int().nullable(),
-    lastClosingDate: z.string().nullable(),
     closedBillCents: z.number().int().nullable(),
     dueDay: z.number().int().nullable(),
     creditLimitCents: centsSchema.nullable(),
@@ -60,11 +59,6 @@ export const updateAccountInputSchema = z
     closingDay: dayOfMonthSchema.optional(),
     dueDay: dayOfMonthSchema.optional(),
     closedBillCents: z.number().int().min(0).nullable().optional(),
-    lastClosingDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.')
-      .nullable()
-      .optional(),
   })
   .strict()
 export type UpdateAccountInput = z.infer<typeof updateAccountInputSchema>

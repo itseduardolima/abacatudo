@@ -1,6 +1,4 @@
 import {
-  openCycleEnd,
-  openCycleStart,
   benefitPeriodRange,
   lastClosingCutoff,
   dateKey,
@@ -124,27 +122,5 @@ describe('benefitPeriodRange', () => {
   it('janeiro começa em 30/12; março começa no último dia de fevereiro', () => {
     expect(benefitPeriodRange('2026-01').start.toISOString()).toBe('2025-12-30T04:00:00.000Z')
     expect(benefitPeriodRange('2026-03').start.toISOString()).toBe('2026-02-28T04:00:00.000Z')
-  })
-})
-
-describe('openCycleStart / openCycleEnd', () => {
-  const lastClosingAt = new Date('2026-09-26T03:00:00.000Z')
-
-  it('com data de último fechamento do ciclo atual, ela é o início e o mês seguinte é o fim', () => {
-    const now = new Date('2026-10-03T23:00:00.000Z')
-    expect(openCycleStart({ closingDay: 27, lastClosingAt }, now)?.toISOString()).toBe('2026-09-26T03:00:00.000Z')
-    expect(openCycleEnd({ closingDay: 27, lastClosingAt }, now)?.toISOString()).toBe('2026-10-26T03:00:00.000Z')
-  })
-
-  it('data velha avança de mês em mês até o ciclo de hoje', () => {
-    const now = new Date('2026-12-10T12:00:00.000Z')
-    expect(openCycleStart({ closingDay: null, lastClosingAt }, now)?.toISOString()).toBe('2026-11-26T03:00:00.000Z')
-  })
-
-  it('sem data usa o dia fixo; sem nenhum dos dois, não há corte', () => {
-    const now = new Date('2026-10-03T23:00:00.000Z')
-    expect(openCycleStart({ closingDay: 27, lastClosingAt: null }, now)?.toISOString()).toBe('2026-09-27T03:00:00.000Z')
-    expect(openCycleStart({ closingDay: null, lastClosingAt: null }, now)).toBeNull()
-    expect(openCycleEnd({ closingDay: null, lastClosingAt: null }, now)).toBeNull()
   })
 })

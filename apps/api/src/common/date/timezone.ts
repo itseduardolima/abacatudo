@@ -146,36 +146,3 @@ export function benefitPeriodRange(monthKeyValue: string): { start: Date; end: D
     end: zonedTimeToUtc(year, month, depositDayIn(year, month)),
   }
 }
-
-export interface ClosingConfig {
-  closingDay: number | null
-  lastClosingAt: Date | null
-}
-
-const BRASILIA_MIDNIGHT_UTC_HOUR = 3
-
-function addMonthsFromBrasiliaDay(date: Date, months: number): Date {
-  const year = date.getUTCFullYear()
-  const month = date.getUTCMonth() + months
-  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
-  return new Date(Date.UTC(year, month, Math.min(date.getUTCDate(), lastDay), BRASILIA_MIDNIGHT_UTC_HOUR))
-}
-
-// Início da fatura aberta de um cartão. A data do último fechamento informada à mão manda (os bancos
-// antecipam o fechamento em fim de semana e feriado, então um dia fixo erra); se ficou velha, avança de mês em
-// mês até o ciclo de hoje. Sem data, cai no dia fixo de fechamento; sem nenhum dos dois, não há corte.
-export function openCycleStart(config: ClosingConfig, now: Date = new Date()): Date | null {
-  if (config.lastClosingAt) {
-    let months = 0
-    while (addMonthsFromBrasiliaDay(config.lastClosingAt, months + 1) <= now) months++
-    return addMonthsFromBrasiliaDay(config.lastClosingAt, months)
-  }
-  return config.closingDay ? lastClosingCutoff(config.closingDay, now) : null
-}
-
-export function openCycleEnd(config: ClosingConfig, now: Date = new Date()): Date | null {
-  const start = openCycleStart(config, now)
-  if (!start) return null
-  if (config.lastClosingAt) return addMonthsFromBrasiliaDay(start, 1)
-  return config.closingDay ? nextClosingCutoff(config.closingDay, now) : null
-}

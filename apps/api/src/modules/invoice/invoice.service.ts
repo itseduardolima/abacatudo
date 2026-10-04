@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import type { AccountInvoice, EstimatedInstallmentsResponse, Invoice, StatementsResponse } from '@gastos/shared'
-import { monthKey, openCycleEnd, openCycleStart, resolveMonthRange } from '../../common/date/timezone'
+import { lastClosingCutoff, monthKey, nextClosingCutoff, resolveMonthRange } from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository, type AccountWithPluggyItem } from '../account/account.repository'
 import { PluggyClient } from '../banking/pluggy/pluggy.client'
@@ -216,8 +216,8 @@ export class InvoiceService {
   }
 
   private async advancePaid(account: AccountWithPluggyItem): Promise<number> {
-    const since = openCycleStart(account)
-    if (!since) return 0
+    if (!account.closingDay) return 0
+    const since = lastClosingCutoff(account.closingDay)
     const payments = await this.repo.sumPaymentsSince(account.userId, account.id, since)
     if (payments === 0) return 0
     return advancePaidCents(payments, await this.closedBillCents(account))
@@ -253,9 +253,9 @@ export class InvoiceService {
   }
 
   private async openEstimatedInstallments(account: AccountWithPluggyItem): Promise<InstallmentSource[]> {
-    const from = openCycleStart(account)
-    const until = openCycleEnd(account)
-    if (account.source !== 'PLUGGY' || !from || !until) return []
+    if (account.source !== 'PLUGGY' || !account.closingDay) return []
+    const from = lastClosingCutoff(account.closingDay)
+    const until = nextClosingCutoff(account.closingDay)
     const sources = await this.repo.findInstallmentSources(account.userId, account.id)
     return estimateInstallments(sources).filter((item) => item.dueAt >= from && item.dueAt < until)
   }
@@ -278,7 +278,7 @@ export class InvoiceService {
 }
 
 function openAfter(account: AccountWithPluggyItem): Date | undefined {
-  return openCycleStart(account) ?? undefined
+  return account.closingDay ? lastClosingCutoff(account.closingDay) : undefined
 }
 
 function resolveMonthKey(month: string): string {

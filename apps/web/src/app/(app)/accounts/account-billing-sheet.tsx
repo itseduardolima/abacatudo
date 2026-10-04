@@ -9,10 +9,8 @@ export function AccountBillingSheet({
   accountName,
   closingDay,
   dueDay,
-  lastClosingDate,
   closedBill,
   onChangeClosedBill,
-  onChangeLastClosingDate,
   onChangeClosingDay,
   onChangeDueDay,
   onSave,
@@ -23,16 +21,14 @@ export function AccountBillingSheet({
   accountName: string
   closingDay: string
   dueDay: string
-  lastClosingDate: string
   closedBill: string
   onChangeClosedBill: (value: string) => void
-  onChangeLastClosingDate: (value: string) => void
   onChangeClosingDay: (value: string) => void
   onChangeDueDay: (value: string) => void
   onSave: () => void
   onClose: () => void
   isSaving: boolean
-  errors: { closingDay?: string; dueDay?: string; lastClosingDate?: string; closedBill?: string; general?: string }
+  errors: { closingDay?: string; dueDay?: string; closedBill?: string; general?: string }
 }) {
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -64,17 +60,6 @@ export function AccountBillingSheet({
           Dia do mês em que a fatura fecha e vence. O banco nem sempre informa, e o que você digitar aqui é mantido.
         </p>
         <div className="flex flex-col gap-3">
-          <Input
-            label="Data do último fechamento"
-            type="date"
-            value={lastClosingDate}
-            onChange={(event) => onChangeLastClosingDate(event.target.value)}
-            error={errors.lastClosingDate}
-          />
-          <p className="-mt-1 text-xs text-muted">
-            A fatura aberta começa nesta data. Os bancos antecipam o fechamento em fim de semana e feriado, então
-            atualize quando a fatura virar. Se ficar velha, o app avança um mês por conta própria.
-          </p>
           <MoneyInput
             label="Total da fatura fechada"
             value={closedBill}

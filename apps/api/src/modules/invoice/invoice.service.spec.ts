@@ -41,7 +41,6 @@ function accountRow(overrides: Partial<AccountRow> = {}): AccountWithPluggyItem 
     type: 'CREDIT_CARD',
     source: 'MANUAL',
     closingDay: null,
-    lastClosingAt: null,
     closedBillCents: null,
     dueDay: null,
     creditLimitCents: null,
@@ -199,7 +198,7 @@ describe('InvoiceService', () => {
         accountRow({
           source: 'PLUGGY',
           externalAccountId: 'ext-1',
-          lastClosingAt: new Date('2026-09-26T03:00:00.000Z'),
+          closingDay: 26,
           ...overrides,
         }),
       )
@@ -253,7 +252,7 @@ describe('InvoiceService', () => {
     })
 
     it('sem data nem dia de fechamento, não há como saber o que veio depois: não abate', async () => {
-      const { service, repo } = setup({ lastClosingAt: null, closingDay: null }, 76709, 66397)
+      const { service, repo } = setup({ closingDay: null }, 76709, 66397)
 
       const result = await service.getForAccount('user-1', 'acc-1', monthKey(new Date()))
 

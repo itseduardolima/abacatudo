@@ -54,12 +54,7 @@ export class AccountService {
       await this.repo.update(userId, id, { bankLogo: input.bankLogo })
     }
 
-    if (
-      input.closingDay !== undefined ||
-      input.dueDay !== undefined ||
-      input.lastClosingDate !== undefined ||
-      input.closedBillCents !== undefined
-    ) {
+    if (input.closingDay !== undefined || input.dueDay !== undefined || input.closedBillCents !== undefined) {
       if (existing.type !== 'CREDIT_CARD') {
         throw new DomainError('NOT_A_CREDIT_CARD', 'Fechamento e vencimento só existem em cartão de crédito.', 422)
       }
@@ -67,7 +62,6 @@ export class AccountService {
         ...(input.closingDay !== undefined ? { closingDay: input.closingDay } : {}),
         ...(input.dueDay !== undefined ? { dueDay: input.dueDay } : {}),
         ...(input.closedBillCents !== undefined ? { closedBillCents: input.closedBillCents } : {}),
-        ...(input.lastClosingDate !== undefined ? { lastClosingAt: parseClosingDate(input.lastClosingDate) } : {}),
       })
     }
 
@@ -96,7 +90,6 @@ function toDto(row: AccountWithPluggyItem): Account {
     type: row.type,
     source: row.source,
     closingDay: row.closingDay,
-    lastClosingDate: row.lastClosingAt?.toISOString().slice(0, 10) ?? null,
     closedBillCents: row.closedBillCents,
     dueDay: row.dueDay,
     creditLimitCents: row.creditLimitCents,
@@ -109,13 +102,4 @@ function toDto(row: AccountWithPluggyItem): Account {
     disconnected: row.pluggyItem?.status === 'DISCONNECTED',
     bankConnectionId: row.pluggyItemId,
   }
-}
-
-function parseClosingDate(value: string | null): Date | null {
-  if (value === null) return null
-  const date = new Date(`${value}T03:00:00.000Z`)
-  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
-    throw new DomainError('INVALID_CLOSING_DATE', 'Data de fechamento inválida.', 422)
-  }
-  return date
 }
