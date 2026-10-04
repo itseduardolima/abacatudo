@@ -220,15 +220,18 @@ export class InvoiceService {
     const since = lastClosingCutoff(account.closingDay)
     const payments = await this.repo.sumPaymentsSince(account.userId, account.id, since)
     if (payments === 0) return 0
-    return advancePaidCents(payments, await this.closedBillCents(account))
+    return advancePaidCents(payments, await this.closedBillCents(account, since))
   }
 
-  private async closedBillCents(account: AccountWithPluggyItem): Promise<number | null> {
+  // O Pluggy só materializa a fatura depois de um tempo: a última que ele manda pode ser a do ciclo anterior (já
+  // paga, vencimento antes do último fechamento). Só vale a fatura que vence depois do fechamento.
+  private async closedBillCents(account: AccountWithPluggyItem, since: Date): Promise<number | null> {
     if (account.closedBillCents !== null) return account.closedBillCents
     if (!account.externalAccountId) return null
     try {
       const bill = await this.pluggy.getLastClosedBill(account.externalAccountId)
-      return bill?.totalAmount == null ? null : Math.round(Math.abs(bill.totalAmount) * 100)
+      if (bill?.totalAmount == null || bill.dueDate.slice(0, 10) < since.toISOString().slice(0, 10)) return null
+      return Math.round(Math.abs(bill.totalAmount) * 100)
     } catch (error) {
       this.logger.warn(
         `Não foi possível buscar a última fatura fechada no Pluggy pra conta ${account.id}: ${String(error)}`,

@@ -192,6 +192,11 @@ describe('InvoiceService', () => {
   })
 
   describe('getForAccount — pagamento adiantado', () => {
+    beforeEach(() => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-03T23:00:00.000Z'))
+    })
+    afterEach(() => jest.useRealTimers())
+
     function setup(overrides: Partial<AccountRow>, payments: number, bill: number | null = null) {
       const accounts = accountsMock()
       accounts.findById.mockResolvedValue(
@@ -232,6 +237,15 @@ describe('InvoiceService', () => {
 
       expect(pluggy.getLastClosedBill).toHaveBeenCalledWith('ext-1')
       expect(result.advancePaidCents).toBe(10312)
+    })
+
+    it('fatura do Pluggy que venceu antes do último fechamento é a do ciclo anterior: ignora, não abate', async () => {
+      const { service, pluggy } = setup({}, 76709, 45440)
+      pluggy.getLastClosedBill.mockResolvedValue({ id: 'bill-old', dueDate: '2026-09-13', totalAmount: 454.4 })
+
+      const result = await service.getForAccount('user-1', 'acc-1', monthKey(new Date()))
+
+      expect(result.advancePaidCents).toBe(0)
     })
 
     it('sem total da fatura fechada em lugar nenhum, não abate (BB e Pic Pay sem valor informado)', async () => {
