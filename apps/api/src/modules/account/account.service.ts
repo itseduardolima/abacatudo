@@ -70,6 +70,13 @@ export class AccountService {
     return toDto(refreshed)
   }
 
+  // Conta removida volta a aparecer (a sincronização do banco nunca desarquiva sozinha, pra não ressuscitar
+  // uma conta que o usuário tirou de propósito).
+  async restore(userId: string, id: string): Promise<void> {
+    const result = await this.repo.restore(userId, id)
+    if (result.count === 0) throw new NotFoundError('ACCOUNT_NOT_FOUND', 'Conta removida não encontrada.')
+  }
+
   // Mesmo padrão do FixedExpenseService.archive — soft-delete, nunca apaga Transaction/histórico por
   // trás (findMany/invoice/pace já ignoram conta arquivada por padrão).
   async archive(userId: string, id: string): Promise<void> {

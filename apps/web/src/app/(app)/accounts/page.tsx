@@ -40,6 +40,9 @@ export default function AccountsPage() {
     isSyncingBanks,
     syncError,
     archive,
+    removedAccounts,
+    restore,
+    restoringId,
     pickingLogoForId,
     openLogoPicker,
     closeLogoPicker,
@@ -156,6 +159,36 @@ export default function AccountsPage() {
                     </span>
                   )}
                 </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {removedAccounts.length > 0 && (
+        <section>
+          <h2 className="text-base font-bold text-ink">Removidas</h2>
+          <p className="text-sm text-muted">
+            Contas de banco que você removeu. Ao conectar o banco de novo elas continuam aqui; restaure para voltar.
+          </p>
+          <ul className="mt-1 flex flex-col">
+            {removedAccounts.map((account) => (
+              <li key={account.id} className="flex items-center gap-3 border-b border-surface py-3.5 last:border-b-0">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-ink" title={account.name}>
+                    {account.name}
+                  </p>
+                  <p className="text-sm text-muted">{formatAccountType(account.type)}</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  state={restoringId === account.id ? 'loading' : 'idle'}
+                  onClick={() => restore(account.id)}
+                >
+                  Restaurar
+                </Button>
               </li>
             ))}
           </ul>

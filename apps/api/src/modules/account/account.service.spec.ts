@@ -11,6 +11,7 @@ function repoMock() {
     update: jest.fn(),
     setBenefitAccount: jest.fn(),
     archive: jest.fn(),
+    restore: jest.fn(),
   } as unknown as jest.Mocked<AccountRepository>
 }
 
@@ -354,6 +355,26 @@ describe('AccountService', () => {
       const service = new AccountService(repo)
 
       await expect(service.archive('user-1', 'acc-1')).resolves.toBeUndefined()
+    })
+  })
+
+  describe('restore', () => {
+    it('devolve a conta removida pro usuário dono', async () => {
+      const repo = repoMock()
+      repo.restore.mockResolvedValue({ count: 1 })
+      const service = new AccountService(repo)
+
+      await expect(service.restore('user-1', 'acc-1')).resolves.toBeUndefined()
+      expect(repo.restore).toHaveBeenCalledWith('user-1', 'acc-1')
+    })
+
+    it('404 pra conta de outro usuário ou que não está removida, sem tocar em nada', async () => {
+      const repo = repoMock()
+      repo.restore.mockResolvedValue({ count: 0 })
+      const service = new AccountService(repo)
+
+      await expect(service.restore('user-2', 'acc-do-user-1')).rejects.toBeInstanceOf(NotFoundError)
+      expect(repo.restore).toHaveBeenCalledWith('user-2', 'acc-do-user-1')
     })
   })
 })

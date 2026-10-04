@@ -33,6 +33,12 @@ export class AccountController {
     return this.accounts.update(userId, id, body)
   }
 
+  @Patch(':id/restore')
+  @HttpCode(204)
+  restore(@CurrentUser() userId: string, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    return this.accounts.restore(userId, id)
+  }
+
   @Patch(':id/archive')
   @HttpCode(204)
   archive(@CurrentUser() userId: string, @Param('id', ParseUUIDPipe) id: string): Promise<void> {

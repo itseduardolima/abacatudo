@@ -37,6 +37,13 @@ export class AccountRepository {
     await this.prisma.account.updateMany({ where: { userId, id }, data })
   }
 
+  restore(userId: string, id: string): Promise<Prisma.BatchPayload> {
+    return this.prisma.account.updateMany({
+      where: { userId, id, archivedAt: { not: null } },
+      data: { archivedAt: null },
+    })
+  }
+
   // Mesmo padrão do FixedExpenseRepository.archive: soft-delete, nunca apaga a conta nem o histórico de
   // Transaction por trás dela — só some das listas/somas (findMany já filtra archivedAt por padrão).
   archive(userId: string, id: string): Promise<Prisma.BatchPayload> {

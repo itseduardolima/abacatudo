@@ -6,8 +6,10 @@ import { useForm } from 'react-hook-form'
 import type { AccountType, BankLogo, CreateAccountInput } from '@gastos/shared'
 import { useAccounts } from '@/hooks/queries/use-accounts'
 import { useArchiveAccount } from '@/hooks/queries/use-archive-account'
+import { useArchivedAccounts } from '@/hooks/queries/use-archived-accounts'
 import { useConnectBank } from '@/hooks/queries/use-connect-bank'
 import { useCreateAccount } from '@/hooks/queries/use-create-account'
+import { useRestoreAccount } from '@/hooks/queries/use-restore-account'
 import { useSyncBankConnection } from '@/hooks/queries/use-sync-bank-connection'
 import { useUpdateAccount } from '@/hooks/queries/use-update-account'
 import { ApiClientError } from '@/lib/api-client'
@@ -21,6 +23,8 @@ export function useAccountsPage() {
   const createAccount = useCreateAccount()
   const updateAccount = useUpdateAccount()
   const archiveAccount = useArchiveAccount()
+  const archivedAccounts = useArchivedAccounts()
+  const restoreAccount = useRestoreAccount()
   const connectBank = useConnectBank()
   const syncBankConnection = useSyncBankConnection()
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -190,6 +194,9 @@ export function useAccountsPage() {
     isSyncingBanks: syncBankConnection.isPending,
     syncError,
     archive: (id: string) => archiveAccount.mutate(id),
+    removedAccounts: (archivedAccounts.data ?? []).filter((account) => account.source === 'PLUGGY'),
+    restore: (id: string) => restoreAccount.mutate(id),
+    restoringId: restoreAccount.isPending ? restoreAccount.variables : undefined,
     menuAccountId,
     openMenu: (id: string) => setMenuAccountId(id),
     closeMenu: () => setMenuAccountId(null),
