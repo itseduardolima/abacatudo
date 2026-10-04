@@ -49,6 +49,8 @@ export default function AccountsPage() {
     dueDayDraft,
     lastClosingDateDraft,
     setLastClosingDateDraft,
+    closedBillDraft,
+    setClosedBillDraft,
     setClosingDayDraft,
     setDueDayDraft,
     billingErrors,
@@ -246,7 +248,13 @@ export default function AccountsPage() {
           }}
           onBilling={() => {
             closeMenu()
-            openBilling(menuAccount.id, menuAccount.closingDay, menuAccount.dueDay, menuAccount.lastClosingDate)
+            openBilling(
+              menuAccount.id,
+              menuAccount.closingDay,
+              menuAccount.dueDay,
+              menuAccount.lastClosingDate,
+              menuAccount.closedBillCents,
+            )
           }}
           onToggleBenefit={() => {
             closeMenu()
@@ -266,6 +274,8 @@ export default function AccountsPage() {
           closingDay={closingDayDraft}
           dueDay={dueDayDraft}
           lastClosingDate={lastClosingDateDraft}
+          closedBill={closedBillDraft}
+          onChangeClosedBill={setClosedBillDraft}
           onChangeLastClosingDate={setLastClosingDateDraft}
           onChangeClosingDay={setClosingDayDraft}
           onChangeDueDay={setDueDayDraft}

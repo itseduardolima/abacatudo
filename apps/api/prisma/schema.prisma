@@ -176,6 +176,7 @@ model Account {
   // schema Zod, ver packages/shared/src/schemas/account.ts).
   closingDay        Int?
   lastClosingAt     DateTime?
+  closedBillCents   Int?
   dueDay            Int?
   creditLimitCents  Int?
   // Saldo sincronizado pelo Pluggy (Fase 4) — só populado em CHECKING via runSync; conta MANUAL/IMPORT

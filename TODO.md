@@ -1225,6 +1225,9 @@ fatura) e `/movements` só com o resto — como o desenho previa.
 - [x] Data do último fechamento por cartão (Contas > `⋮`): manda sobre o dia fixo, porque o banco antecipa o fechamento
       em fim de semana (Nubank fechou em 26/09, não 27). Conferido contra o OFX do Nubank (2026-10-03).
 
+- [x] Fatura = quanto falta pagar: pagamento adiantado (sobra além da fatura fechada) abate a aberta na Início e na tela
+      da fatura; total da fatura fechada informado em Contas ou vindo do Pluggy (2026-10-03).
+
 ### Code review (2026-09-22) — 4 achados, todos corrigidos e reverificados ao vivo
 
 - **`lastErrorCode` era campo morto**: existia na coluna e no DTO, mas nada escrevia nele — conexão com

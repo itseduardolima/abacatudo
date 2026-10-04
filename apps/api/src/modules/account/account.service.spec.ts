@@ -26,6 +26,7 @@ function row(
     source: 'MANUAL',
     closingDay: 20,
     lastClosingAt: null,
+    closedBillCents: null,
     dueDay: 27,
     creditLimitCents: 500000,
     balanceCents: null,

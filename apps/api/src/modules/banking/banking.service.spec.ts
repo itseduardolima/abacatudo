@@ -114,6 +114,7 @@ function accountRow(overrides: Partial<AccountRow> = {}): AccountRow {
     source: 'PLUGGY',
     closingDay: 20,
     lastClosingAt: null,
+    closedBillCents: null,
     dueDay: 27,
     creditLimitCents: 500000,
     balanceCents: null,

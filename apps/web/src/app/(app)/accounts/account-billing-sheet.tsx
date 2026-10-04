@@ -3,12 +3,15 @@
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { MoneyInput } from '@/components/ui/MoneyInput'
 
 export function AccountBillingSheet({
   accountName,
   closingDay,
   dueDay,
   lastClosingDate,
+  closedBill,
+  onChangeClosedBill,
   onChangeLastClosingDate,
   onChangeClosingDay,
   onChangeDueDay,
@@ -21,13 +24,15 @@ export function AccountBillingSheet({
   closingDay: string
   dueDay: string
   lastClosingDate: string
+  closedBill: string
+  onChangeClosedBill: (value: string) => void
   onChangeLastClosingDate: (value: string) => void
   onChangeClosingDay: (value: string) => void
   onChangeDueDay: (value: string) => void
   onSave: () => void
   onClose: () => void
   isSaving: boolean
-  errors: { closingDay?: string; dueDay?: string; lastClosingDate?: string; general?: string }
+  errors: { closingDay?: string; dueDay?: string; lastClosingDate?: string; closedBill?: string; general?: string }
 }) {
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -69,6 +74,15 @@ export function AccountBillingSheet({
           <p className="-mt-1 text-xs text-muted">
             A fatura aberta começa nesta data. Os bancos antecipam o fechamento em fim de semana e feriado, então
             atualize quando a fatura virar. Se ficar velha, o app avança um mês por conta própria.
+          </p>
+          <MoneyInput
+            label="Total da fatura fechada"
+            value={closedBill}
+            onChange={(event) => onChangeClosedBill(event.target.value)}
+            error={errors.closedBill}
+          />
+          <p className="-mt-1 text-xs text-muted">
+            Opcional. Com ele, só o que você pagou além desse valor abate a fatura aberta. O Nubank informa sozinho.
           </p>
           <Input
             label="Dia do fechamento"
