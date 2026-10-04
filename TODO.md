@@ -1222,8 +1222,8 @@ fatura) e `/movements` só com o resto — como o desenho previa.
       `apps/web`). Aviso ignorado de forma explícita em `pnpm-workspace.yaml`; remover quando sair `braces` >= 3.0.4
       (2026-10-03).
 
-- [x] Data do último fechamento por cartão (Contas > `⋮`): manda sobre o dia fixo, porque o banco antecipa o fechamento
-      em fim de semana (Nubank fechou em 26/09, não 27). Conferido contra o OFX do Nubank (2026-10-03).
+- [x] ~~Data do último fechamento por cartão~~ — feita e **removida** a pedido (2026-10-03): volta o dia fixo de
+      fechamento (o banco antecipa em fim de semana, Nubank fechou em 26/09 e não 27; aproximação conhecida).
 
 - [x] Fatura = quanto falta pagar: pagamento adiantado (sobra além da fatura fechada) abate a aberta na Início e na tela
       da fatura; total da fatura fechada informado em Contas ou vindo do Pluggy (2026-10-03).
