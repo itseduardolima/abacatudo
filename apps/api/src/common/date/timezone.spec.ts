@@ -98,17 +98,17 @@ describe('dayFromDateString', () => {
 })
 
 describe('lastClosingCutoff', () => {
-  it('no dia do fechamento, a fatura aberta já começa nesse dia (Manaus)', () => {
-    expect(lastClosingCutoff(2, new Date('2026-10-02T18:33:00.000Z')).toISOString()).toBe('2026-10-02T04:00:00.000Z')
+  it('no dia do fechamento, a fatura aberta já começa nesse dia (meia-noite de Brasília)', () => {
+    expect(lastClosingCutoff(2, new Date('2026-10-02T18:33:00.000Z')).toISOString()).toBe('2026-10-02T03:00:00.000Z')
   })
 
   it('antes do fechamento do mês, vale o fechamento do mês anterior', () => {
-    expect(lastClosingCutoff(20, new Date('2026-10-02T18:33:00.000Z')).toISOString()).toBe('2026-09-20T04:00:00.000Z')
+    expect(lastClosingCutoff(20, new Date('2026-10-02T18:33:00.000Z')).toISOString()).toBe('2026-09-20T03:00:00.000Z')
   })
 
   it('em janeiro, volta pra dezembro; dia 31 em mês curto cai no último dia', () => {
-    expect(lastClosingCutoff(20, new Date('2026-01-05T15:00:00.000Z')).toISOString()).toBe('2025-12-20T04:00:00.000Z')
-    expect(lastClosingCutoff(31, new Date('2026-03-01T15:00:00.000Z')).toISOString()).toBe('2026-02-28T04:00:00.000Z')
+    expect(lastClosingCutoff(20, new Date('2026-01-05T15:00:00.000Z')).toISOString()).toBe('2025-12-20T03:00:00.000Z')
+    expect(lastClosingCutoff(31, new Date('2026-03-01T15:00:00.000Z')).toISOString()).toBe('2026-02-28T03:00:00.000Z')
   })
 })
 

@@ -109,14 +109,16 @@ export function dayFromDateString(date: string): Date {
   return /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T12:00:00.000Z`) : new Date(date)
 }
 
-// Início do dia do último fechamento (dia `closingDay`, já ocorrido hoje ou antes) em America/Manaus: como
+// Início do dia do último fechamento (dia `closingDay`, já ocorrido hoje ou antes), à meia-noite de Brasília
+// (UTC-3, sem horário de verão): os bancos fecham a fatura pelo dia de Brasília, e a data que o banco manda
+// para uma compra costuma vir 00:00 de Brasília, que em Manaus seria 23:00 do dia anterior. Como
 // no Nubank e no "melhor dia de compra" dos bancos, a compra feita no dia do fechamento já vai pra fatura
 // seguinte. O que for lançado a partir daqui pertence à fatura aberta. Dia > fim do mês cai no último dia.
 export function lastClosingCutoff(closingDay: number, now: Date = new Date()): Date {
   const { year, month, day } = zonedParts(now)
   const closingIn = (y: number, m: number) => Math.min(closingDay, new Date(Date.UTC(y, m, 0)).getUTCDate())
   const [y, m] = closingIn(year, month) <= day ? [year, month] : month === 1 ? [year - 1, 12] : [year, month - 1]
-  return zonedTimeToUtc(y, m, closingIn(y, m))
+  return new Date(Date.UTC(y, m - 1, closingIn(y, m), 3))
 }
 
 export function nextClosingCutoff(closingDay: number, now: Date = new Date()): Date {
