@@ -252,6 +252,15 @@ describe('InvoiceService', () => {
       })
     })
 
+    it('total informado à mão com pagamento menor: o que falta e o total a pagar também aparecem', async () => {
+      const { service } = setup({ closedBillCents: 43248 }, 42060)
+
+      const result = await service.getForAccount('user-1', 'acc-1', monthKey(new Date()))
+
+      expect(result.previousBillRemainingCents).toBe(1188)
+      expect(result.payableCents).toBe(result.totalCents + 1188)
+    })
+
     it('pagamento maior que a fatura fechada: nada falta e o total a pagar é o da aberta', async () => {
       const { service } = setup({}, 76709, 66397)
 
