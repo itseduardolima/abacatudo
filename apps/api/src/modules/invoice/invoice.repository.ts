@@ -51,13 +51,14 @@ export class InvoiceRepository {
     return rows.map((row) => toInvoiceRow(row, installmentOf(row)))
   }
 
-  async sumPaymentsSince(userId: string, accountId: string, since: Date): Promise<number> {
+  async sumPaymentsSince(userId: string, accountId: string, since: Date, closedBillId: string | null): Promise<number> {
     const result = await this.prisma.transaction.aggregate({
       where: {
         userId,
         accountId,
         kind: 'CARD_PAYMENT',
         occurredAt: { gte: since },
+        ...(closedBillId ? { OR: [{ billId: null }, { billId: closedBillId }] } : {}),
         account: { type: 'CREDIT_CARD', source: 'PLUGGY' },
       },
       _sum: { amountCents: true },

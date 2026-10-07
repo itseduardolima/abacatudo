@@ -256,13 +256,21 @@ describe('InvoiceService', () => {
       expect(result).toMatchObject({ totalCents: 155504, advancePaidCents: 0 })
     })
 
-    it('sem pagamento desde o fechamento, nem consulta o Pluggy', async () => {
-      const { service, pluggy } = setup({}, 0, 66397)
+    it('soma só pagamento sem fatura ou da fatura fechada: o de fatura anterior não é antecipado', async () => {
+      const { service, repo } = setup({}, 0, 66397)
 
       const result = await service.getForAccount('user-1', 'acc-1', monthKey(new Date()))
 
       expect(result.advancePaidCents).toBe(0)
-      expect(pluggy.getLastClosedBill).not.toHaveBeenCalled()
+      expect(repo.sumPaymentsSince).toHaveBeenCalledWith('user-1', 'acc-1', expect.any(Date), 'bill-1')
+    })
+
+    it('total informado à mão não tem fatura do Pluggy: soma todos os pagamentos desde o fechamento', async () => {
+      const { service, repo } = setup({ closedBillCents: 66397 }, 76709)
+
+      await service.getForAccount('user-1', 'acc-1', monthKey(new Date()))
+
+      expect(repo.sumPaymentsSince).toHaveBeenCalledWith('user-1', 'acc-1', expect.any(Date), null)
     })
 
     it('sem data nem dia de fechamento, não há como saber o que veio depois: não abate', async () => {
