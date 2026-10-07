@@ -22,6 +22,7 @@ export class InvoiceRepository {
     const rows = await this.prisma.transaction.findMany({
       where: {
         userId,
+        cancelledAt: null,
         occurredAt: { gte: range.start, lt: range.end },
         kind: { in: ['EXPENSE', 'REFUND'] },
         account: { type: 'CREDIT_CARD', ...(accountId ? { id: accountId } : {}) },
@@ -41,6 +42,7 @@ export class InvoiceRepository {
     const rows = await this.prisma.transaction.findMany({
       where: {
         userId,
+        cancelledAt: null,
         billId: null,
         ...openSince(after),
         kind: { in: ['EXPENSE', 'REFUND'] },
@@ -55,6 +57,7 @@ export class InvoiceRepository {
     const result = await this.prisma.transaction.aggregate({
       where: {
         userId,
+        cancelledAt: null,
         accountId,
         kind: 'CARD_PAYMENT',
         occurredAt: { gte: since },
@@ -98,6 +101,7 @@ export class InvoiceRepository {
     const rows = await this.prisma.transaction.findMany({
       where: {
         userId,
+        cancelledAt: null,
         billId: null,
         installmentDueAt: { gte: range.start, lt: range.end },
         kind: { in: ['EXPENSE', 'REFUND'] },
@@ -111,6 +115,7 @@ export class InvoiceRepository {
   findStatementOpenRows(userId: string, accountId: string, after?: Date): Promise<StatementRow[]> {
     return this.statementRows({
       userId,
+      cancelledAt: null,
       billId: null,
       ...openSince(after),
       kind: { in: ['EXPENSE', 'REFUND'] },
@@ -125,6 +130,7 @@ export class InvoiceRepository {
   ): Promise<StatementRow[]> {
     return this.statementRows({
       userId,
+      cancelledAt: null,
       billId: null,
       installmentDueAt: { gte: range.start, lt: range.end },
       kind: { in: ['EXPENSE', 'REFUND'] },
@@ -139,6 +145,7 @@ export class InvoiceRepository {
   ): Promise<StatementRow[]> {
     return this.statementRows({
       userId,
+      cancelledAt: null,
       occurredAt: { gte: range.start, lt: range.end },
       kind: { in: ['EXPENSE', 'REFUND'] },
       account: { id: accountId, type: 'CREDIT_CARD' },
@@ -199,7 +206,7 @@ export class InvoiceRepository {
 
   async findLastInstallmentDueAt(userId: string, accountId: string): Promise<Date | null> {
     const result = await this.prisma.transaction.aggregate({
-      where: { userId, accountId, billId: null, installmentDueAt: { not: null } },
+      where: { userId, accountId, cancelledAt: null, billId: null, installmentDueAt: { not: null } },
       _max: { installmentDueAt: true },
     })
     return result._max.installmentDueAt
