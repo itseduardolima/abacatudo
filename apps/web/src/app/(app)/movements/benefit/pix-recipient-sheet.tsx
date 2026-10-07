@@ -4,6 +4,7 @@ import type { Transaction } from '@gastos/shared'
 import { X } from 'lucide-react'
 import { useEffect } from 'react'
 import { MovementRow } from '../movement-row'
+import { ListSkeleton } from '@/components/ui/Skeleton'
 
 export function PixRecipientSheet({
   name,
@@ -49,7 +50,7 @@ export function PixRecipientSheet({
             <X size={18} strokeWidth={1.8} />
           </button>
         </div>
-        {isLoading && <p className="pt-3 text-text">Carregando…</p>}
+        {isLoading && <ListSkeleton rows={4} />}
         {transactions.map((movement) => (
           <MovementRow key={movement.id} movement={movement} accountName={accountName} />
         ))}

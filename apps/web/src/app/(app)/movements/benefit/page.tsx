@@ -16,6 +16,7 @@ import { MonthStepper } from '@/components/ui/MonthStepper'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { formatSyncedAt } from '@/lib/utils/format-date'
 import { formatMonthName } from '@/lib/utils/format-month'
+import { ListSkeleton } from '@/components/ui/Skeleton'
 
 const TAB_OPTIONS: { value: BenefitTab; label: string }[] = [
   { value: 'statement', label: 'Extrato' },
@@ -118,7 +119,7 @@ export default function BenefitPage() {
 
           {tab === 'statement' && (
             <>
-              {isLoadingMovements && <p className="text-text">Carregando…</p>}
+              {isLoadingMovements && <ListSkeleton rows={6} />}
               {!isLoadingMovements && !errorMessage && groups.length === 0 && (
                 <p className="text-text">Nenhuma movimentação neste mês.</p>
               )}

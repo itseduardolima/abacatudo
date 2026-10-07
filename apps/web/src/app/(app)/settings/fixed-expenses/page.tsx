@@ -10,6 +10,7 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { MoneyText } from '@/components/finance/MoneyText'
 import { FixedExpenseActionsSheet } from './fixed-expense-actions-sheet'
 import { useFixedExpensesPage } from './use-fixed-expenses-page'
+import { ListSkeleton } from '@/components/ui/Skeleton'
 
 const PAY_HALF_LABEL = {
   1: 'na 1ª quinzena (dia 15)',
@@ -52,7 +53,7 @@ export default function FixedExpensesPage() {
         </div>
       </div>
 
-      {isLoading && <p className="text-text">Carregando…</p>}
+      {isLoading && <ListSkeleton />}
 
       {!isLoading && fixedExpenses.length === 0 && !isFormOpen && <p className="text-text">Nenhum gasto fixo ainda.</p>}
 

@@ -4,6 +4,7 @@ import { BenefitBalanceCard } from './benefit-balance-card'
 import { CardInvoiceRow } from './card-invoice-row'
 import { ConnectBankCard } from './connect-bank-card'
 import { HeroCarousel } from './hero-carousel'
+import { HeroSkeleton, InvoicesSkeleton } from './home-skeleton'
 import { PaceHeroCard } from './pace-hero-card'
 import { useHomePage } from './use-home-page'
 import { CardStatementSwitch } from '@/components/layout/CardStatementSwitch'
@@ -22,6 +23,7 @@ export default function HomePage() {
     cardAccounts,
     invoiceByAccountId,
     forecast,
+    isLoadingInvoices,
     isLoadingAccounts,
     onConnectBank,
     isConnectingBank,
@@ -31,6 +33,7 @@ export default function HomePage() {
     benefitSyncedAt,
   } = useHomePage()
   const hasNoCard = !isLoadingAccounts && cardAccounts.length === 0
+  const isLoadingHome = isLoadingMe || isLoadingAccounts
 
   return (
     <main className="mx-auto flex min-h-screen max-w-[420px] flex-col gap-6 px-4 pb-28 md:pb-10 pt-8">
@@ -39,13 +42,14 @@ export default function HomePage() {
         <Logo height={32} />
       </div>
 
-      {isLoadingMe && <p className="text-text">Carregando…</p>}
+      {(isLoadingHome || (!hasNoCard && isLoadingPace)) && <HeroSkeleton />}
+      {isLoadingHome && <InvoicesSkeleton />}
 
       {hasNoCard && (
         <ConnectBankCard onConnect={() => void onConnectBank()} isConnecting={isConnectingBank} error={connectError} />
       )}
 
-      {!isLoadingMe && !hasNoCard && !isLoadingPace && pace && (
+      {!isLoadingHome && !hasNoCard && !isLoadingPace && pace && (
         <HeroCarousel
           cards={[
             { key: 'pace', content: <PaceHeroCard pace={pace} /> },
@@ -87,6 +91,7 @@ export default function HomePage() {
                 account={account}
                 invoice={invoiceByAccountId.get(account.id)}
                 month={forecast.isForecast ? forecast.month : undefined}
+                isLoading={isLoadingInvoices}
               />
             ))}
           </div>

@@ -11,6 +11,7 @@ import { InlineAlert } from '@/components/ui/InlineAlert'
 import { MonthStepper } from '@/components/ui/MonthStepper'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { formatMonthName } from '@/lib/utils/format-month'
+import { ListSkeleton } from '@/components/ui/Skeleton'
 
 const DIRECTION_OPTIONS: { value: DirectionFilter; label: string }[] = [
   { value: 'ALL', label: 'Tudo' },
@@ -90,7 +91,11 @@ export default function MovementsPage() {
             <InlineAlert>{errorMessage}</InlineAlert>
           </div>
         )}
-        {isLoading && <p className="pt-4 text-text">Carregando…</p>}
+        {isLoading && (
+          <div className="pt-3">
+            <ListSkeleton rows={6} />
+          </div>
+        )}
         {!isLoading && !errorMessage && groups.length === 0 && (
           <p className="pt-4 text-text">
             {isFiltering ? 'Buscando…' : 'Nenhuma movimentação com esses filtros neste mês.'}
