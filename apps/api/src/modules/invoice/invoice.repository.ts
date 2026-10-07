@@ -88,6 +88,7 @@ export class InvoiceRepository {
     const rows = await this.prisma.transaction.findMany({
       where: {
         userId,
+        cancelledAt: null,
         billId: null,
         kind: { in: ['EXPENSE', 'REFUND'] },
         account: { id: accountId, type: 'CREDIT_CARD', source: 'PLUGGY' },

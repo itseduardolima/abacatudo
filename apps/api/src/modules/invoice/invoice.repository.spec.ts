@@ -16,6 +16,7 @@ describe('InvoiceRepository: compra cancelada fica fora da conta', () => {
   it.each([
     ['findRows', (repo: InvoiceRepository) => repo.findRows('user-1', RANGE)],
     ['findOpenRows', (repo: InvoiceRepository) => repo.findOpenRows('user-1')],
+    ['findOpenRowsInRange', (repo: InvoiceRepository) => repo.findOpenRowsInRange('user-1', 'acc-1', RANGE)],
     ['findForecastRows', (repo: InvoiceRepository) => repo.findForecastRows('user-1', 'acc-1', RANGE)],
     ['findStatementOpenRows', (repo: InvoiceRepository) => repo.findStatementOpenRows('user-1', 'acc-1')],
     [
@@ -56,6 +57,18 @@ describe('InvoiceRepository: fatura aberta com data de fechamento', () => {
       { installmentDueAt: { gte: AFTER } },
       { installmentNumber: null, status: 'PENDING' },
     ])
+  })
+})
+
+describe('InvoiceRepository: quinzena com data de fechamento', () => {
+  it('findOpenRowsInRange também inclui compra à vista pendente sem fatura dentro da janela', async () => {
+    const after = new Date('2026-10-02T03:00:00.000Z')
+    const { prisma, transaction } = fakePrisma()
+    await new InvoiceRepository(prisma).findOpenRowsInRange('user-1', 'acc-1', RANGE, after)
+    expect(transaction.findMany.mock.calls[0][0].where.AND[0].OR).toContainEqual({
+      installmentNumber: null,
+      status: 'PENDING',
+    })
   })
 })
 

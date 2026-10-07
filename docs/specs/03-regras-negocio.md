@@ -306,7 +306,7 @@ pode marcar a compra como cancelada (`Transaction.cancelledAt`), e reverter.
   do mesmo grupo (`installmentGroupKey`) ainda sem `billId`; parcela já faturada
   não muda. À vista: só a própria linha. Só EXPENSE/REFUND de cartão.
 - **Fora de toda conta:** fatura aberta e prevista, "Meu"/"Não é meu", orçamento
-  e ritmo, relatórios, assinaturas, economia, mensagem de conta e sugestão de
+  (inclusive o "Meu" de cada quinzena) e ritmo, relatórios, assinaturas, economia, mensagem de conta e sugestão de
   categoria da IA ignoram linha cancelada.
 - **Meses futuros:** parcela cancelada não aparece na fatura prevista (nem no
   total, nem na lista) e não estende o último mês de previsão.

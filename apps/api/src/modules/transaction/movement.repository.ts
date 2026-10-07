@@ -31,6 +31,7 @@ export class MovementRepository {
   ): Promise<{ incomeCents: number; expenseCents: number }> {
     const scope = {
       userId,
+      cancelledAt: null,
       occurredAt: { gte: range.start, lt: range.end },
       account: { type: { not: 'CREDIT_CARD' } },
     } as const
@@ -48,6 +49,7 @@ export class MovementRepository {
   ): Prisma.TransactionWhereInput {
     return {
       userId,
+      cancelledAt: null,
       occurredAt: { gte: range.start, lt: range.end },
       account: { type: { not: 'CREDIT_CARD' }, ...(filters.accountId ? { id: filters.accountId } : {}) },
       ...(filters.direction === 'IN' ? { kind: 'INCOME' } : {}),
