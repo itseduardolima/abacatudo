@@ -1299,3 +1299,7 @@ typecheck/lint/build limpos).
 - [ ] 5.4 — Rótulo "transferência entre suas contas"/"pagamento de fatura"
 - [ ] 5.5 — Nota opcional em movimentação
 - [ ] 12.5 — Checklist do primeiro deploy
+
+- [x] Cancelar compra: `Transaction.cancelledAt`, `PATCH /transactions/:id/cancellation` (grupo de parcelas sem
+      fatura), fora de fatura, orçamento, relatórios e extratos, linha riscada com selo na Fatura, reversível
+      (2026-10-07).
