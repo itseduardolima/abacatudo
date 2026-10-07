@@ -91,8 +91,10 @@ export class TransactionRepository {
   ): Promise<
     {
       id: string
+      accountId: string
       description: string
       occurredAt: Date
+      amountCents: number
       installmentNumber: number | null
       installmentTotal: number | null
     }[]
@@ -106,7 +108,15 @@ export class TransactionRepository {
         installmentTotal,
         account: { type: 'CREDIT_CARD' },
       },
-      select: { id: true, description: true, occurredAt: true, installmentNumber: true, installmentTotal: true },
+      select: {
+        id: true,
+        accountId: true,
+        description: true,
+        occurredAt: true,
+        amountCents: true,
+        installmentNumber: true,
+        installmentTotal: true,
+      },
     })
   }
 
@@ -117,15 +127,25 @@ export class TransactionRepository {
   ): Promise<
     {
       id: string
+      accountId: string
       description: string
       occurredAt: Date
+      amountCents: number
       installmentNumber: number | null
       installmentTotal: number | null
     }[]
   > {
     return this.prisma.transaction.findMany({
       where: { userId, accountId, installmentTotal, billId: null, account: { type: 'CREDIT_CARD' } },
-      select: { id: true, description: true, occurredAt: true, installmentNumber: true, installmentTotal: true },
+      select: {
+        id: true,
+        accountId: true,
+        description: true,
+        occurredAt: true,
+        amountCents: true,
+        installmentNumber: true,
+        installmentTotal: true,
+      },
     })
   }
 
