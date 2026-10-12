@@ -7,10 +7,17 @@ import type { InvoiceRow } from './invoice.mapper'
 import { resolveInstallmentDueDates, type InstallmentSource } from './installment-forecast.mapper'
 import type { StatementRow } from './statement.mapper'
 
-function openSince(after?: Date): Prisma.TransactionWhereInput {
-  if (!after) return {}
+export interface OpenWindow {
+  after: Date
+  before?: Date
+}
+
+function openSince(window?: OpenWindow): Prisma.TransactionWhereInput {
+  if (!window) return {}
+  const { after, before } = window
   const recentPending = new Date(Date.now() - PENDING_LOOKBACK_MS)
   return {
+    ...(before ? { NOT: { installmentNumber: { not: null }, installmentDueAt: { not: null, gte: before } } } : {}),
     OR: [
       { installmentDueAt: null, occurredAt: { gte: after } },
       { installmentDueAt: { gte: after } },
@@ -46,13 +53,13 @@ export class InvoiceRepository {
   // CARD_PAYMENT (só aqui — nunca em findRows): pagamento antecipado abate o que falta pagar da fatura
   // aberta (computeInvoice trata o sinal). Traz description/occurredAt/installmentTotal pra
   // keepNextDueInstallmentOnly identificar qual parcela é a próxima a vencer.
-  async findOpenRows(userId: string, accountId?: string, after?: Date): Promise<InvoiceRow[]> {
+  async findOpenRows(userId: string, accountId?: string, window?: OpenWindow): Promise<InvoiceRow[]> {
     const rows = await this.prisma.transaction.findMany({
       where: {
         userId,
         cancelledAt: null,
         billId: null,
-        ...openSince(after),
+        ...openSince(window),
         kind: { in: ['EXPENSE', 'REFUND'] },
         account: { type: 'CREDIT_CARD', source: 'PLUGGY', ...(accountId ? { id: accountId } : {}) },
       },
@@ -95,7 +102,7 @@ export class InvoiceRepository {
   }
 
   // Quinzena (03-regras-negocio § Orçamento mensal): lançamento sem billId de cartão PLUGGY cuja data
-  // (a do vencimento, se parcela) cai na janela. `after` corta a fatura já fechada, como em findOpenRows.
+  // (a do vencimento, se parcela) cai na janela. `after` corta a fatura já fechada, como em findOpenRows (a janela já é o range, sem corte superior).
   async findOpenRowsInRange(
     userId: string,
     accountId: string,
@@ -111,7 +118,7 @@ export class InvoiceRepository {
         kind: { in: ['EXPENSE', 'REFUND'] },
         account: { id: accountId, type: 'CREDIT_CARD', source: 'PLUGGY' },
         AND: [
-          openSince(after),
+          openSince(after ? { after } : undefined),
           { OR: [{ installmentDueAt: null, occurredAt: inRange }, { installmentDueAt: inRange }] },
         ],
       },
@@ -138,12 +145,12 @@ export class InvoiceRepository {
     return rows.map((row) => toInvoiceRow(row, null))
   }
 
-  findStatementOpenRows(userId: string, accountId: string, after?: Date): Promise<StatementRow[]> {
+  findStatementOpenRows(userId: string, accountId: string, window?: OpenWindow): Promise<StatementRow[]> {
     return this.statementRows({
       userId,
       cancelledAt: null,
       billId: null,
-      ...openSince(after),
+      ...openSince(window),
       kind: { in: ['EXPENSE', 'REFUND'] },
       account: { id: accountId, type: 'CREDIT_CARD', source: 'PLUGGY' },
     })
