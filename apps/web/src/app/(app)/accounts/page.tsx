@@ -11,7 +11,6 @@ import { BackIcon, IconButton } from '@/components/ui/IconButton'
 import { InlineAlert } from '@/components/ui/InlineAlert'
 import { Input } from '@/components/ui/Input'
 import { BankAvatar } from '@/components/finance/BankAvatar'
-import { ReconnectBanner } from '@/components/finance/ReconnectBanner'
 import { formatAccountType } from '@/lib/utils/format-account-type'
 import { formatSyncedAt } from '@/lib/utils/format-date'
 import { formatMoney } from '@/lib/utils/format-money'
@@ -38,7 +37,6 @@ export default function AccountsPage() {
     onConnectBank,
     isConnectingBank,
     connectError,
-    reconnectBanner,
     onSyncBanks,
     isSyncingBanks,
     syncError,
@@ -100,8 +98,6 @@ export default function AccountsPage() {
         </IconButton>
         <h1 className="display-number text-[2rem] text-ink">Contas</h1>
       </div>
-
-      <ReconnectBanner {...reconnectBanner} />
 
       {connectError && <InlineAlert>{connectError}</InlineAlert>}
       {syncError && <InlineAlert>{syncError}</InlineAlert>}
