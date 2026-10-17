@@ -10,6 +10,7 @@ import { useArchivedAccounts } from '@/hooks/queries/use-archived-accounts'
 import { useConnectBank } from '@/hooks/queries/use-connect-bank'
 import { useCreateAccount } from '@/hooks/queries/use-create-account'
 import { useRestoreAccount } from '@/hooks/queries/use-restore-account'
+import { useReconnectBanner } from '@/hooks/use-reconnect-banner'
 import { useSyncBankConnection } from '@/hooks/queries/use-sync-bank-connection'
 import { useUpdateAccount } from '@/hooks/queries/use-update-account'
 import { ApiClientError } from '@/lib/api-client'
@@ -28,6 +29,7 @@ export function useAccountsPage() {
   const restoreAccount = useRestoreAccount()
   const connectBank = useConnectBank()
   const syncBankConnection = useSyncBankConnection()
+  const reconnectBanner = useReconnectBanner()
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [ruleError, setRuleError] = useState<string | null>(null)
   const [connectError, setConnectError] = useState<string | null>(null)
@@ -191,6 +193,7 @@ export function useAccountsPage() {
     onConnectBank: () => void onConnectBank(),
     isConnectingBank: connectBank.isPending,
     connectError,
+    reconnectBanner,
     onSyncBanks: () => void onSyncBanks(),
     isSyncingBanks: syncBankConnection.isPending,
     syncError,

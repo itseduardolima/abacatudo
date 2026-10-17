@@ -8,6 +8,7 @@ import { HeroSkeleton, InvoicesSkeleton } from './home-skeleton'
 import { PaceHeroCard } from './pace-hero-card'
 import { useHomePage } from './use-home-page'
 import { CardStatementSwitch } from '@/components/layout/CardStatementSwitch'
+import { ReconnectBanner } from '@/components/finance/ReconnectBanner'
 import { Logo } from '@/components/ui/Logo'
 import { MonthStepper } from '@/components/ui/MonthStepper'
 import { formatMonthName } from '@/lib/utils/format-month'
@@ -28,6 +29,7 @@ export default function HomePage() {
     onConnectBank,
     isConnectingBank,
     connectError,
+    reconnectBanner,
     benefitAccountName,
     benefitBalanceCents,
     benefitSyncedAt,
@@ -41,6 +43,8 @@ export default function HomePage() {
         <CardStatementSwitch active="card" />
         <Logo height={32} />
       </div>
+
+      <ReconnectBanner {...reconnectBanner} />
 
       {(isLoadingHome || (!hasNoCard && isLoadingPace)) && <HeroSkeleton />}
       {isLoadingHome && <InvoicesSkeleton />}
