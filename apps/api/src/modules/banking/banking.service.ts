@@ -18,6 +18,7 @@ import {
   findSettledPendingTwins,
   mapAccountFields,
   mapTransaction,
+  needsReconnect,
   reconnectWarningDays,
   type MappedTransaction,
   type SettledPendingTwin,
@@ -343,6 +344,7 @@ function describeError(error: unknown): string {
 }
 
 function toConnectionDto(row: PluggyItemRow): BankConnection {
+  const now = new Date()
   return {
     id: row.id,
     institutionName: row.institutionName,
@@ -351,6 +353,7 @@ function toConnectionDto(row: PluggyItemRow): BankConnection {
     lastSyncAt: row.lastSyncAt?.toISOString() ?? null,
     lastErrorCode: row.lastErrorCode,
     createdAt: row.createdAt.toISOString(),
-    reconnectWarningDays: reconnectWarningDays(row.consentExpiresAt, new Date()),
+    reconnectWarningDays: reconnectWarningDays(row.consentExpiresAt, now),
+    needsReconnect: needsReconnect(row.status, row.consentExpiresAt, now),
   }
 }
