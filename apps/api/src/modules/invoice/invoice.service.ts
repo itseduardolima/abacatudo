@@ -149,6 +149,11 @@ export class InvoiceService {
   // número que alimenta o ritmo (HU 7.4). É a fatura de agora; não existe "mês passado" aqui. Só um mês
   // futuro muda o resultado: aí soma a fatura prevista de cada cartão (só parcelas já lançadas).
   async getSummary(userId: string, month?: string): Promise<Invoice> {
+    const { advancePaidCents: _advancePaidCents, ...invoice } = await this.getSummaryWithAdvance(userId, month)
+    return invoice
+  }
+
+  async getSummaryWithAdvance(userId: string, month?: string): Promise<Invoice & { advancePaidCents: number }> {
     const selfId = await this.selfPersonId(userId)
     const cardAccounts = (await this.accounts.findMany(userId, false)).filter((a) => a.type === 'CREDIT_CARD')
     const futureMonth = month && resolveMonthKey(month) > monthKey(new Date()) ? month : undefined
@@ -156,7 +161,10 @@ export class InvoiceService {
     const invoices = await Promise.all(
       cardAccounts.map((account) => this.invoiceForAccount(account, selfId, futureMonth)),
     )
-    return mergeInvoices(invoices)
+    return {
+      ...mergeInvoices(invoices),
+      advancePaidCents: invoices.reduce((sum, invoice) => sum + invoice.advancePaidCents, 0),
+    }
   }
 
   async getHalfMineCents(userId: string, range: { start: Date; end: Date }): Promise<number> {

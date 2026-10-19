@@ -29,6 +29,8 @@ export const budgetPaceSchema = z
     month: monthKeySchema,
     capCents: centsSchema,
     spentCents: centsSchema,
+    advancePaidCents: centsSchema,
+    grossSpentCents: centsSchema,
     // Gasto nos cartões de crédito, somando todos (fatura do banco de cada um) — inclui o que não é meu.
     cardsMineCents: centsSchema,
     remainingCents: centsSchema,
@@ -41,6 +43,10 @@ export const budgetPaceSchema = z
     perDayRemainingCents: centsSchema,
     firstHalfCapCents: centsSchema,
     firstHalfSpentCents: centsSchema.nullable(),
+    firstHalfRemainingCents: centsSchema.nullable(),
+    secondHalfCapCents: centsSchema,
+    secondHalfSpentCents: centsSchema.nullable(),
+    secondHalfRemainingCents: centsSchema.nullable(),
     currentHalf: z.union([z.literal(1), z.literal(2)]).nullable(),
     currentHalfRemainingCents: centsSchema.nullable(),
   })

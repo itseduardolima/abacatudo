@@ -21,7 +21,7 @@ export class BudgetPaceService {
   async getPace(userId: string, month?: string): Promise<BudgetPace> {
     const [budget, invoice, fixedExpensesCents] = await Promise.all([
       this.budgetMonth.getOrCreate(userId, month),
-      this.invoices.getSummary(userId, month),
+      this.invoices.getSummaryWithAdvance(userId, month),
       this.fixedExpenses.sumActiveCents(userId),
     ])
 
@@ -41,12 +41,19 @@ export class BudgetPaceService {
           currentHalf === 1 ? undefined : this.halfSpentCents(userId, budget.month, 2),
         ])
       : [null, undefined]
+    const secondHalfSpent = currentHalf === 2 ? (currentHalfSpentCents ?? null) : null
     const currentHalfCapCents = currentHalf === 1 ? budget.firstHalfIncomeCents : budget.secondHalfIncomeCents
     const currentHalfSpent = currentHalf === 1 ? firstHalfSpentCents : (currentHalfSpentCents ?? null)
     return {
       ...pace,
+      advancePaidCents: invoice.advancePaidCents,
+      grossSpentCents: pace.spentCents + invoice.advancePaidCents,
       firstHalfCapCents: budget.firstHalfIncomeCents,
       firstHalfSpentCents,
+      firstHalfRemainingCents: firstHalfSpentCents === null ? null : budget.firstHalfIncomeCents - firstHalfSpentCents,
+      secondHalfCapCents: budget.secondHalfIncomeCents,
+      secondHalfSpentCents: secondHalfSpent,
+      secondHalfRemainingCents: secondHalfSpent === null ? null : budget.secondHalfIncomeCents - secondHalfSpent,
       currentHalf: isCurrentMonth ? (currentHalf as 1 | 2) : null,
       currentHalfRemainingCents: currentHalfSpent === null ? null : currentHalfCapCents - currentHalfSpent,
     }
