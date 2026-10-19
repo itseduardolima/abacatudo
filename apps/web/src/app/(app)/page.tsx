@@ -5,7 +5,9 @@ import { CardInvoiceRow } from './card-invoice-row'
 import { ConnectBankCard } from './connect-bank-card'
 import { HeroCarousel } from './hero-carousel'
 import { HeroSkeleton, InvoicesSkeleton } from './home-skeleton'
+import { FortnightHeroCard } from './fortnight-hero-card'
 import { PaceHeroCard } from './pace-hero-card'
+import { ToPayHeroCard } from './to-pay-hero-card'
 import { useHomePage } from './use-home-page'
 import { CardStatementSwitch } from '@/components/layout/CardStatementSwitch'
 import { Logo } from '@/components/ui/Logo'
@@ -53,6 +55,8 @@ export default function HomePage() {
         <HeroCarousel
           cards={[
             { key: 'pace', content: <PaceHeroCard pace={pace} /> },
+            { key: 'to-pay', content: <ToPayHeroCard pace={pace} /> },
+            { key: 'fortnight', content: <FortnightHeroCard pace={pace} /> },
             ...(benefitBalanceCents != null
               ? [
                   {
