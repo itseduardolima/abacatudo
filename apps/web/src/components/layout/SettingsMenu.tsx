@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useLogout } from '@/hooks/queries/use-logout'
+import { useMe } from '@/hooks/queries/use-me'
 
 // Mesma lista que antes vivia solta no rodapé da Início ("Configurar") — motivo de mudar pra cá: precisa
 // caber tanto no shell mobile (BottomNav) quanto no desktop (TopNav), sem duplicar o menu em cada tela.
@@ -18,6 +19,8 @@ const SETTINGS_LINKS = [
   { href: '/settings/income', label: 'Renda' },
 ] as const
 
+const INVITE_LINK = { href: '/settings/invite', label: 'Convidar' } as const
+
 // Mesmo padrão de bottom sheet do protótipo (04-escolher-banco: "Conectar cartão" — véu escuro + folha
 // com puxador subindo da base, nunca um popover de canto). `triggerClassName` deixa o botão da engrenagem
 // se comportar como qualquer outro item da nav de origem (mesmo tamanho, mesmo estado), em vez de um
@@ -25,6 +28,7 @@ const SETTINGS_LINKS = [
 export function SettingsMenu({ triggerClassName }: { triggerClassName: string }) {
   const router = useRouter()
   const logout = useLogout()
+  const links = useMe().data?.role === 'ADMIN' ? [...SETTINGS_LINKS, INVITE_LINK] : SETTINGS_LINKS
   const [isOpen, setIsOpen] = useState(false)
 
   const onLogout = async () => {
@@ -73,7 +77,7 @@ export function SettingsMenu({ triggerClassName }: { triggerClassName: string })
           >
             <div className="mx-auto mb-3.5 h-1 w-10 rounded-pill bg-border" />
             <p className="mb-1 text-lg font-bold text-ink">Configurar</p>
-            {SETTINGS_LINKS.map((link) => (
+            {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
