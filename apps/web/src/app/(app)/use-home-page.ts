@@ -44,11 +44,6 @@ export function useHomePage() {
     invoiceMonth,
   )
 
-  // Fase 4: saldo real da conta de benefício (InfinitePay via Pluggy) — só existe card quando o usuário
-  // marcou uma conta em /accounts e ela já sincronizou saldo. Sem isso, o hero fica sozinho, como antes.
-  const benefitAccount = (accounts.data ?? []).find((account) => account.isBenefitAccount) ?? null
-  const benefitBalanceCents = benefitAccount?.balanceCents ?? null
-
   const onConnectBank = async () => {
     setConnectError(null)
     try {
@@ -94,9 +89,6 @@ export function useHomePage() {
     onConnectBank,
     isConnectingBank: connectBank.isPending,
     connectError,
-    benefitAccountName: benefitAccount?.name ?? null,
-    benefitBalanceCents,
-    benefitSyncedAt: benefitAccount?.lastSyncAt ?? null,
     fixedExpenses: fixedExpenses.data ?? [],
     onTogglePaid,
     pendingPaidKeys,

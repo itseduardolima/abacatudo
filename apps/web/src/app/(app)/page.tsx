@@ -1,6 +1,5 @@
 'use client'
 
-import { BenefitBalanceCard } from './benefit-balance-card'
 import { CardInvoiceRow } from './card-invoice-row'
 import { ConnectBankCard } from './connect-bank-card'
 import { HeroCarousel } from './hero-carousel'
@@ -31,9 +30,6 @@ export default function HomePage() {
     onConnectBank,
     isConnectingBank,
     connectError,
-    benefitAccountName,
-    benefitBalanceCents,
-    benefitSyncedAt,
     fixedExpenses,
     onTogglePaid,
     pendingPaidKeys,
@@ -62,20 +58,6 @@ export default function HomePage() {
             { key: 'pace', content: <PaceHeroCard pace={pace} /> },
             { key: 'to-pay', content: <ToPayHeroCard pace={pace} /> },
             { key: 'fortnight', content: <FortnightHeroCard pace={pace} /> },
-            ...(benefitBalanceCents != null
-              ? [
-                  {
-                    key: 'benefit',
-                    content: (
-                      <BenefitBalanceCard
-                        accountName={benefitAccountName}
-                        cents={benefitBalanceCents}
-                        syncedAt={benefitSyncedAt}
-                      />
-                    ),
-                  },
-                ]
-              : []),
           ]}
         />
       )}
