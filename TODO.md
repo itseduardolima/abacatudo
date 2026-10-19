@@ -1364,3 +1364,5 @@ Separar o hero da Início em cards de um assunto só: gasto do mês, falta pagar
   - [x] API `PUT`/`DELETE /fixed-expenses/:id/paid` (mês atual), `paid` na lista, `paidFixedCents` e `toPayCents` no
         `BudgetPace`; testes de Service com dois Users.
   - [x] Seção "Gastos fixos" na Início, com checkbox, e "Falta pagar" descontando os fixos pagos.
+  - [x] Marca por quinzena: `half` em `FixedExpensePayment`, `PUT`/`DELETE /fixed-expenses/:id/paid/:half`, `shares`
+        (parte, valor e pago) no lugar de `paid`; o dividido tem duas partes. Seção agrupada em 1ª e 2ª quinzena.

@@ -459,12 +459,15 @@ teto variável = renda mensal (fixa + benefícios)
   (ciclo que vira no dia 27, por exemplo) conta na 1ª. Assim **1ª + 2ª = gasto bruto do mês** (fatura aberta, antes
   do pagamento antecipado, mais fixos), sempre. A tela mostra as duas quinzenas lado a lado, cada uma com gasto,
   salário e sobra, com a atual destacada; fora do mês atual só aparece o salário.
-- **Gasto fixo pago**: o User marca na Início cada gasto fixo como pago no **mês atual** (`FixedExpensePayment`, uma
-  linha por gasto fixo e mês). A marca vale só aquele mês: no mês seguinte volta a pendente, e arquivar o gasto
-  fixo tira ele da conta. Marcar não muda o gasto, o teto, a sobra nem as quinzenas (o dinheiro foi gasto de
-  qualquer jeito); só reduz o **"Falta pagar"** (`toPayCents` = gasto abatido do pagamento antecipado − fixos
-  pagos, `paidFixedCents`). Vale só para gasto fixo do próprio User: **não existe "marcar pago" para gasto de
-  terceiros**, que segue só como mensagem manual. Mês futuro ou passado não tem marca (`paidFixedCents` = 0).
+- **Gasto fixo pago**: o User marca na Início cada gasto fixo como pago no **mês atual**, **por quinzena**
+  (`FixedExpensePayment`: uma linha por gasto fixo, mês e quinzena). Gasto da 1ª ou da 2ª tem uma parte só; o
+  **dividido tem duas**, de metade do valor cada (o centavo ímpar na 2ª), marcadas separadamente. A tela agrupa por
+  quinzena, com o dividido aparecendo nas duas. A marca vale só aquele mês: no mês seguinte volta a pendente, e
+  arquivar o gasto fixo tira ele da conta. Marcar não muda o gasto, o teto, a sobra nem as quinzenas (o dinheiro foi
+  gasto de qualquer jeito); só reduz o **"Falta pagar"** (`toPayCents` = gasto abatido do pagamento antecipado −
+  fixos pagos, `paidFixedCents` = soma das partes marcadas). Vale só para gasto fixo do próprio User: **não existe
+  "marcar pago" para gasto de terceiros**, que segue só como mensagem manual. Mês futuro ou passado não tem marca
+  (`paidFixedCents` = 0).
 - **Ritmo**: compara o gasto do mês (fatura aberta somada em todos os
   cartões + gastos fixos ativos, já abatido do pagamento antecipado) com o esperado linear até hoje, sobre o
   teto; sinaliza se está acima. O card da Início mostra também **quanto foi gasto
