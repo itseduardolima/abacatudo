@@ -12,7 +12,15 @@ const SELF = 'self-1'
 const FAMILY = 'family-1'
 
 function row(overrides: Partial<InvoiceRow> = {}): InvoiceRow {
-  return { kind: 'EXPENSE', amountCents: 1000, personId: SELF, splits: [], installment: null, ...overrides }
+  return {
+    kind: 'EXPENSE',
+    amountCents: 1000,
+    at: new Date('2026-10-10T12:00:00.000Z'),
+    personId: SELF,
+    splits: [],
+    installment: null,
+    ...overrides,
+  }
 }
 
 describe('computeInvoice', () => {

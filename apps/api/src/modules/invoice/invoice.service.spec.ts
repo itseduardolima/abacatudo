@@ -71,6 +71,8 @@ function personRow(overrides: Partial<PersonRow> = {}): PersonRow {
   }
 }
 
+const AT = new Date('2026-09-10T12:00:00.000Z')
+
 describe('InvoiceService', () => {
   describe('getForAccount', () => {
     it('400 sem accountId, antes de tocar no banco', async () => {
@@ -104,8 +106,8 @@ describe('InvoiceService', () => {
       people.findSelf.mockResolvedValue(personRow())
       const repo = repoMock()
       repo.findRows.mockResolvedValue([
-        { kind: 'EXPENSE', amountCents: 1000, personId: 'self-1', splits: [], installment: null },
-        { kind: 'EXPENSE', amountCents: 700, personId: 'family-1', splits: [], installment: null },
+        { kind: 'EXPENSE', amountCents: 1000, at: AT, personId: 'self-1', splits: [], installment: null },
+        { kind: 'EXPENSE', amountCents: 700, at: AT, personId: 'family-1', splits: [], installment: null },
       ])
       const service = new InvoiceService(repo, accounts, people, pluggyMock())
 
@@ -122,10 +124,11 @@ describe('InvoiceService', () => {
       people.findSelf.mockResolvedValue(personRow())
       const repo = repoMock()
       repo.findOpenRows.mockResolvedValue([
-        { kind: 'EXPENSE', amountCents: 100000, personId: 'self-1', splits: [], installment: null },
+        { kind: 'EXPENSE', amountCents: 100000, at: AT, personId: 'self-1', splits: [], installment: null },
         {
           kind: 'EXPENSE',
           amountCents: 5000,
+          at: AT,
           personId: 'self-1',
           splits: [],
           installment: { groupKey: 'compra-1', number: 3 },
@@ -133,6 +136,7 @@ describe('InvoiceService', () => {
         {
           kind: 'EXPENSE',
           amountCents: 5000,
+          at: AT,
           personId: 'self-1',
           splits: [],
           installment: { groupKey: 'compra-1', number: 4 },
@@ -188,7 +192,7 @@ describe('InvoiceService', () => {
       people.findSelf.mockResolvedValue(personRow())
       const repo = repoMock()
       repo.findOpenRows.mockResolvedValue([
-        { kind: 'EXPENSE', amountCents: 5000, personId: 'self-1', splits: [], installment: null },
+        { kind: 'EXPENSE', amountCents: 5000, at: AT, personId: 'self-1', splits: [], installment: null },
       ])
       const service = new InvoiceService(repo, accounts, people, pluggyMock())
 
@@ -204,7 +208,7 @@ describe('InvoiceService', () => {
       people.findSelf.mockResolvedValue(personRow())
       const repo = repoMock()
       repo.findOpenRows.mockResolvedValue([
-        { kind: 'EXPENSE', amountCents: 5000, personId: 'self-1', splits: [], installment: null },
+        { kind: 'EXPENSE', amountCents: 5000, at: AT, personId: 'self-1', splits: [], installment: null },
       ])
       const service = new InvoiceService(repo, accounts, people, pluggyMock())
 
@@ -234,7 +238,7 @@ describe('InvoiceService', () => {
       people.findSelf.mockResolvedValue(personRow())
       const repo = repoMock()
       repo.findOpenRows.mockResolvedValue([
-        { kind: 'EXPENSE', amountCents: 155504, personId: 'self-1', splits: [], installment: null },
+        { kind: 'EXPENSE', amountCents: 155504, at: AT, personId: 'self-1', splits: [], installment: null },
       ])
       repo.sumPaymentsSince.mockResolvedValue(payments)
       const pluggy = pluggyMock()
@@ -357,11 +361,12 @@ describe('InvoiceService', () => {
       people.findSelf.mockResolvedValue(personRow())
       const repo = repoMock()
       repo.findForecastRows.mockResolvedValue([
-        { kind: 'EXPENSE', amountCents: 10000, personId: 'self-1', splits: [], installment: null },
-        { kind: 'EXPENSE', amountCents: 6000, personId: 'family-1', splits: [], installment: null },
+        { kind: 'EXPENSE', amountCents: 10000, at: AT, personId: 'self-1', splits: [], installment: null },
+        { kind: 'EXPENSE', amountCents: 6000, at: AT, personId: 'family-1', splits: [], installment: null },
         {
           kind: 'EXPENSE',
           amountCents: 4000,
+          at: AT,
           personId: 'self-1',
           splits: [
             { personId: 'self-1', amountCents: 1000 },
@@ -537,7 +542,7 @@ describe('InvoiceService', () => {
     it('mês futuro soma as estimadas às lançadas e informa quanto é estimado', async () => {
       const { service } = setup(
         [source()],
-        [{ kind: 'EXPENSE', amountCents: 2500, personId: 'self-1', splits: [], installment: null }],
+        [{ kind: 'EXPENSE', amountCents: 2500, at: AT, personId: 'self-1', splits: [], installment: null }],
       )
 
       const result = await service.getForAccount('user-1', 'acc-1', nextMonth)
@@ -570,7 +575,7 @@ describe('InvoiceService', () => {
       const before = await forMonth([source({ number: 2 })], [])
       const after = await forMonth(
         [source({ number: 2 }), source({ number: 3, dueAt: new Date(`${nextMonth}-17T12:00:00.000Z`) })],
-        [{ kind: 'EXPENSE', amountCents: 10000, personId: 'self-1', splits: [], installment: null }],
+        [{ kind: 'EXPENSE', amountCents: 10000, at: AT, personId: 'self-1', splits: [], installment: null }],
       )
 
       expect(before).toMatchObject({ totalCents: 10000, estimatedCents: 10000 })
@@ -649,6 +654,7 @@ describe('InvoiceService', () => {
       return {
         kind: 'EXPENSE' as const,
         amountCents: 1000,
+        at: AT,
         personId: 'ana',
         splits: [],
         installment: null,
@@ -770,10 +776,10 @@ describe('InvoiceService', () => {
       ])
       const repo = repoMock()
       repo.findOpenRows.mockResolvedValue([
-        { kind: 'EXPENSE', amountCents: 58988, personId: 'self-1', splits: [], installment: null },
+        { kind: 'EXPENSE', amountCents: 58988, at: AT, personId: 'self-1', splits: [], installment: null },
       ])
       repo.findRows.mockResolvedValue([
-        { kind: 'EXPENSE', amountCents: 500, personId: 'self-1', splits: [], installment: null },
+        { kind: 'EXPENSE', amountCents: 500, at: AT, personId: 'self-1', splits: [], installment: null },
       ])
       const service = new InvoiceService(repo, accounts, people, pluggyMock())
 
@@ -806,8 +812,8 @@ describe('InvoiceService', () => {
       const repo = repoMock()
       repo.findForecastRows.mockImplementation(async (_userId, accountId) =>
         accountId === 'card-a'
-          ? [{ kind: 'EXPENSE', amountCents: 10000, personId: 'self-1', splits: [], installment: null }]
-          : [{ kind: 'EXPENSE', amountCents: 4000, personId: 'family-1', splits: [], installment: null }],
+          ? [{ kind: 'EXPENSE', amountCents: 10000, at: AT, personId: 'self-1', splits: [], installment: null }]
+          : [{ kind: 'EXPENSE', amountCents: 4000, at: AT, personId: 'family-1', splits: [], installment: null }],
       )
       const service = new InvoiceService(repo, accounts, people, pluggyMock())
 
@@ -838,6 +844,80 @@ describe('InvoiceService', () => {
       const service = new InvoiceService(repoMock(), accountsMock(), people, pluggyMock())
 
       await expect(service.getSummary('user-1')).rejects.toBeInstanceOf(DomainError)
+    })
+  })
+
+  describe('getMonthHalves', () => {
+    beforeEach(() => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-19T15:00:00.000Z'))
+    })
+    afterEach(() => jest.useRealTimers())
+
+    const mine = (amountCents: number, at: string, overrides: Record<string, unknown> = {}) => ({
+      kind: 'EXPENSE' as const,
+      amountCents,
+      at: new Date(at),
+      personId: 'self-1',
+      splits: [],
+      installment: null,
+      ...overrides,
+    })
+
+    function setup() {
+      const accounts = accountsMock()
+      accounts.findMany.mockResolvedValue([
+        accountRow({ id: 'acc-pluggy', source: 'PLUGGY', externalAccountId: 'ext-1' }),
+        accountRow({ id: 'acc-manual', source: 'MANUAL' }),
+      ])
+      const people = peopleMock()
+      people.findSelf.mockResolvedValue(personRow())
+      const repo = repoMock()
+      repo.findOpenRows.mockResolvedValue([
+        mine(1000, '2026-09-28T12:00:00.000Z'),
+        mine(2000, '2026-10-10T12:00:00.000Z'),
+        mine(3000, '2026-10-20T12:00:00.000Z'),
+        mine(500, '2026-10-20T12:00:00.000Z', { personId: 'family-1' }),
+      ])
+      repo.findRows.mockResolvedValue([mine(400, '2026-10-05T12:00:00.000Z'), mine(600, '2026-10-20T12:00:00.000Z')])
+      return new InvoiceService(repo, accounts, people, pluggyMock())
+    }
+
+    it('compra do fim do mês anterior ainda na fatura aberta cai na 1ª quinzena', async () => {
+      const result = await setup().getMonthHalves('user-1', '2026-10')
+
+      expect(result.firstHalfMineCents).toBe(1000 + 2000 + 400)
+    })
+
+    it('do dia 16 em diante cai na 2ª, e o que não é meu fica fora das duas', async () => {
+      const result = await setup().getMonthHalves('user-1', '2026-10')
+
+      expect(result.secondHalfMineCents).toBe(3000 + 600)
+    })
+
+    it('1ª + 2ª = "meu" da fatura aberta de todos os cartões', async () => {
+      const service = setup()
+
+      const halves = await service.getMonthHalves('user-1', '2026-10')
+      const summary = await service.getSummaryWithAdvance('user-1', '2026-10')
+
+      expect(halves.firstHalfMineCents + halves.secondHalfMineCents).toBe(summary.mineCents + summary.advancePaidCents)
+    })
+
+    it('só a próxima parcela de cada compra entra, como no total', async () => {
+      const accounts = accountsMock()
+      accounts.findMany.mockResolvedValue([accountRow({ source: 'PLUGGY', externalAccountId: 'ext-1' })])
+      const people = peopleMock()
+      people.findSelf.mockResolvedValue(personRow())
+      const repo = repoMock()
+      repo.findOpenRows.mockResolvedValue([
+        mine(5000, '2026-10-09T12:00:00.000Z', { installment: { groupKey: 'tv', number: 4 } }),
+        mine(5000, '2026-11-09T12:00:00.000Z', { installment: { groupKey: 'tv', number: 5 } }),
+      ])
+      const service = new InvoiceService(repo, accounts, people, pluggyMock())
+
+      const result = await service.getMonthHalves('user-1', '2026-10')
+
+      expect(result).toEqual({ firstHalfMineCents: 5000, secondHalfMineCents: 0 })
     })
   })
 })

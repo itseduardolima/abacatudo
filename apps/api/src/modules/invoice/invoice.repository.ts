@@ -101,32 +101,6 @@ export class InvoiceRepository {
     return result._sum.amountCents ?? 0
   }
 
-  // Quinzena (03-regras-negocio § Orçamento mensal): lançamento sem billId de cartão PLUGGY cuja data
-  // (a do vencimento, se parcela) cai na janela. `after` corta a fatura já fechada, como em findOpenRows (a janela já é o range, sem corte superior).
-  async findOpenRowsInRange(
-    userId: string,
-    accountId: string,
-    range: { start: Date; end: Date },
-    after?: Date,
-  ): Promise<InvoiceRow[]> {
-    const inRange = { gte: range.start, lt: range.end }
-    const rows = await this.prisma.transaction.findMany({
-      where: {
-        userId,
-        cancelledAt: null,
-        billId: null,
-        kind: { in: ['EXPENSE', 'REFUND'] },
-        account: { id: accountId, type: 'CREDIT_CARD', source: 'PLUGGY' },
-        AND: [
-          openSince(after ? { after } : undefined),
-          { OR: [{ installmentDueAt: null, occurredAt: inRange }, { installmentDueAt: inRange }] },
-        ],
-      },
-      include: { splits: { select: { personId: true, amountCents: true } } },
-    })
-    return rows.map((row) => toInvoiceRow(row, null))
-  }
-
   // Fatura prevista (03-regras-negocio § Fatura prevista): parcelas ainda sem billId cuja data de
   // vencimento (installmentDueAt, a `date` do Pluggy) cai no mês pedido — nunca a compra inteira, nunca
   // CARD_PAYMENT.
@@ -269,6 +243,8 @@ function toInvoiceRow(
   row: {
     kind: string
     amountCents: number
+    occurredAt: Date
+    installmentDueAt: Date | null
     personId: string | null
     splits: { personId: string; amountCents: number }[]
   },
@@ -277,6 +253,7 @@ function toInvoiceRow(
   return {
     kind: row.kind as 'EXPENSE' | 'REFUND' | 'CARD_PAYMENT',
     amountCents: row.amountCents,
+    at: row.installmentDueAt ?? row.occurredAt,
     personId: row.personId,
     splits: row.splits,
     installment,

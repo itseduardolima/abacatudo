@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import type { BudgetPace } from '@gastos/shared'
-import { dayOfMonth, halfMonthRange, monthKey } from '../../common/date/timezone'
+import { dayOfMonth, monthKey } from '../../common/date/timezone'
 import { FixedExpenseService } from '../fixed-expense/fixed-expense.service'
 import { InvoiceService } from '../invoice/invoice.service'
 import { BudgetMonthService } from './budget-month.service'
@@ -35,35 +35,34 @@ export class BudgetPaceService {
     })
     const isCurrentMonth = budget.month === monthKey(new Date())
     const currentHalf = dayOfMonth(new Date()) <= 15 ? 1 : 2
-    const [firstHalfSpentCents, currentHalfSpentCents] = isCurrentMonth
-      ? await Promise.all([
-          this.halfSpentCents(userId, budget.month, 1),
-          currentHalf === 1 ? undefined : this.halfSpentCents(userId, budget.month, 2),
-        ])
-      : [null, undefined]
-    const secondHalfSpent = currentHalf === 2 ? (currentHalfSpentCents ?? null) : null
-    const currentHalfCapCents = currentHalf === 1 ? budget.firstHalfIncomeCents : budget.secondHalfIncomeCents
-    const currentHalfSpent = currentHalf === 1 ? firstHalfSpentCents : (currentHalfSpentCents ?? null)
+    const [firstHalfSpentCents, secondHalfSpentCents] = isCurrentMonth
+      ? await this.halvesSpentCents(userId, budget.month)
+      : [null, null]
+    const firstHalfRemainingCents =
+      firstHalfSpentCents === null ? null : budget.firstHalfIncomeCents - firstHalfSpentCents
+    const secondHalfRemainingCents =
+      secondHalfSpentCents === null ? null : budget.secondHalfIncomeCents - secondHalfSpentCents
     return {
       ...pace,
       advancePaidCents: invoice.advancePaidCents,
       grossSpentCents: pace.spentCents + invoice.advancePaidCents,
       firstHalfCapCents: budget.firstHalfIncomeCents,
       firstHalfSpentCents,
-      firstHalfRemainingCents: firstHalfSpentCents === null ? null : budget.firstHalfIncomeCents - firstHalfSpentCents,
+      firstHalfRemainingCents,
       secondHalfCapCents: budget.secondHalfIncomeCents,
-      secondHalfSpentCents: secondHalfSpent,
-      secondHalfRemainingCents: secondHalfSpent === null ? null : budget.secondHalfIncomeCents - secondHalfSpent,
+      secondHalfSpentCents,
+      secondHalfRemainingCents,
       currentHalf: isCurrentMonth ? (currentHalf as 1 | 2) : null,
-      currentHalfRemainingCents: currentHalfSpent === null ? null : currentHalfCapCents - currentHalfSpent,
+      currentHalfRemainingCents: currentHalf === 1 ? firstHalfRemainingCents : secondHalfRemainingCents,
     }
   }
 
-  private async halfSpentCents(userId: string, month: string, half: 1 | 2): Promise<number> {
-    const [cardsCents, fixedCents] = await Promise.all([
-      this.invoices.getHalfMineCents(userId, halfMonthRange(month, half)),
-      this.fixedExpenses.sumActiveCentsByHalf(userId, half),
+  private async halvesSpentCents(userId: string, month: string): Promise<[number, number]> {
+    const [cards, fixedFirst, fixedSecond] = await Promise.all([
+      this.invoices.getMonthHalves(userId, month),
+      this.fixedExpenses.sumActiveCentsByHalf(userId, 1),
+      this.fixedExpenses.sumActiveCentsByHalf(userId, 2),
     ])
-    return cardsCents + fixedCents
+    return [cards.firstHalfMineCents + fixedFirst, cards.secondHalfMineCents + fixedSecond]
   }
 }

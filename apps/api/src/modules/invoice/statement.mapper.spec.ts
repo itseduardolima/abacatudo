@@ -17,6 +17,7 @@ function row(overrides: Partial<StatementRow> = {}): StatementRow {
   return {
     kind: 'EXPENSE',
     amountCents: 1000,
+    at: new Date('2026-09-10T12:00:00.000Z'),
     personId: 'ana',
     splits: [],
     installment: null,

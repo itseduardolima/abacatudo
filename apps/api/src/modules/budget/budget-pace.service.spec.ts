@@ -28,7 +28,10 @@ function invoicesMock(mineCents: number, advancePaidCents = 0) {
   }
   return {
     getSummaryWithAdvance: jest.fn().mockResolvedValue(summary),
-    getHalfMineCents: jest.fn().mockResolvedValue(mineCents / 2),
+    getMonthHalves: jest.fn().mockResolvedValue({
+      firstHalfMineCents: (mineCents + advancePaidCents) / 2,
+      secondHalfMineCents: (mineCents + advancePaidCents) / 2,
+    }),
   } as unknown as jest.Mocked<InvoiceService>
 }
 
@@ -131,10 +134,37 @@ describe('BudgetPaceService', () => {
     expect(result.secondHalfRemainingCents).toBe(150_000 - 35_000)
   })
 
-  it('na 1ª quinzena, a 2ª ainda não tem gasto nem sobra, só o teto', async () => {
+  it('as duas quinzenas somam o gasto bruto do mês (1ª + 2ª = fatura aberta + fixos, antes do pagamento antecipado)', async () => {
+    const service = new BudgetPaceService(
+      budgetMonthMock(300_000),
+      invoicesMock(50_000, 12_000),
+      fixedExpensesMock(20_000),
+    )
+
+    const result = await service.getPace('user-1')
+
+    expect(result.firstHalfSpentCents! + result.secondHalfSpentCents!).toBe(result.grossSpentCents)
+  })
+
+  it('na 1ª quinzena, a 2ª já traz o que cai nela (parcela e fixo do dia 16 em diante)', async () => {
     const service = new BudgetPaceService(budgetMonthMock(300_000), invoicesMock(50_000), fixedExpensesMock(20_000))
 
     const result = await service.getPace('user-1')
+
+    expect(result.currentHalf).toBe(1)
+    expect(result.secondHalfSpentCents).toBe(35_000)
+    expect(result.secondHalfRemainingCents).toBe(150_000 - 35_000)
+    expect(result.currentHalfRemainingCents).toBe(result.firstHalfRemainingCents)
+  })
+
+  it('fora do mês atual, as quinzenas não têm gasto nem sobra, só o teto', async () => {
+    const service = new BudgetPaceService(
+      budgetMonthMock(300_000, '2026-10'),
+      invoicesMock(50_000),
+      fixedExpensesMock(20_000),
+    )
+
+    const result = await service.getPace('user-1', '2026-10')
 
     expect(result.secondHalfCapCents).toBe(150_000)
     expect(result.secondHalfSpentCents).toBeNull()

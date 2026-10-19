@@ -1,6 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common'
 import type { AccountInvoice, EstimatedInstallmentsResponse, Invoice, StatementsResponse } from '@gastos/shared'
-import { monthKey, nextClosingCutoff, resolveLastClosingCutoff, resolveMonthRange } from '../../common/date/timezone'
+import {
+  halfMonthRange,
+  monthKey,
+  nextClosingCutoff,
+  resolveLastClosingCutoff,
+  resolveMonthRange,
+} from '../../common/date/timezone'
 import { DomainError, NotFoundError } from '../../common/errors/domain.error'
 import { AccountRepository, type AccountWithPluggyItem } from '../account/account.repository'
 import { PluggyClient } from '../banking/pluggy/pluggy.client'
@@ -10,6 +16,7 @@ import {
   advancePaidCents,
   previousBillRemainingCents,
   applyAdvancePayment,
+  computeHalves,
   computeInvoice,
   keepNextDueInstallmentOnly,
   mergeInvoices,
@@ -167,25 +174,29 @@ export class InvoiceService {
     }
   }
 
-  async getHalfMineCents(userId: string, range: { start: Date; end: Date }): Promise<number> {
+  async getMonthHalves(
+    userId: string,
+    month: string,
+  ): Promise<{ firstHalfMineCents: number; secondHalfMineCents: number }> {
     const selfId = await this.selfPersonId(userId)
     const cards = (await this.accounts.findMany(userId, false)).filter((a) => a.type === 'CREDIT_CARD')
+    const middle = halfMonthRange(month, 2).start
     const perCard = await Promise.all(
       cards.map(async (account) => {
-        if (account.source !== 'PLUGGY') {
-          return computeInvoice(await this.repo.findRows(userId, range, account.id), selfId).mineCents
-        }
-        const [rows, sources] = await Promise.all([
-          this.repo.findOpenRowsInRange(userId, account.id, range, (await this.openWindow(account))?.after),
-          this.repo.findInstallmentSources(userId, account.id),
-        ])
-        const estimated = estimateInstallments(sources)
-          .filter((item) => item.dueAt >= range.start && item.dueAt < range.end)
-          .map(toInvoiceRow)
-        return computeInvoice([...rows, ...estimated], selfId).mineCents
+        const rows =
+          account.source === 'PLUGGY'
+            ? (await this.pluggyOpenRows(account)).rows
+            : await this.repo.findRows(userId, resolveMonthRange(month), account.id)
+        return computeHalves(rows, middle, selfId)
       }),
     )
-    return perCard.reduce((sum, cents) => sum + cents, 0)
+    return perCard.reduce(
+      (sum, half) => ({
+        firstHalfMineCents: sum.firstHalfMineCents + half.firstHalfMineCents,
+        secondHalfMineCents: sum.secondHalfMineCents + half.secondHalfMineCents,
+      }),
+      { firstHalfMineCents: 0, secondHalfMineCents: 0 },
+    )
   }
 
   // PLUGGY: fatura aberta = lançamentos sem billId (e, com closingDay, só depois do último fechamento),
@@ -224,23 +235,27 @@ export class InvoiceService {
       }
     }
 
-    const window = await this.openWindow(account)
-    const [rows, estimated] = await Promise.all([
-      this.repo.findOpenRows(account.userId, account.id, window),
-      this.openEstimatedInstallments(account, window?.after),
-    ])
-    const estimatedRows = estimated.map(toInvoiceRow)
+    const { rows, estimatedRows, window } = await this.pluggyOpenRows(account)
     const settlement = await this.closedBillSettlement(account, window?.after)
     const advancePaid = settlement.advancePaidCents
     return {
-      ...applyAdvancePayment(
-        computeInvoice([...keepNextDueInstallmentOnly(rows), ...estimatedRows], selfPersonId),
-        advancePaid,
-      ),
+      ...applyAdvancePayment(computeInvoice(rows, selfPersonId), advancePaid),
       estimatedCents: computeInvoice(estimatedRows, selfPersonId).totalCents,
       advancePaidCents: advancePaid,
       previousBillRemainingCents: settlement.previousBillRemainingCents,
     }
+  }
+
+  private async pluggyOpenRows(
+    account: AccountWithPluggyItem,
+  ): Promise<{ rows: InvoiceRow[]; estimatedRows: InvoiceRow[]; window: OpenWindow | undefined }> {
+    const window = await this.openWindow(account)
+    const [openRows, estimated] = await Promise.all([
+      this.repo.findOpenRows(account.userId, account.id, window),
+      this.openEstimatedInstallments(account, window?.after),
+    ])
+    const estimatedRows = estimated.map(toInvoiceRow)
+    return { rows: [...keepNextDueInstallmentOnly(openRows), ...estimatedRows], estimatedRows, window }
   }
 
   private async closedBillSettlement(
@@ -351,6 +366,7 @@ function toInvoiceRow(item: InstallmentSource): InvoiceRow {
   return {
     kind: item.kind,
     amountCents: item.amountCents,
+    at: item.dueAt,
     personId: item.personId,
     splits: item.splits,
     installment: null,

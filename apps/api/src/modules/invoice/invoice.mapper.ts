@@ -1,6 +1,7 @@
 export interface InvoiceRow {
   kind: 'EXPENSE' | 'REFUND' | 'CARD_PAYMENT'
   amountCents: number
+  at: Date
   personId: string | null
   splits: { personId: string; amountCents: number }[]
   // Só presente pra parcela ainda sem billId. `groupKey` identifica a compra (todas as parcelas dela
@@ -66,6 +67,23 @@ export function keepNextDueInstallmentOnly<T extends InvoiceRow>(rows: T[]): T[]
   return rows.filter(
     (row) => !row.installment || row.installment.number === lowestNumberByGroup.get(row.installment.groupKey),
   )
+}
+
+export function computeHalves(
+  rows: InvoiceRow[],
+  middle: Date,
+  selfPersonId: string,
+): { firstHalfMineCents: number; secondHalfMineCents: number } {
+  return {
+    firstHalfMineCents: computeInvoice(
+      rows.filter((row) => row.at < middle),
+      selfPersonId,
+    ).mineCents,
+    secondHalfMineCents: computeInvoice(
+      rows.filter((row) => row.at >= middle),
+      selfPersonId,
+    ).mineCents,
+  }
 }
 
 // Soma a fatura de vários cartões numa só (getSummary): cada `Invoice` já respeita sua própria invariante,
