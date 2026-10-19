@@ -80,16 +80,6 @@ export default function HomePage() {
         />
       )}
 
-      {!isLoadingHome && !hasNoCard && !forecast.isForecast && fixedExpenses.length > 0 && (
-        <FixedExpensesSection
-          expenses={fixedExpenses}
-          currentHalf={pace?.currentHalf ?? null}
-          pendingKey={paidPendingKey}
-          error={paidError}
-          onToggle={(id, half, paid) => void onTogglePaid(id, half, paid)}
-        />
-      )}
-
       {!isLoadingAccounts && cardAccounts.length > 0 && (
         <section>
           <div className="flex items-center justify-between gap-2">
@@ -115,6 +105,16 @@ export default function HomePage() {
             ))}
           </div>
         </section>
+      )}
+
+      {!isLoadingHome && !hasNoCard && !forecast.isForecast && fixedExpenses.length > 0 && (
+        <FixedExpensesSection
+          expenses={fixedExpenses}
+          currentHalf={pace?.currentHalf ?? null}
+          pendingKey={paidPendingKey}
+          error={paidError}
+          onToggle={(id, half, paid) => void onTogglePaid(id, half, paid)}
+        />
       )}
     </main>
   )
