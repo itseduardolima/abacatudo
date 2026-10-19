@@ -1340,3 +1340,23 @@ typecheck/lint/build limpos).
 
 - [x] Pessoas: editar o nome (`PATCH /people/:id`, edição inline na tela) e o campo "Nova pessoa" no topo da lista
       (2026-10-12).
+
+## Início em 3 cards (2026-10-19)
+
+Separar o hero da Início em cards de um assunto só: gasto do mês, falta pagar e quinzenas. Etapas validadas
+(typecheck, lint e testes) antes da próxima. Branch `feat/home-cards`.
+
+- [x] Etapa 1: separar os 3 cards no carrossel, sem fixo pago ainda.
+  - [x] `BudgetPace` ganha `advancePaidCents`, `grossSpentCents` (gasto antes do pagamento antecipado) e os campos da
+        2ª quinzena e a sobra de cada metade (o front não faz conta); `spentCents` segue abatido, como no spec 03.
+  - [x] Card 1 "Gasto do mês" (`pace-hero-card.tsx`): bruto, barra contra a renda, sem quinzena.
+  - [x] Card 2 "Falta pagar" (`to-pay-hero-card.tsx`): gasto abatido do pagamento antecipado e "Sobram".
+  - [x] Card 3 "Quinzenas" (`fortnight-hero-card.tsx`): 1ª e 2ª lado a lado, quinzena atual destacada.
+  - [x] Teste Jest do `BudgetPaceService` e Cypress de componente dos três cards.
+- [ ] Etapa 2: um único cálculo para total e quinzenas (1ª + 2ª = total; some a diferença de R$ 1,72 vista no
+      Nubank). Decidir antes: compras do fim do mês anterior que estão na fatura aberta. Atualizar spec 03.
+- [ ] Etapa 3: marcar gasto fixo como pago no mês.
+  - [ ] Spec 03: "marcar pago" vale só para fixo no mês, nunca para terceiros.
+  - [ ] Tabela `FixedExpensePayment` (userId, fixedExpenseId, month, paidAt) com RLS `FORCE` e migration.
+  - [ ] API (marcar e desmarcar), `paidCents` e `toPayCents` no `BudgetPace`, teste com dois Users.
+  - [ ] Checkbox dos fixos dentro do card "Falta pagar".
