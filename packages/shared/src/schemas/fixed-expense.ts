@@ -5,13 +5,22 @@ import { centsSchema, idSchema } from './common'
 // (03-regras-negocio § Orçamento mensal).
 export const payHalfSchema = z.union([z.literal(1), z.literal(2), z.literal(3)])
 
+export const fixedExpenseShareSchema = z
+  .object({
+    half: z.union([z.literal(1), z.literal(2)]),
+    amountCents: centsSchema,
+    paid: z.boolean(),
+  })
+  .strict()
+export type FixedExpenseShare = z.infer<typeof fixedExpenseShareSchema>
+
 export const fixedExpenseSchema = z
   .object({
     id: idSchema,
     name: z.string(),
     amountCents: centsSchema,
     half: payHalfSchema,
-    paid: z.boolean(),
+    shares: z.array(fixedExpenseShareSchema),
     archivedAt: z.string().datetime().nullable(),
     createdAt: z.string().datetime(),
   })

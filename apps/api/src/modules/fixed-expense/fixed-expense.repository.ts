@@ -33,23 +33,23 @@ export class FixedExpenseRepository {
     return this.prisma.fixedExpense.updateMany({ where: { userId, id }, data: { archivedAt: new Date() } })
   }
 
-  async findPaidIds(userId: string, month: string): Promise<Set<string>> {
+  async findPaidHalves(userId: string, month: string): Promise<Set<string>> {
     const rows = await this.prisma.fixedExpensePayment.findMany({
       where: { userId, month },
-      select: { fixedExpenseId: true },
+      select: { fixedExpenseId: true, half: true },
     })
-    return new Set(rows.map((row) => row.fixedExpenseId))
+    return new Set(rows.map((row) => `${row.fixedExpenseId}:${row.half}`))
   }
 
-  markPaid(userId: string, fixedExpenseId: string, month: string): Promise<unknown> {
+  markPaid(userId: string, fixedExpenseId: string, month: string, half: number): Promise<unknown> {
     return this.prisma.fixedExpensePayment.upsert({
-      where: { fixedExpenseId_month: { fixedExpenseId, month } },
-      create: { userId, fixedExpenseId, month },
+      where: { fixedExpenseId_month_half: { fixedExpenseId, month, half } },
+      create: { userId, fixedExpenseId, month, half },
       update: {},
     })
   }
 
-  unmarkPaid(userId: string, fixedExpenseId: string, month: string): Promise<Prisma.BatchPayload> {
-    return this.prisma.fixedExpensePayment.deleteMany({ where: { userId, fixedExpenseId, month } })
+  unmarkPaid(userId: string, fixedExpenseId: string, month: string, half: number): Promise<Prisma.BatchPayload> {
+    return this.prisma.fixedExpensePayment.deleteMany({ where: { userId, fixedExpenseId, month, half } })
   }
 }

@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  ParseIntPipe,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common'
 import type { FixedExpense } from '@gastos/shared'
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import { CreateFixedExpenseDto } from './dto/create-fixed-expense.dto'
@@ -34,15 +47,23 @@ export class FixedExpenseController {
     return this.fixedExpenses.archive(userId, id)
   }
 
-  @Put(':id/paid')
+  @Put(':id/paid/:half')
   @HttpCode(204)
-  markPaid(@CurrentUser() userId: string, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    return this.fixedExpenses.markPaid(userId, id)
+  markPaid(
+    @CurrentUser() userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('half', ParseIntPipe) half: number,
+  ): Promise<void> {
+    return this.fixedExpenses.markPaid(userId, id, half)
   }
 
-  @Delete(':id/paid')
+  @Delete(':id/paid/:half')
   @HttpCode(204)
-  unmarkPaid(@CurrentUser() userId: string, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    return this.fixedExpenses.unmarkPaid(userId, id)
+  unmarkPaid(
+    @CurrentUser() userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('half', ParseIntPipe) half: number,
+  ): Promise<void> {
+    return this.fixedExpenses.unmarkPaid(userId, id, half)
   }
 }
