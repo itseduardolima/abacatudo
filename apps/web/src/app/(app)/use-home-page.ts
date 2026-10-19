@@ -59,10 +59,10 @@ export function useHomePage() {
     }
   }
 
-  const onTogglePaid = async (id: string, paid: boolean) => {
+  const onTogglePaid = async (id: string, half: 1 | 2, paid: boolean) => {
     setPaidError(null)
     try {
-      await setFixedExpensePaid.mutateAsync({ id, paid })
+      await setFixedExpensePaid.mutateAsync({ id, half, paid })
     } catch (error) {
       if (error instanceof ApiClientError) setPaidError(error.error.message)
       else throw error
@@ -88,7 +88,10 @@ export function useHomePage() {
     benefitSyncedAt: benefitAccount?.lastSyncAt ?? null,
     fixedExpenses: fixedExpenses.data ?? [],
     onTogglePaid,
-    paidPendingId: setFixedExpensePaid.isPending ? (setFixedExpensePaid.variables?.id ?? null) : null,
+    paidPendingKey:
+      setFixedExpensePaid.isPending && setFixedExpensePaid.variables
+        ? `${setFixedExpensePaid.variables.id}:${setFixedExpensePaid.variables.half}`
+        : null,
     paidError,
   }
 }
