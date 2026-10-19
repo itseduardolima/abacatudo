@@ -3,6 +3,8 @@ import { PersonModule } from '../person/person.module'
 import { AuthController } from './auth.controller'
 import { AuthRepository } from './auth.repository'
 import { AuthService } from './auth.service'
+import { InviteController } from './invite.controller'
+import { InviteService } from './invite.service'
 import { LoginAttemptTracker } from './login-attempt.tracker'
 import { PasswordResetService } from './password-reset.service'
 import { TwoFactorService } from './two-factor.service'
@@ -14,8 +16,8 @@ import { TwoFactorService } from './two-factor.service'
 // em AuthRepository.updateProfile. MailModule não precisa import explícito (é @Global()).
 @Module({
   imports: [PersonModule],
-  controllers: [AuthController],
-  providers: [AuthService, AuthRepository, LoginAttemptTracker, PasswordResetService, TwoFactorService],
+  controllers: [AuthController, InviteController],
+  providers: [AuthService, AuthRepository, LoginAttemptTracker, PasswordResetService, TwoFactorService, InviteService],
   exports: [AuthService, AuthRepository],
 })
 export class AuthModule {}

@@ -5,26 +5,10 @@
 // Roda fora de uma request: por isso seta o usuário explicitamente no AsyncLocalStorage antes de tocar em
 // Person/Category (RLS por userId — 08-seguranca § 1), depois de já ter o id do User criado.
 import argon2 from 'argon2'
+import { DEFAULT_CATEGORIES } from '../src/common/default-categories'
 import { assertStrongPassword } from '../src/common/security/password-policy'
 import { runAsUser } from '../src/common/user-context'
 import { createPrismaClient } from '../src/prisma/prisma.client'
-
-// Mesma lista do seed do pdv-web (03-regras-negocio § Categorias e regras) — o usuário renomeia/arquiva as dele.
-const DEFAULT_CATEGORIES = [
-  'Mercado',
-  'Alimentação fora',
-  'Combustível',
-  'Transporte',
-  'Moradia',
-  'Contas fixas',
-  'Saúde',
-  'Lazer',
-  'Assinaturas',
-  'Educação',
-  'Compras',
-  'Viagem',
-  'Outros',
-]
 
 async function main(): Promise<void> {
   const email = process.env.SEED_USER_EMAIL
@@ -42,8 +26,8 @@ async function main(): Promise<void> {
 
   const user = await prisma.user.upsert({
     where: { email },
-    update: { passwordHash },
-    create: { email, passwordHash },
+    update: { passwordHash, role: 'ADMIN' },
+    create: { email, passwordHash, role: 'ADMIN' },
     select: { id: true, email: true },
   })
 

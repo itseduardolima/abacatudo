@@ -1366,3 +1366,18 @@ Separar o hero da Início em cards de um assunto só: gasto do mês, falta pagar
   - [x] Seção "Gastos fixos" na Início, com checkbox, e "Falta pagar" descontando os fixos pagos.
   - [x] Marca por quinzena: `half` em `FixedExpensePayment`, `PUT`/`DELETE /fixed-expenses/:id/paid/:half`, `shares`
         (parte, valor e pago) no lugar de `paid`; o dividido tem duas partes. Seção agrupada em 1ª e 2ª quinzena.
+
+## Multiusuário por convite (2026-10-19)
+
+O sistema volta a aceitar outras pessoas, só por convite do admin (o dono). Cada convidado conecta as próprias
+contas pelo Meu Pluggy (spec 07). Convite é só link copiável, sem e-mail. Branch `feat/invites`.
+
+- [ ] Etapa 1: convite por link e papel de admin.
+  - [ ] Spec 03/00/08: volta o papel de admin (`User.role`), só ele convida; o link é copiado na tela, nunca enviado.
+  - [ ] `User.role` (ADMIN/MEMBER) e tabela `Invite` (hash do token, validade 72h, uso único, sem RLS) com migration;
+        o usuário mais antigo vira ADMIN.
+  - [ ] API: `POST /auth/invites` (só ADMIN), `GET /auth/invites/:token`, `POST /auth/invites/accept` (cria User, Person
+        isSelf e categorias padrão numa transação), testes com os dois papéis.
+  - [ ] Web: tela pública `/invite?token=`, "Convidar" em Configurações (só ADMIN) com botão de copiar o link.
+- [ ] Etapa 2: reautenticação em ação sensível (1.7) e excluir conta revogando os Items no Pluggy (1.8).
+- [ ] Etapa 3: teto mensal de IA por usuário e SMTP real (hoje `MAIL_TRANSPORT=log`).

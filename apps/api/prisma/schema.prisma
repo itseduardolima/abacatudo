@@ -20,6 +20,7 @@ model User {
   id               String    @id @default(uuid())
   email            String    @unique
   passwordHash     String
+  role             UserRole  @default(MEMBER)
   // 2FA TOTP (1.6, 08-seguranca § 4): segredo cifrado (AES-256-GCM, DATA_ENCRYPTION_KEY), nunca em texto
   // puro no banco. totpEnabledAt null = ligando ainda não confirmado ou nunca ligado; a distinção entre os
   // dois é só "totpSecret preenchido e totpEnabledAt null" (setup pendente) — nunca uma tabela à parte.
@@ -44,6 +45,7 @@ model User {
   fixedExpenses          FixedExpense[]
   fixedExpensePayments   FixedExpensePayment[]
   passwordResetTokens    PasswordResetToken[]
+  invites                Invite[]
   aiUsages               AiUsage[]
   twoFactorRecoveryCodes TwoFactorRecoveryCode[]
   twoFactorChallenges    TwoFactorChallenge[]
@@ -63,6 +65,24 @@ model Session {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+model Invite {
+  id          String    @id @default(uuid())
+  invitedById String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  invitedBy User @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([invitedById])
 }
 
 /// Sem RLS: resolvida pelo hash do token do link, antes de existir userId no contexto (mesma exceção de

@@ -17,6 +17,7 @@ export const currentUserSchema = z
     id: z.string().uuid(),
     email: z.string().email(),
     name: z.string(),
+    role: z.enum(['ADMIN', 'MEMBER']),
   })
   .strict()
 export type CurrentUser = z.infer<typeof currentUserSchema>
@@ -94,3 +95,19 @@ export const resetPasswordInputSchema = z
   })
   .strict()
 export type ResetPasswordInput = z.infer<typeof resetPasswordInputSchema>
+
+export const inviteCreatedSchema = z.object({ link: z.string(), expiresAt: z.string() }).strict()
+export type InviteCreated = z.infer<typeof inviteCreatedSchema>
+
+export const inviteInfoSchema = z.object({ expiresAt: z.string() }).strict()
+export type InviteInfo = z.infer<typeof inviteInfoSchema>
+
+export const acceptInviteInputSchema = z
+  .object({
+    token: z.string().min(1, 'Link inválido.'),
+    name: z.string().trim().min(1, 'Informe o nome.').max(100, 'Nome muito longo.'),
+    email: z.string().trim().toLowerCase().email('Informe um e-mail válido.'),
+    password: z.string().min(1, 'Informe a senha.'),
+  })
+  .strict()
+export type AcceptInviteInput = z.infer<typeof acceptInviteInputSchema>

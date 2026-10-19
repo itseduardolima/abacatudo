@@ -77,6 +77,7 @@ describe('AuthService.login', () => {
     repo.findUserForLogin.mockResolvedValue({
       id: 'user-1',
       email: 'a@b.com',
+      role: 'ADMIN' as const,
       passwordHash,
       totpSecret: null,
       totpEnabledAt: null,
@@ -98,7 +99,7 @@ describe('AuthService.login', () => {
     const result = await svc.login({ email: 'a@b.com', password: 'correct horse battery staple' }, META)
     if (result.status !== 'OK') throw new Error('esperava login OK, sem 2FA')
 
-    expect(result.user).toEqual({ id: 'user-1', email: 'a@b.com', name: 'Eduardo' })
+    expect(result.user).toEqual({ id: 'user-1', email: 'a@b.com', name: 'Eduardo', role: 'ADMIN' })
     expect(result.token).toHaveLength(43) // 32 bytes em base64url
     expect(repo.createSession).toHaveBeenCalledWith({
       userId: 'user-1',
@@ -113,6 +114,7 @@ describe('AuthService.login', () => {
     repo.findUserForLogin.mockResolvedValue({
       id: 'user-1',
       email: 'a@b.com',
+      role: 'ADMIN' as const,
       passwordHash,
       totpSecret: null,
       totpEnabledAt: null,
@@ -134,6 +136,7 @@ describe('AuthService.login', () => {
     repo.findUserForLogin.mockResolvedValue({
       id: 'user-1',
       email: 'a@b.com',
+      role: 'ADMIN' as const,
       passwordHash,
       totpSecret: null,
       totpEnabledAt: null,
@@ -195,6 +198,7 @@ describe('AuthService.login', () => {
     repo.findUserForLogin.mockResolvedValue({
       id: 'user-1',
       email: 'a@b.com',
+      role: 'ADMIN' as const,
       passwordHash,
       totpSecret: null,
       totpEnabledAt: null,
@@ -207,6 +211,7 @@ describe('AuthService.login', () => {
       repo.findUserForLogin.mockResolvedValueOnce({
         id: 'user-1',
         email: 'a@b.com',
+        role: 'ADMIN' as const,
         passwordHash,
         totpSecret: null,
         totpEnabledAt: null,
@@ -234,6 +239,7 @@ describe('AuthService.login', () => {
     repo.findUserForLogin.mockResolvedValueOnce({
       id: 'user-1',
       email: 'atacante@b.com',
+      role: 'ADMIN' as const,
       passwordHash,
       totpSecret: null,
       totpEnabledAt: null,
@@ -295,7 +301,7 @@ describe('AuthService.logout/me/sessions', () => {
 
   it('me devolve o usuário com nome (Person isSelf) e sem passwordHash', async () => {
     const repo = repoMock()
-    repo.findUserById.mockResolvedValue({ id: 'user-1', email: 'a@b.com' })
+    repo.findUserById.mockResolvedValue({ id: 'user-1', email: 'a@b.com', role: 'ADMIN' })
     const people = peopleMock()
     people.findSelf.mockResolvedValue({
       id: 'p1',
@@ -307,7 +313,7 @@ describe('AuthService.logout/me/sessions', () => {
       updatedAt: new Date(),
     })
     const { svc } = await service(repo, undefined, undefined, people)
-    await expect(svc.me('user-1')).resolves.toEqual({ id: 'user-1', email: 'a@b.com', name: 'Eduardo' })
+    await expect(svc.me('user-1')).resolves.toEqual({ id: 'user-1', email: 'a@b.com', name: 'Eduardo', role: 'ADMIN' })
   })
 
   it('me lança se o usuário sumiu (ex.: excluído entre requests)', async () => {
@@ -345,12 +351,12 @@ describe('AuthService.updateProfile', () => {
   it('atualiza e-mail (User) e nome (Person isSelf) numa chamada só', async () => {
     const repo = repoMock()
     repo.findUserByEmail.mockResolvedValue(null)
-    repo.updateProfile.mockResolvedValue({ id: 'user-1', email: 'novo@b.com' })
+    repo.updateProfile.mockResolvedValue({ id: 'user-1', email: 'novo@b.com', role: 'ADMIN' as const })
     const { svc } = await service(repo)
 
     const result = await svc.updateProfile('user-1', { name: 'Novo Nome', email: 'novo@b.com' })
 
-    expect(result).toEqual({ id: 'user-1', email: 'novo@b.com', name: 'Novo Nome' })
+    expect(result).toEqual({ id: 'user-1', email: 'novo@b.com', name: 'Novo Nome', role: 'ADMIN' })
     expect(repo.updateProfile).toHaveBeenCalledWith('user-1', { email: 'novo@b.com', name: 'Novo Nome' })
   })
 
@@ -366,7 +372,7 @@ describe('AuthService.updateProfile', () => {
   it('e-mail já é o mesmo do próprio usuário: não é conflito', async () => {
     const repo = repoMock()
     repo.findUserByEmail.mockResolvedValue({ id: 'user-1' })
-    repo.updateProfile.mockResolvedValue({ id: 'user-1', email: 'a@b.com' })
+    repo.updateProfile.mockResolvedValue({ id: 'user-1', email: 'a@b.com', role: 'ADMIN' as const })
     const { svc } = await service(repo)
 
     await expect(svc.updateProfile('user-1', { name: 'X', email: 'a@b.com' })).resolves.toMatchObject({
@@ -395,6 +401,7 @@ describe('AuthService.changePassword', () => {
     repo.findUserWithPasswordById.mockResolvedValue({
       id: 'user-1',
       email: 'a@b.com',
+      role: 'ADMIN' as const,
       passwordHash: currentHash,
       totpSecret: null,
       totpEnabledAt: null,
@@ -417,6 +424,7 @@ describe('AuthService.changePassword', () => {
     repo.findUserWithPasswordById.mockResolvedValue({
       id: 'user-1',
       email: 'a@b.com',
+      role: 'ADMIN' as const,
       passwordHash: currentHash,
       totpSecret: null,
       totpEnabledAt: null,
@@ -437,6 +445,7 @@ describe('AuthService.changePassword', () => {
     repo.findUserWithPasswordById.mockResolvedValue({
       id: 'user-1',
       email: 'a@b.com',
+      role: 'ADMIN' as const,
       passwordHash: currentHash,
       totpSecret: null,
       totpEnabledAt: null,
@@ -457,6 +466,7 @@ describe('AuthService.forgotPassword/resetPassword', () => {
     repo.findUserForLogin.mockResolvedValue({
       id: 'user-1',
       email: 'a@b.com',
+      role: 'ADMIN' as const,
       passwordHash: 'x',
       totpSecret: null,
       totpEnabledAt: null,

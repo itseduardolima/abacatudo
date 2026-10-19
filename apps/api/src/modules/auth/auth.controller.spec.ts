@@ -38,7 +38,7 @@ describe('AuthController', () => {
     auth.login.mockResolvedValue({
       status: 'OK',
       token: 'tok-123',
-      user: { id: 'user-1', email: 'a@b.com', name: 'Eduardo' },
+      user: { id: 'user-1', email: 'a@b.com', name: 'Eduardo', role: 'ADMIN' as const },
     })
     const response = responseMock()
     const request = { ip: '203.0.113.5', get: () => 'jest-agent' } as unknown as Request
@@ -46,7 +46,10 @@ describe('AuthController', () => {
 
     const result = await controller.login({ email: 'a@b.com', password: 'x' }, request, response)
 
-    expect(result).toEqual({ status: 'OK', user: { id: 'user-1', email: 'a@b.com', name: 'Eduardo' } })
+    expect(result).toEqual({
+      status: 'OK',
+      user: { id: 'user-1', email: 'a@b.com', name: 'Eduardo', role: 'ADMIN' as const },
+    })
     expect(JSON.stringify(result)).not.toContain('tok-123')
     expect(response.cookie).toHaveBeenCalledWith(
       '__Host-gastos_session',
@@ -73,7 +76,7 @@ describe('AuthController', () => {
     auth.loginWithTwoFactor.mockResolvedValue({
       status: 'OK',
       token: 'tok-456',
-      user: { id: 'user-1', email: 'a@b.com', name: 'Eduardo' },
+      user: { id: 'user-1', email: 'a@b.com', name: 'Eduardo', role: 'ADMIN' as const },
     })
     const response = responseMock()
     const request = { ip: '203.0.113.5', get: () => 'jest-agent' } as unknown as Request
@@ -85,7 +88,10 @@ describe('AuthController', () => {
       ip: '203.0.113.5',
       userAgent: 'jest-agent',
     })
-    expect(result).toEqual({ status: 'OK', user: { id: 'user-1', email: 'a@b.com', name: 'Eduardo' } })
+    expect(result).toEqual({
+      status: 'OK',
+      user: { id: 'user-1', email: 'a@b.com', name: 'Eduardo', role: 'ADMIN' as const },
+    })
     expect(response.cookie).toHaveBeenCalledWith(
       '__Host-gastos_session',
       'tok-456',
@@ -122,9 +128,14 @@ describe('AuthController', () => {
 
   it('me repassa o userId do decorator para o Service', async () => {
     const auth = authMock()
-    auth.me.mockResolvedValue({ id: 'user-1', email: 'a@b.com', name: 'Eduardo' })
+    auth.me.mockResolvedValue({ id: 'user-1', email: 'a@b.com', name: 'Eduardo', role: 'ADMIN' as const })
     const controller = new AuthController(auth, configMock())
-    await expect(controller.me('user-1')).resolves.toEqual({ id: 'user-1', email: 'a@b.com', name: 'Eduardo' })
+    await expect(controller.me('user-1')).resolves.toEqual({
+      id: 'user-1',
+      email: 'a@b.com',
+      name: 'Eduardo',
+      role: 'ADMIN' as const,
+    })
     expect(auth.me).toHaveBeenCalledWith('user-1')
   })
 

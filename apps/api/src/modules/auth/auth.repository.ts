@@ -1,10 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common'
 import type { Prisma } from '@prisma/client'
+import { DEFAULT_CATEGORIES } from '../../common/default-categories'
 import { PRISMA, type PrismaService, setUserInTransaction } from '../../prisma/prisma.client'
 
+export type UserRole = 'ADMIN' | 'MEMBER'
 export type UserForLogin = {
   id: string
   email: string
+  role: UserRole
   passwordHash: string
   totpSecret: string | null
   totpEnabledAt: Date | null
@@ -18,12 +21,14 @@ export type ResetTokenRow = {
   usedAt: Date | null
   userEmail: string
 }
+export type InviteRow = { id: string; expiresAt: Date; usedAt: Date | null }
 export type ChallengeRow = { id: string; userId: string; expiresAt: Date; usedAt: Date | null }
 export type RecoveryCodeRow = { id: string; codeHash: string; usedAt: Date | null }
 
 const TOTP_SELECT = {
   id: true,
   email: true,
+  role: true,
   passwordHash: true,
   totpSecret: true,
   totpEnabledAt: true,
@@ -43,8 +48,8 @@ export class AuthRepository {
     })
   }
 
-  findUserById(id: string): Promise<{ id: string; email: string } | null> {
-    return this.prisma.user.findUnique({ where: { id }, select: { id: true, email: true } })
+  findUserById(id: string): Promise<{ id: string; email: string; role: UserRole } | null> {
+    return this.prisma.user.findUnique({ where: { id }, select: { id: true, email: true, role: true } })
   }
 
   findUserWithPasswordById(id: string): Promise<UserForLogin | null> {
@@ -59,13 +64,16 @@ export class AuthRepository {
   // transação cobre a escrita em Person. Exceção deliberada de "AuthRepository só toca User": perfil é
   // inerentemente as duas coisas juntas (e-mail é User, nome é a Person isSelf — não existe User.name,
   // mesmo dado nunca duplicado em duas tabelas).
-  updateProfile(userId: string, data: { email: string; name: string }): Promise<{ id: string; email: string }> {
+  updateProfile(
+    userId: string,
+    data: { email: string; name: string },
+  ): Promise<{ id: string; email: string; role: UserRole }> {
     return this.prisma.$transaction(async (tx) => {
       await setUserInTransaction(tx, userId)
       const user = await tx.user.update({
         where: { id: userId },
         data: { email: data.email },
-        select: { id: true, email: true },
+        select: { id: true, email: true, role: true },
       })
       await tx.person.updateMany({ where: { userId, isSelf: true }, data: { name: data.name } })
       return user
@@ -109,6 +117,41 @@ export class AuthRepository {
       await tx.passwordResetToken.update({ where: { id: tokenId }, data: { usedAt: new Date() } })
       await tx.user.update({ where: { id: userId }, data: { passwordHash } })
       await tx.session.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } })
+    })
+  }
+
+  async createInvite(data: { invitedById: string; tokenHash: string; expiresAt: Date }): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.invite.updateMany({
+        where: { invitedById: data.invitedById, usedAt: null },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.invite.create({ data }),
+    ])
+  }
+
+  findInvite(tokenHash: string): Promise<InviteRow | null> {
+    return this.prisma.invite.findUnique({
+      where: { tokenHash },
+      select: { id: true, expiresAt: true, usedAt: true },
+    })
+  }
+
+  acceptInvite(data: { inviteId: string; email: string; name: string; passwordHash: string }): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const burned = await tx.invite.updateMany({
+        where: { id: data.inviteId, usedAt: null },
+        data: { usedAt: new Date() },
+      })
+      if (burned.count === 0) return false
+      const user = await tx.user.create({
+        data: { email: data.email, passwordHash: data.passwordHash },
+        select: { id: true },
+      })
+      await setUserInTransaction(tx, user.id)
+      await tx.person.create({ data: { userId: user.id, name: data.name, isSelf: true } })
+      await tx.category.createMany({ data: DEFAULT_CATEGORIES.map((name) => ({ userId: user.id, name })) })
+      return true
     })
   }
 

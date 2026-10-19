@@ -42,13 +42,14 @@ nunca se misturam com a gestão.
 
 ## Usuários e acesso
 
-- **User** é quem faz login. Só existe um papel (o dono dos próprios dados) —
-  não há admin, não há visão de outro User.
-- **Cadastro só por convite.** O primeiro User nasce pelo seed
-  (`SEED_USER_*`). Um User logado pode gerar **um convite por vez** (token de
-  32 bytes aleatórios, o banco guarda só o SHA-256, uso único, validade 72h,
-  emitir novo invalida o anterior) e envia por e-mail. Quem aceita define a
-  própria senha. Não existe rota de cadastro aberto.
+- **User** é quem faz login. Dois papéis: `ADMIN` (o dono, criado pelo seed) e `MEMBER` (convidado). O papel só
+  decide quem convida; nenhum dos dois vê dado de outro User.
+- **Cadastro só por convite, e só o ADMIN convida.** O primeiro User nasce pelo seed
+  (`SEED_USER_*`). O ADMIN gera **um convite por vez** (token de 32 bytes aleatórios, o banco guarda só o
+  SHA-256, uso único, validade 72h, emitir novo invalida o anterior) e **copia o link na tela** para mandar como
+  quiser; o sistema não envia e-mail. Quem abre o link informa nome, e-mail e a própria senha, e o sistema cria o
+  User, a Person "eu" e as categorias padrão. Não existe rota de cadastro aberto. Cada convidado conecta as
+  próprias contas pelo Meu Pluggy (spec 07).
 - **Dados de um User nunca são visíveis a outro**, nem para quem convidou.
   Convidar não cria vínculo de dados.
 - **Ações sensíveis exigem senha de novo** (reautenticação, válida 5 min):

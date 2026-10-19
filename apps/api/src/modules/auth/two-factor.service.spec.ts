@@ -74,6 +74,7 @@ describe('TwoFactorService', () => {
       repo.findUserWithPasswordById.mockResolvedValue({
         id: USER_ID,
         email: EMAIL,
+        role: 'ADMIN' as const,
         passwordHash: 'x',
         totpSecret: null,
         totpEnabledAt: null,
@@ -91,6 +92,7 @@ describe('TwoFactorService', () => {
       repo.findUserWithPasswordById.mockResolvedValue({
         id: USER_ID,
         email: EMAIL,
+        role: 'ADMIN' as const,
         passwordHash: 'x',
         totpSecret: encrypt('SEGREDO', KEY),
         totpEnabledAt: null,
@@ -108,6 +110,7 @@ describe('TwoFactorService', () => {
       repo.findUserWithPasswordById.mockResolvedValue({
         id: USER_ID,
         email: EMAIL,
+        role: 'ADMIN' as const,
         passwordHash: 'x',
         totpSecret: encrypt('SEGREDO', KEY),
         totpEnabledAt: null,
@@ -134,6 +137,7 @@ describe('TwoFactorService', () => {
       repo.findUserWithPasswordById.mockResolvedValue({
         id: USER_ID,
         email: EMAIL,
+        role: 'ADMIN' as const,
         passwordHash,
         totpSecret: null,
         totpEnabledAt: new Date(),
@@ -153,6 +157,7 @@ describe('TwoFactorService', () => {
       repo.findUserWithPasswordById.mockResolvedValue({
         id: USER_ID,
         email: EMAIL,
+        role: 'ADMIN' as const,
         passwordHash,
         totpSecret: null,
         totpEnabledAt: new Date(),
@@ -171,6 +176,7 @@ describe('TwoFactorService', () => {
       return {
         id: USER_ID,
         email: EMAIL,
+        role: 'ADMIN' as const,
         passwordHash: 'x',
         totpSecret: encrypt('SEGREDO', KEY),
         totpEnabledAt: new Date(),

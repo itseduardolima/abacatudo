@@ -1,0 +1,15 @@
+export const DEFAULT_CATEGORIES = [
+  'Mercado',
+  'Alimentação fora',
+  'Combustível',
+  'Transporte',
+  'Moradia',
+  'Contas fixas',
+  'Saúde',
+  'Lazer',
+  'Assinaturas',
+  'Educação',
+  'Compras',
+  'Viagem',
+  'Outros',
+]

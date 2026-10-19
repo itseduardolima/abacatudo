@@ -92,27 +92,27 @@ export class AuthService implements OnModuleInit {
       return { status: 'MFA_REQUIRED', mfaToken }
     }
 
-    return { status: 'OK', ...(await this.createSessionResult(user.id, user.email, meta)) }
+    return { status: 'OK', ...(await this.createSessionResult(user, meta)) }
   }
 
   async loginWithTwoFactor(mfaToken: string, code: string, meta: LoginMeta): Promise<LoginResult> {
     const userId = await this.twoFactor.verifyChallenge(mfaToken, code)
     const user = await this.repo.findUserById(userId)
     if (!user) throw new UnauthorizedError('INVALID_SESSION', 'Sessão inválida. Faça login novamente.')
-    return { status: 'OK', ...(await this.createSessionResult(user.id, user.email, meta)) }
+    return { status: 'OK', ...(await this.createSessionResult(user, meta)) }
   }
 
   private async createSessionResult(
-    userId: string,
-    email: string,
+    user: { id: string; email: string; role: CurrentUser['role'] },
     meta: LoginMeta,
   ): Promise<{ token: string; user: CurrentUser }> {
+    const { id: userId, email, role } = user
     const { token, tokenHash } = generateSessionToken()
     await this.repo.createSession({ userId, tokenHash, userAgent: meta.userAgent })
     // Sem sessão ainda no AsyncLocalStorage neste ponto (é o login que está criando ela) — Person tem RLS,
     // então precisa declarar o usuário explicitamente pra essa leitura, mesmo padrão do seed/jobs.
     const name = await runAsUser(userId, () => this.selfName(userId))
-    return { token, user: { id: userId, email, name } }
+    return { token, user: { id: userId, email, name, role } }
   }
 
   // Chamado pelo SessionMiddleware a cada request; nunca lança — sessão inválida só significa "sem
