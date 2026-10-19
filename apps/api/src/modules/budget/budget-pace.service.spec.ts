@@ -1,8 +1,7 @@
-import type { Invoice } from '@gastos/shared'
 import { BudgetPaceService } from './budget-pace.service'
 import type { BudgetMonthService } from './budget-month.service'
 import type { FixedExpenseService } from '../fixed-expense/fixed-expense.service'
-import type { InvoiceService } from '../invoice/invoice.service'
+import type { InvoiceService, SummaryWithAdvance } from '../invoice/invoice.service'
 
 function budgetMonthMock(incomeCents: number, month = '2026-09') {
   return {
@@ -20,26 +19,27 @@ function budgetMonthMock(incomeCents: number, month = '2026-09') {
 }
 
 function invoicesMock(mineCents: number, advancePaidCents = 0) {
-  const summary: Invoice & { advancePaidCents: number } = {
+  const summary: SummaryWithAdvance = {
     totalCents: mineCents + 1000,
     mineCents,
     notMineCents: 1000,
     advancePaidCents,
+    firstHalfMineCents: (mineCents + advancePaidCents) / 2,
+    secondHalfMineCents: (mineCents + advancePaidCents) / 2,
   }
   return {
     getSummaryWithAdvance: jest.fn().mockResolvedValue(summary),
-    getMonthHalves: jest.fn().mockResolvedValue({
-      firstHalfMineCents: (mineCents + advancePaidCents) / 2,
-      secondHalfMineCents: (mineCents + advancePaidCents) / 2,
-    }),
   } as unknown as jest.Mocked<InvoiceService>
 }
 
 function fixedExpensesMock(sumCents: number, paidCents = 0) {
   return {
-    sumActiveCents: jest.fn().mockResolvedValue(sumCents),
-    sumActiveCentsByHalf: jest.fn().mockResolvedValue(sumCents / 2),
-    sumPaidCents: jest.fn().mockResolvedValue(paidCents),
+    getFigures: jest.fn().mockResolvedValue({
+      totalCents: sumCents,
+      firstHalfCents: sumCents / 2,
+      secondHalfCents: sumCents / 2,
+      paidCents,
+    }),
   } as unknown as jest.Mocked<FixedExpenseService>
 }
 
@@ -59,7 +59,7 @@ describe('BudgetPaceService', () => {
 
     expect(budgetMonth.getOrCreate).toHaveBeenCalledWith('user-1', undefined)
     expect(invoices.getSummaryWithAdvance).toHaveBeenCalledWith('user-1', undefined)
-    expect(fixedExpenses.sumActiveCents).toHaveBeenCalledWith('user-1')
+    expect(fixedExpenses.getFigures).toHaveBeenCalledWith('user-1', '2026-09')
     expect(result.capCents).toBe(300_000)
     expect(result.spentCents).toBe(70_000)
     expect(result.cardsMineCents).toBe(50_000)
@@ -178,7 +178,7 @@ describe('BudgetPaceService', () => {
 
     const result = await service.getPace('user-1')
 
-    expect(fixedExpenses.sumPaidCents).toHaveBeenCalledWith('user-1', '2026-09')
+    expect(fixedExpenses.getFigures).toHaveBeenCalledWith('user-1', '2026-09')
     expect(result.paidFixedCents).toBe(8_000)
     expect(result.spentCents).toBe(70_000)
     expect(result.toPayCents).toBe(62_000)
@@ -186,13 +186,12 @@ describe('BudgetPaceService', () => {
     expect(result.grossSpentCents).toBe(82_000)
   })
 
-  it('fora do mês atual não há marca de pago: falta pagar é o próprio gasto', async () => {
+  it('fora do mês atual a marca de pago é ignorada: falta pagar é o próprio gasto', async () => {
     const fixedExpenses = fixedExpensesMock(20_000, 8_000)
     const service = new BudgetPaceService(budgetMonthMock(300_000, '2026-10'), invoicesMock(50_000), fixedExpenses)
 
     const result = await service.getPace('user-1', '2026-10')
 
-    expect(fixedExpenses.sumPaidCents).not.toHaveBeenCalled()
     expect(result.paidFixedCents).toBe(0)
     expect(result.toPayCents).toBe(result.spentCents)
   })

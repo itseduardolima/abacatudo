@@ -13,6 +13,7 @@ function repoMock() {
     findPaidHalves: jest.fn().mockResolvedValue(new Set<string>()),
     markPaid: jest.fn().mockResolvedValue(undefined),
     unmarkPaid: jest.fn().mockResolvedValue({ count: 1 }),
+    deleteStalePayments: jest.fn().mockResolvedValue({ count: 0 }),
   } as unknown as jest.Mocked<FixedExpenseRepository>
 }
 
@@ -59,23 +60,6 @@ describe('FixedExpenseService', () => {
     expect(repo.findMany).toHaveBeenCalledWith('user-1', false)
   })
 
-  it('sumActiveCents: soma só os ativos', async () => {
-    const repo = repoMock()
-    repo.findMany.mockResolvedValue([row({ amountCents: 120000 }), row({ id: 'fe-2', amountCents: 10000 })])
-    const service = new FixedExpenseService(repo)
-
-    await expect(service.sumActiveCents('user-1')).resolves.toBe(130000)
-    expect(repo.findMany).toHaveBeenCalledWith('user-1', false)
-  })
-
-  it('sumActiveCents: sem nenhum gasto fixo, zero', async () => {
-    const repo = repoMock()
-    repo.findMany.mockResolvedValue([])
-    const service = new FixedExpenseService(repo)
-
-    await expect(service.sumActiveCents('user-1')).resolves.toBe(0)
-  })
-
   it('archive: 404 quando não existe (ou é de outro usuário)', async () => {
     const repo = repoMock()
     repo.archive.mockResolvedValue({ count: 0 })
@@ -115,7 +99,7 @@ describe('FixedExpenseService', () => {
     expect(repo.findById).not.toHaveBeenCalled()
   })
 
-  it('sumActiveCentsByHalf: gasto dividido (3) conta metade em cada quinzena, o centavo ímpar na 2ª', async () => {
+  it('getFigures: soma total e quinzenas; o dividido conta metade em cada, o centavo ímpar na 2ª', async () => {
     const repo = repoMock()
     repo.findMany.mockResolvedValue([
       row({ amountCents: 10001, half: 3 }),
@@ -124,8 +108,26 @@ describe('FixedExpenseService', () => {
     ])
     const service = new FixedExpenseService(repo)
 
-    await expect(service.sumActiveCentsByHalf('user-1', 1)).resolves.toBe(5000 + 5000)
-    await expect(service.sumActiveCentsByHalf('user-1', 2)).resolves.toBe(5001 + 7000)
+    await expect(service.getFigures('user-1', '2026-10')).resolves.toEqual({
+      totalCents: 22001,
+      firstHalfCents: 5000 + 5000,
+      secondHalfCents: 5001 + 7000,
+      paidCents: 0,
+    })
+    expect(repo.findMany).toHaveBeenCalledWith('user-1', false)
+  })
+
+  it('getFigures: sem nenhum gasto fixo, tudo zero', async () => {
+    const repo = repoMock()
+    repo.findMany.mockResolvedValue([])
+    const service = new FixedExpenseService(repo)
+
+    await expect(service.getFigures('user-1', '2026-10')).resolves.toEqual({
+      totalCents: 0,
+      firstHalfCents: 0,
+      secondHalfCents: 0,
+      paidCents: 0,
+    })
   })
 
   describe('gasto fixo pago no mês e na quinzena', () => {
@@ -231,7 +233,7 @@ describe('FixedExpenseService', () => {
       expect(result.shares).toEqual([{ half: 1, amountCents: 120000, paid: true }])
     })
 
-    it('sumPaidCents soma só as partes marcadas: o dividido conta a metade de cada marca, e arquivado fica fora', async () => {
+    it('getFigures soma só as partes marcadas: o dividido conta a metade de cada marca, e arquivado fica fora', async () => {
       const repo = repoMock()
       repo.findMany.mockResolvedValue([
         row({ id: 'fe-1', amountCents: 10001, half: 3 }),
@@ -241,8 +243,43 @@ describe('FixedExpenseService', () => {
       repo.findPaidHalves.mockResolvedValue(new Set(['fe-1:2', 'fe-3:2', 'fe-arquivado:1']))
       const service = new FixedExpenseService(repo)
 
-      await expect(service.sumPaidCents('user-1', '2026-10')).resolves.toBe(5001 + 7000)
+      const result = await service.getFigures('user-1', '2026-10')
+
+      expect(result.paidCents).toBe(5001 + 7000)
       expect(repo.findPaidHalves).toHaveBeenCalledWith('user-1', '2026-10')
+    })
+
+    it('update apaga as marcas das quinzenas que o gasto deixou de ter (dividido virou só 1ª)', async () => {
+      const repo = repoMock()
+      repo.update.mockResolvedValue({ count: 1 })
+      repo.findById.mockResolvedValue(row({ half: 1 }))
+      const service = new FixedExpenseService(repo)
+
+      await service.update('user-1', 'fe-1', { name: 'Aluguel', amountCents: 120000, half: 1 })
+
+      expect(repo.deleteStalePayments).toHaveBeenCalledWith('user-1', 'fe-1', [1])
+    })
+
+    it('update de um gasto dividido mantém as marcas das duas quinzenas', async () => {
+      const repo = repoMock()
+      repo.update.mockResolvedValue({ count: 1 })
+      repo.findById.mockResolvedValue(row({ half: 3 }))
+      const service = new FixedExpenseService(repo)
+
+      await service.update('user-1', 'fe-1', { name: 'Aluguel', amountCents: 120000, half: 3 })
+
+      expect(repo.deleteStalePayments).toHaveBeenCalledWith('user-1', 'fe-1', [1, 2])
+    })
+
+    it('update de gasto de outro usuário é 404 e nenhuma marca é apagada', async () => {
+      const repo = repoMock()
+      repo.update.mockResolvedValue({ count: 0 })
+      const service = new FixedExpenseService(repo)
+
+      await expect(
+        service.update('user-2', 'fe-1', { name: 'Aluguel', amountCents: 1, half: 1 }),
+      ).rejects.toBeInstanceOf(NotFoundError)
+      expect(repo.deleteStalePayments).not.toHaveBeenCalled()
     })
   })
 })

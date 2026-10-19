@@ -20,6 +20,11 @@ export class FixedExpenseService {
     if (result.count === 0) throw NOT_FOUND()
     const row = await this.repo.findById(userId, id)
     if (!row) throw NOT_FOUND()
+    await this.repo.deleteStalePayments(
+      userId,
+      id,
+      sharesOf(row).map((share) => share.half),
+    )
     return toDto(row, await this.repo.findPaidHalves(userId, monthKey(new Date())))
   }
 
@@ -43,30 +48,21 @@ export class FixedExpenseService {
     await this.repo.unmarkPaid(userId, id, monthKey(new Date()), half)
   }
 
-  async sumPaidCents(userId: string, month: string): Promise<number> {
+  async getFigures(
+    userId: string,
+    month: string,
+  ): Promise<{ totalCents: number; firstHalfCents: number; secondHalfCents: number; paidCents: number }> {
     const [rows, paid] = await Promise.all([this.repo.findMany(userId, false), this.repo.findPaidHalves(userId, month)])
-    return rows.reduce(
-      (total, row) =>
-        total +
-        sharesOf(row)
-          .filter((share) => paid.has(`${row.id}:${share.half}`))
-          .reduce((sum, share) => sum + share.amountCents, 0),
-      0,
-    )
-  }
-
-  // Soma dos ativos (03-regras-negocio § Orçamento mensal) — entra junto da fatura aberta no ritmo (HU 7.4).
-  async sumActiveCents(userId: string): Promise<number> {
-    const rows = await this.repo.findMany(userId, false)
-    return rows.reduce((total, row) => total + row.amountCents, 0)
-  }
-
-  async sumActiveCentsByHalf(userId: string, half: 1 | 2): Promise<number> {
-    const rows = await this.repo.findMany(userId, false)
-    return rows.reduce(
-      (total, row) => total + (sharesOf(row).find((share) => share.half === half)?.amountCents ?? 0),
-      0,
-    )
+    const figures = { totalCents: 0, firstHalfCents: 0, secondHalfCents: 0, paidCents: 0 }
+    for (const row of rows) {
+      figures.totalCents += row.amountCents
+      for (const share of sharesOf(row)) {
+        if (share.half === 1) figures.firstHalfCents += share.amountCents
+        else figures.secondHalfCents += share.amountCents
+        if (paid.has(`${row.id}:${share.half}`)) figures.paidCents += share.amountCents
+      }
+    }
+    return figures
   }
 
   async archive(userId: string, id: string): Promise<void> {

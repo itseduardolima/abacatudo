@@ -41,15 +41,20 @@ export class FixedExpenseRepository {
     return new Set(rows.map((row) => `${row.fixedExpenseId}:${row.half}`))
   }
 
-  markPaid(userId: string, fixedExpenseId: string, month: string, half: number): Promise<unknown> {
-    return this.prisma.fixedExpensePayment.upsert({
-      where: { fixedExpenseId_month_half: { fixedExpenseId, month, half } },
-      create: { userId, fixedExpenseId, month, half },
-      update: {},
+  async markPaid(userId: string, fixedExpenseId: string, month: string, half: number): Promise<void> {
+    await this.prisma.fixedExpensePayment.createMany({
+      data: [{ userId, fixedExpenseId, month, half }],
+      skipDuplicates: true,
     })
   }
 
   unmarkPaid(userId: string, fixedExpenseId: string, month: string, half: number): Promise<Prisma.BatchPayload> {
     return this.prisma.fixedExpensePayment.deleteMany({ where: { userId, fixedExpenseId, month, half } })
+  }
+
+  deleteStalePayments(userId: string, fixedExpenseId: string, keepHalves: number[]): Promise<Prisma.BatchPayload> {
+    return this.prisma.fixedExpensePayment.deleteMany({
+      where: { userId, fixedExpenseId, half: { notIn: keepHalves } },
+    })
   }
 }
