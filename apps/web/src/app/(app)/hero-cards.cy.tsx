@@ -9,6 +9,8 @@ const pace: BudgetPace = {
   spentCents: 360144,
   advancePaidCents: 60000,
   grossSpentCents: 420144,
+  paidFixedCents: 120000,
+  toPayCents: 240144,
   cardsMineCents: 200000,
   remainingCents: 205001,
   daysInMonth: 31,
@@ -73,14 +75,15 @@ describe('PaceHeroCard', () => {
 })
 
 describe('ToPayHeroCard', () => {
-  it('mostra o gasto abatido, o pagamento antecipado e o que sobra', () => {
+  it('mostra o que falta pagar, o pagamento antecipado, os fixos pagos e o que sobra', () => {
     cy.mount(<ToPayHeroCard pace={pace} />)
-    shows('Falta pagar', 'R$ 3.601,44', 'já pago adiantado', 'R$ 600,00', 'R$ 2.050,01')
+    shows('Falta pagar', 'R$ 2.401,44', 'já pago adiantado', 'R$ 600,00', 'fixos pagos', 'R$ 1.200,00', 'R$ 2.050,01')
   })
 
-  it('esconde a linha de pagamento antecipado quando não houve', () => {
-    cy.mount(<ToPayHeroCard pace={{ ...pace, advancePaidCents: 0 }} />)
+  it('esconde as linhas de pagamento antecipado e de fixos pagos quando não há', () => {
+    cy.mount(<ToPayHeroCard pace={{ ...pace, advancePaidCents: 0, paidFixedCents: 0 }} />)
     hides('já pago adiantado')
+    hides('fixos pagos')
   })
 
   it('mostra sobra negativa com o sinal de menos', () => {

@@ -7,7 +7,9 @@ import { useAccounts } from '@/hooks/queries/use-accounts'
 import { useBudgetPace } from '@/hooks/queries/use-budget-pace'
 import { useConnectBank } from '@/hooks/queries/use-connect-bank'
 import { useInvoices } from '@/hooks/queries/use-invoice'
+import { useFixedExpenses } from '@/hooks/queries/use-fixed-expenses'
 import { useMe } from '@/hooks/queries/use-me'
+import { useSetFixedExpensePaid } from '@/hooks/queries/use-set-fixed-expense-paid'
 import { ApiClientError } from '@/lib/api-client'
 import { PluggyConnectError } from '@/lib/pluggy-connect'
 import { latestForecastMonth } from '@/lib/utils/latest-forecast-month'
@@ -18,6 +20,9 @@ export function useHomePage() {
   const accounts = useAccounts()
   const connectBank = useConnectBank()
   const [connectError, setConnectError] = useState<string | null>(null)
+  const fixedExpenses = useFixedExpenses()
+  const setFixedExpensePaid = useSetFixedExpensePaid()
+  const [paidError, setPaidError] = useState<string | null>(null)
 
   // O middleware só olha se o cookie existe, nunca se a sessão ainda é válida — quem confirma de verdade
   // é a API. Cookie velho (revogado, expirado) vira 401 aqui, e manda pro login em vez de mostrar a tela
@@ -54,6 +59,16 @@ export function useHomePage() {
     }
   }
 
+  const onTogglePaid = async (id: string, paid: boolean) => {
+    setPaidError(null)
+    try {
+      await setFixedExpensePaid.mutateAsync({ id, paid })
+    } catch (error) {
+      if (error instanceof ApiClientError) setPaidError(error.error.message)
+      else throw error
+    }
+  }
+
   return {
     isLoadingMe: me.isPending || me.isError,
     pace: pace.data,
@@ -71,5 +86,9 @@ export function useHomePage() {
     benefitAccountName: benefitAccount?.name ?? null,
     benefitBalanceCents,
     benefitSyncedAt: benefitAccount?.lastSyncAt ?? null,
+    fixedExpenses: fixedExpenses.data ?? [],
+    onTogglePaid,
+    paidPendingId: setFixedExpensePaid.isPending ? (setFixedExpensePaid.variables?.id ?? null) : null,
+    paidError,
   }
 }

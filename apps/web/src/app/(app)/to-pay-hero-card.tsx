@@ -7,11 +7,16 @@ export function ToPayHeroCard({ pace }: { pace: BudgetPace }) {
       <div>
         <p className="text-xs text-on-inverse-muted">Falta pagar</p>
         <p className="display-number mt-3 text-[2.75rem] text-on-inverse-accent">
-          <MoneyText cents={pace.spentCents} className="!text-on-inverse-accent" />
+          <MoneyText cents={pace.toPayCents} className="!text-on-inverse-accent" />
         </p>
         {pace.advancePaidCents > 0 && (
           <p className="mt-2.5 text-xs text-on-inverse-muted">
             já pago adiantado <MoneyText cents={pace.advancePaidCents} className="!text-on-inverse" />
+          </p>
+        )}
+        {pace.paidFixedCents > 0 && (
+          <p className="mt-1.5 text-xs text-on-inverse-muted">
+            fixos pagos <MoneyText cents={pace.paidFixedCents} className="!text-on-inverse" />
           </p>
         )}
       </div>

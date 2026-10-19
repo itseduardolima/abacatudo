@@ -5,6 +5,7 @@ import { CardInvoiceRow } from './card-invoice-row'
 import { ConnectBankCard } from './connect-bank-card'
 import { HeroCarousel } from './hero-carousel'
 import { HeroSkeleton, InvoicesSkeleton } from './home-skeleton'
+import { FixedExpensesSection } from './fixed-expenses-section'
 import { FortnightHeroCard } from './fortnight-hero-card'
 import { PaceHeroCard } from './pace-hero-card'
 import { ToPayHeroCard } from './to-pay-hero-card'
@@ -33,6 +34,10 @@ export default function HomePage() {
     benefitAccountName,
     benefitBalanceCents,
     benefitSyncedAt,
+    fixedExpenses,
+    onTogglePaid,
+    paidPendingId,
+    paidError,
   } = useHomePage()
   const hasNoCard = !isLoadingAccounts && cardAccounts.length === 0
   const isLoadingHome = isLoadingMe || isLoadingAccounts
@@ -72,6 +77,15 @@ export default function HomePage() {
                 ]
               : []),
           ]}
+        />
+      )}
+
+      {!isLoadingHome && !hasNoCard && !forecast.isForecast && fixedExpenses.length > 0 && (
+        <FixedExpensesSection
+          expenses={fixedExpenses}
+          pendingId={paidPendingId}
+          error={paidError}
+          onToggle={(id, paid) => void onTogglePaid(id, paid)}
         />
       )}
 

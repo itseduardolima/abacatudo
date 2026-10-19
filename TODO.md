@@ -1357,8 +1357,10 @@ Separar o hero da Início em cards de um assunto só: gasto do mês, falta pagar
       (`pluggyOpenRows`) e divide pela data: antes do dia 16 é da 1ª, do 16 em diante é da 2ª, então 1ª + 2ª = gasto
       bruto do mês. Compra do fim do mês anterior ainda na fatura aberta conta na 1ª. Sai `getHalfMineCents` e
       `findOpenRowsInRange`. Spec 03 atualizado (2026-10-19).
-- [ ] Etapa 3: marcar gasto fixo como pago no mês.
-  - [ ] Spec 03: "marcar pago" vale só para fixo no mês, nunca para terceiros.
-  - [ ] Tabela `FixedExpensePayment` (userId, fixedExpenseId, month, paidAt) com RLS `FORCE` e migration.
-  - [ ] API (marcar e desmarcar), `paidCents` e `toPayCents` no `BudgetPace`, teste com dois Users.
-  - [ ] Checkbox dos fixos dentro do card "Falta pagar".
+- [x] Etapa 3: marcar gasto fixo como pago no mês (2026-10-19).
+  - [x] Spec 03: "marcar pago" vale só para fixo no mês, nunca para terceiros.
+  - [x] Tabela `FixedExpensePayment` (userId, fixedExpenseId, month, paidAt) com RLS `FORCE` e migration; isolamento
+        checado no Postgres com dois Users (o outro não vê nem grava marca alheia).
+  - [x] API `PUT`/`DELETE /fixed-expenses/:id/paid` (mês atual), `paid` na lista, `paidFixedCents` e `toPayCents` no
+        `BudgetPace`; testes de Service com dois Users.
+  - [x] Seção "Gastos fixos" na Início, com checkbox, e "Falta pagar" descontando os fixos pagos.
