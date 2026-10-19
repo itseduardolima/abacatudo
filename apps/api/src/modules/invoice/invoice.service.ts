@@ -26,6 +26,14 @@ import { estimateInstallments, type InstallmentSource } from './installment-fore
 import { InvoiceRepository, type OpenWindow } from './invoice.repository'
 import { buildPersonStatements, formatStatementText, type StatementRow } from './statement.mapper'
 
+type Halves = { firstHalfMineCents: number; secondHalfMineCents: number }
+type AccountInvoiceFigures = Invoice & {
+  estimatedCents: number
+  advancePaidCents: number
+  previousBillRemainingCents: number
+}
+export type SummaryWithAdvance = Invoice & Halves & { advancePaidCents: number }
+
 const LAST_BILL_TTL_MS = 5 * 60 * 1000
 
 @Injectable()
@@ -52,7 +60,7 @@ export class InvoiceService {
     const selfId = await this.selfPersonId(userId)
     const lastForecastMonth = await this.lastForecastMonth(account)
 
-    const invoice = await this.invoiceForAccount(account, selfId, month)
+    const { invoice } = await this.invoiceForAccount(account, selfId, month)
 
     return {
       ...invoice,
@@ -156,47 +164,22 @@ export class InvoiceService {
   // número que alimenta o ritmo (HU 7.4). É a fatura de agora; não existe "mês passado" aqui. Só um mês
   // futuro muda o resultado: aí soma a fatura prevista de cada cartão (só parcelas já lançadas).
   async getSummary(userId: string, month?: string): Promise<Invoice> {
-    const { advancePaidCents: _advancePaidCents, ...invoice } = await this.getSummaryWithAdvance(userId, month)
-    return invoice
+    const { totalCents, mineCents, notMineCents } = await this.getSummaryWithAdvance(userId, month)
+    return { totalCents, mineCents, notMineCents }
   }
 
-  async getSummaryWithAdvance(userId: string, month?: string): Promise<Invoice & { advancePaidCents: number }> {
+  async getSummaryWithAdvance(userId: string, month?: string): Promise<SummaryWithAdvance> {
     const selfId = await this.selfPersonId(userId)
     const cardAccounts = (await this.accounts.findMany(userId, false)).filter((a) => a.type === 'CREDIT_CARD')
     const futureMonth = month && resolveMonthKey(month) > monthKey(new Date()) ? month : undefined
 
-    const invoices = await Promise.all(
-      cardAccounts.map((account) => this.invoiceForAccount(account, selfId, futureMonth)),
-    )
+    const parts = await Promise.all(cardAccounts.map((account) => this.invoiceForAccount(account, selfId, futureMonth)))
     return {
-      ...mergeInvoices(invoices),
-      advancePaidCents: invoices.reduce((sum, invoice) => sum + invoice.advancePaidCents, 0),
+      ...mergeInvoices(parts.map((part) => part.invoice)),
+      advancePaidCents: parts.reduce((sum, part) => sum + part.invoice.advancePaidCents, 0),
+      firstHalfMineCents: parts.reduce((sum, part) => sum + part.halves.firstHalfMineCents, 0),
+      secondHalfMineCents: parts.reduce((sum, part) => sum + part.halves.secondHalfMineCents, 0),
     }
-  }
-
-  async getMonthHalves(
-    userId: string,
-    month: string,
-  ): Promise<{ firstHalfMineCents: number; secondHalfMineCents: number }> {
-    const selfId = await this.selfPersonId(userId)
-    const cards = (await this.accounts.findMany(userId, false)).filter((a) => a.type === 'CREDIT_CARD')
-    const middle = halfMonthRange(month, 2).start
-    const perCard = await Promise.all(
-      cards.map(async (account) => {
-        const rows =
-          account.source === 'PLUGGY'
-            ? (await this.pluggyOpenRows(account)).rows
-            : await this.repo.findRows(userId, resolveMonthRange(month), account.id)
-        return computeHalves(rows, middle, selfId)
-      }),
-    )
-    return perCard.reduce(
-      (sum, half) => ({
-        firstHalfMineCents: sum.firstHalfMineCents + half.firstHalfMineCents,
-        secondHalfMineCents: sum.secondHalfMineCents + half.secondHalfMineCents,
-      }),
-      { firstHalfMineCents: 0, secondHalfMineCents: 0 },
-    )
   }
 
   // PLUGGY: fatura aberta = lançamentos sem billId (e, com closingDay, só depois do último fechamento),
@@ -209,7 +192,9 @@ export class InvoiceService {
     account: AccountWithPluggyItem,
     selfPersonId: string,
     month?: string,
-  ): Promise<Invoice & { estimatedCents: number; advancePaidCents: number; previousBillRemainingCents: number }> {
+  ): Promise<{ invoice: AccountInvoiceFigures; halves: Halves }> {
+    const middle = halfMonthRange(monthKey(new Date()), 2).start
+
     if (this.isForecastFor(account, month)) {
       const range = resolveMonthRange(month as string)
       const [real, estimated] = await Promise.all([
@@ -218,20 +203,26 @@ export class InvoiceService {
       ])
       const estimatedRows = estimated.map(toInvoiceRow)
       return {
-        ...computeInvoice([...real, ...estimatedRows], selfPersonId),
-        estimatedCents: computeInvoice(estimatedRows, selfPersonId).totalCents,
-        advancePaidCents: 0,
-        previousBillRemainingCents: 0,
+        invoice: {
+          ...computeInvoice([...real, ...estimatedRows], selfPersonId),
+          estimatedCents: computeInvoice(estimatedRows, selfPersonId).totalCents,
+          advancePaidCents: 0,
+          previousBillRemainingCents: 0,
+        },
+        halves: { firstHalfMineCents: 0, secondHalfMineCents: 0 },
       }
     }
 
     if (account.source !== 'PLUGGY') {
       const rows = await this.repo.findRows(account.userId, resolveMonthRange(month), account.id)
       return {
-        ...computeInvoice(rows, selfPersonId),
-        estimatedCents: 0,
-        advancePaidCents: 0,
-        previousBillRemainingCents: 0,
+        invoice: {
+          ...computeInvoice(rows, selfPersonId),
+          estimatedCents: 0,
+          advancePaidCents: 0,
+          previousBillRemainingCents: 0,
+        },
+        halves: computeHalves(rows, middle, selfPersonId),
       }
     }
 
@@ -239,10 +230,13 @@ export class InvoiceService {
     const settlement = await this.closedBillSettlement(account, window?.after)
     const advancePaid = settlement.advancePaidCents
     return {
-      ...applyAdvancePayment(computeInvoice(rows, selfPersonId), advancePaid),
-      estimatedCents: computeInvoice(estimatedRows, selfPersonId).totalCents,
-      advancePaidCents: advancePaid,
-      previousBillRemainingCents: settlement.previousBillRemainingCents,
+      invoice: {
+        ...applyAdvancePayment(computeInvoice(rows, selfPersonId), advancePaid),
+        estimatedCents: computeInvoice(estimatedRows, selfPersonId).totalCents,
+        advancePaidCents: advancePaid,
+        previousBillRemainingCents: settlement.previousBillRemainingCents,
+      },
+      halves: computeHalves(rows, middle, selfPersonId),
     }
   }
 

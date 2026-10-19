@@ -847,7 +847,7 @@ describe('InvoiceService', () => {
     })
   })
 
-  describe('getMonthHalves', () => {
+  describe('quinzenas na fatura aberta', () => {
     beforeEach(() => {
       jest.useFakeTimers().setSystemTime(new Date('2026-10-19T15:00:00.000Z'))
     })
@@ -883,13 +883,13 @@ describe('InvoiceService', () => {
     }
 
     it('compra do fim do mês anterior ainda na fatura aberta cai na 1ª quinzena', async () => {
-      const result = await setup().getMonthHalves('user-1', '2026-10')
+      const result = await setup().getSummaryWithAdvance('user-1', '2026-10')
 
       expect(result.firstHalfMineCents).toBe(1000 + 2000 + 400)
     })
 
     it('do dia 16 em diante cai na 2ª, e o que não é meu fica fora das duas', async () => {
-      const result = await setup().getMonthHalves('user-1', '2026-10')
+      const result = await setup().getSummaryWithAdvance('user-1', '2026-10')
 
       expect(result.secondHalfMineCents).toBe(3000 + 600)
     })
@@ -897,10 +897,11 @@ describe('InvoiceService', () => {
     it('1ª + 2ª = "meu" da fatura aberta de todos os cartões', async () => {
       const service = setup()
 
-      const halves = await service.getMonthHalves('user-1', '2026-10')
       const summary = await service.getSummaryWithAdvance('user-1', '2026-10')
 
-      expect(halves.firstHalfMineCents + halves.secondHalfMineCents).toBe(summary.mineCents + summary.advancePaidCents)
+      expect(summary.firstHalfMineCents + summary.secondHalfMineCents).toBe(
+        summary.mineCents + summary.advancePaidCents,
+      )
     })
 
     it('só a próxima parcela de cada compra entra, como no total', async () => {
@@ -915,9 +916,9 @@ describe('InvoiceService', () => {
       ])
       const service = new InvoiceService(repo, accounts, people, pluggyMock())
 
-      const result = await service.getMonthHalves('user-1', '2026-10')
+      const result = await service.getSummaryWithAdvance('user-1', '2026-10')
 
-      expect(result).toEqual({ firstHalfMineCents: 5000, secondHalfMineCents: 0 })
+      expect(result).toMatchObject({ firstHalfMineCents: 5000, secondHalfMineCents: 0 })
     })
   })
 })
