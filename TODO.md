@@ -1353,8 +1353,10 @@ Separar o hero da Início em cards de um assunto só: gasto do mês, falta pagar
   - [x] Card 2 "Falta pagar" (`to-pay-hero-card.tsx`): gasto abatido do pagamento antecipado e "Sobram".
   - [x] Card 3 "Quinzenas" (`fortnight-hero-card.tsx`): 1ª e 2ª lado a lado, quinzena atual destacada.
   - [x] Teste Jest do `BudgetPaceService` e Cypress de componente dos três cards.
-- [ ] Etapa 2: um único cálculo para total e quinzenas (1ª + 2ª = total; some a diferença de R$ 1,72 vista no
-      Nubank). Decidir antes: compras do fim do mês anterior que estão na fatura aberta. Atualizar spec 03.
+- [x] Etapa 2: um único cálculo para total e quinzenas. `getMonthHalves` parte das mesmas linhas da fatura aberta
+      (`pluggyOpenRows`) e divide pela data: antes do dia 16 é da 1ª, do 16 em diante é da 2ª, então 1ª + 2ª = gasto
+      bruto do mês. Compra do fim do mês anterior ainda na fatura aberta conta na 1ª. Sai `getHalfMineCents` e
+      `findOpenRowsInRange`. Spec 03 atualizado (2026-10-19).
 - [ ] Etapa 3: marcar gasto fixo como pago no mês.
   - [ ] Spec 03: "marcar pago" vale só para fixo no mês, nunca para terceiros.
   - [ ] Tabela `FixedExpensePayment` (userId, fixedExpenseId, month, paidAt) com RLS `FORCE` e migration.

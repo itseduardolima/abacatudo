@@ -452,13 +452,15 @@ teto variável = renda mensal (fixa + benefícios)
   etc.), a linha `CARD_PAYMENT` e gastos de outras Persons.
 - **Quinzena**: a renda é informada em dois salários, o da 1ª quinzena (dia 15, cobre os dias 1–15) e o da
   2ª (dia 30, cobre 16–fim do mês); o teto mensal é a soma. Cada gasto fixo tem uma quinzena de pagamento
-  (1ª, 2ª ou dividido meio a meio, o centavo ímpar na 2ª; editável). No mês atual, o gasto da quinzena = minha parte nas compras de cartão **com data dentro da
-  quinzena** (parcela pela data de vencimento, fatura fechada fora) + gastos fixos daquela quinzena, contra o
-  salário dela. O card mostra, na barra do mês, um marcador no teto do dia 15 com o quanto já foi gasto na 1ª quinzena
-  (só no mês atual). Ao lado do "Sobram" do mês, "Sobram até dia 15" (1ª quinzena) ou "até dia 30" (2ª): o salário da
-  quinzena atual menos o gasto dela.
+  (1ª, 2ª ou dividido meio a meio, o centavo ímpar na 2ª; editável). No mês atual, o gasto da quinzena = minha parte
+  nas linhas da **fatura aberta** (a mesma do total, com a próxima parcela de cada compra e as estimadas) + gastos fixos
+  daquela quinzena, contra o salário dela. Cada linha cai pela data (a de vencimento, se parcela): **antes do dia 16
+  é da 1ª quinzena, do dia 16 em diante é da 2ª**. Compra do fim do mês anterior que ainda está na fatura aberta
+  (ciclo que vira no dia 27, por exemplo) conta na 1ª. Assim **1ª + 2ª = gasto bruto do mês** (fatura aberta, antes
+  do pagamento antecipado, mais fixos), sempre. A tela mostra as duas quinzenas lado a lado, cada uma com gasto,
+  salário e sobra, com a atual destacada; fora do mês atual só aparece o salário.
 - **Ritmo**: compara o gasto do mês (fatura aberta somada em todos os
-  cartões + gastos fixos ativos) com o esperado linear até hoje, sobre o
+  cartões + gastos fixos ativos, já abatido do pagamento antecipado) com o esperado linear até hoje, sobre o
   teto; sinaliza se está acima. O card da Início mostra também **quanto foi gasto
   nos cartões de crédito, somando todos, só a minha parte** (sem o que não é meu), calculado no backend (`cardsMineCents`). O card acompanha
   o mês escolhido nas setas da Início: num **mês futuro** mostra o **previsto**
