@@ -36,7 +36,7 @@ export default function HomePage() {
     benefitSyncedAt,
     fixedExpenses,
     onTogglePaid,
-    paidPendingKey,
+    pendingPaidKeys,
     paidError,
   } = useHomePage()
   const hasNoCard = !isLoadingAccounts && cardAccounts.length === 0
@@ -111,7 +111,7 @@ export default function HomePage() {
         <FixedExpensesSection
           expenses={fixedExpenses}
           currentHalf={pace?.currentHalf ?? null}
-          pendingKey={paidPendingKey}
+          pendingKeys={pendingPaidKeys}
           error={paidError}
           onToggle={(id, half, paid) => void onTogglePaid(id, half, paid)}
         />

@@ -12,6 +12,7 @@ import { useMe } from '@/hooks/queries/use-me'
 import { useSetFixedExpensePaid } from '@/hooks/queries/use-set-fixed-expense-paid'
 import { ApiClientError } from '@/lib/api-client'
 import { PluggyConnectError } from '@/lib/pluggy-connect'
+import { fixedExpenseShareKey } from '@/lib/utils/fixed-expense-key'
 import { latestForecastMonth } from '@/lib/utils/latest-forecast-month'
 
 export function useHomePage() {
@@ -23,6 +24,7 @@ export function useHomePage() {
   const fixedExpenses = useFixedExpenses()
   const setFixedExpensePaid = useSetFixedExpensePaid()
   const [paidError, setPaidError] = useState<string | null>(null)
+  const [pendingPaidKeys, setPendingPaidKeys] = useState<ReadonlySet<string>>(new Set())
 
   // O middleware só olha se o cookie existe, nunca se a sessão ainda é válida — quem confirma de verdade
   // é a API. Cookie velho (revogado, expirado) vira 401 aqui, e manda pro login em vez de mostrar a tela
@@ -60,12 +62,21 @@ export function useHomePage() {
   }
 
   const onTogglePaid = async (id: string, half: 1 | 2, paid: boolean) => {
+    const key = fixedExpenseShareKey(id, half)
+    if (pendingPaidKeys.has(key)) return
     setPaidError(null)
+    setPendingPaidKeys((keys) => new Set(keys).add(key))
     try {
       await setFixedExpensePaid.mutateAsync({ id, half, paid })
     } catch (error) {
       if (error instanceof ApiClientError) setPaidError(error.error.message)
       else throw error
+    } finally {
+      setPendingPaidKeys((keys) => {
+        const next = new Set(keys)
+        next.delete(key)
+        return next
+      })
     }
   }
 
@@ -88,10 +99,7 @@ export function useHomePage() {
     benefitSyncedAt: benefitAccount?.lastSyncAt ?? null,
     fixedExpenses: fixedExpenses.data ?? [],
     onTogglePaid,
-    paidPendingKey:
-      setFixedExpensePaid.isPending && setFixedExpensePaid.variables
-        ? `${setFixedExpensePaid.variables.id}:${setFixedExpensePaid.variables.half}`
-        : null,
+    pendingPaidKeys,
     paidError,
   }
 }

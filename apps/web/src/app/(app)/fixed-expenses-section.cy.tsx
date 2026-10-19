@@ -1,4 +1,5 @@
 import type { FixedExpense } from '@gastos/shared'
+import { fixedExpenseShareKey } from '@/lib/utils/fixed-expense-key'
 import { FixedExpensesSection } from './fixed-expenses-section'
 
 const base = { archivedAt: null, createdAt: '2026-09-01T00:00:00.000Z' }
@@ -38,7 +39,7 @@ function mountSection(overrides: Partial<Parameters<typeof FixedExpensesSection>
     <FixedExpensesSection
       expenses={expenses}
       currentHalf={2}
-      pendingKey={null}
+      pendingKeys={new Set()}
       error={null}
       onToggle={cy.stub().as('onToggle')}
       {...overrides}
@@ -77,9 +78,16 @@ describe('FixedExpensesSection', () => {
   })
 
   it('trava só a parte que está salvando', () => {
-    mountSection({ pendingKey: 'fe-3:2' })
+    mountSection({ pendingKeys: new Set([fixedExpenseShareKey('fe-3', 2)]) })
     cy.get('[aria-label="Carro pago na 2ª quinzena"]').should('be.disabled')
     cy.get('[aria-label="Carro pago na 1ª quinzena"]').should('not.be.disabled')
+  })
+
+  it('trava todas as partes em andamento ao mesmo tempo, não só a última', () => {
+    mountSection({ pendingKeys: new Set([fixedExpenseShareKey('fe-2', 2), fixedExpenseShareKey('fe-3', 1)]) })
+    cy.get('[aria-label="Internet pago na 2ª quinzena"]').should('be.disabled')
+    cy.get('[aria-label="Carro pago na 1ª quinzena"]').should('be.disabled')
+    cy.get('[aria-label="Aluguel pago na 1ª quinzena"]').should('not.be.disabled')
   })
 
   it('mostra a mensagem de erro da API, sem toast', () => {

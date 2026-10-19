@@ -2,6 +2,7 @@ import { Check } from 'lucide-react'
 import type { FixedExpense } from '@gastos/shared'
 import { MoneyText } from '@/components/finance/MoneyText'
 import { InlineAlert } from '@/components/ui/InlineAlert'
+import { fixedExpenseShareKey } from '@/lib/utils/fixed-expense-key'
 
 const HALVES = [
   { half: 1, title: '1ª quinzena', hint: 'dia 15' },
@@ -11,13 +12,13 @@ const HALVES = [
 export function FixedExpensesSection({
   expenses,
   currentHalf,
-  pendingKey,
+  pendingKeys,
   error,
   onToggle,
 }: {
   expenses: FixedExpense[]
   currentHalf: 1 | 2 | null
-  pendingKey: string | null
+  pendingKeys: ReadonlySet<string>
   error: string | null
   onToggle: (id: string, half: 1 | 2, paid: boolean) => void
 }) {
@@ -49,7 +50,7 @@ export function FixedExpensesSection({
                     role="checkbox"
                     aria-checked={share.paid}
                     aria-label={`${expense.name} pago na ${title}`}
-                    disabled={pendingKey === `${expense.id}:${half}`}
+                    disabled={pendingKeys.has(fixedExpenseShareKey(expense.id, half))}
                     onClick={() => onToggle(expense.id, half, !share.paid)}
                     className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors disabled:opacity-50 ${
                       share.paid
