@@ -42,6 +42,7 @@ model User {
   budgetMonths           BudgetMonth[]
   cardHolderHints        CardHolderHint[]
   fixedExpenses          FixedExpense[]
+  fixedExpensePayments   FixedExpensePayment[]
   passwordResetTokens    PasswordResetToken[]
   aiUsages               AiUsage[]
   twoFactorRecoveryCodes TwoFactorRecoveryCode[]
@@ -353,9 +354,27 @@ model FixedExpense {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments FixedExpensePayment[]
 
   @@index([userId])
+}
+
+/// RLS por userId. Marca de "pago" de um gasto fixo em um mês (AAAA-MM, America/Manaus): uma linha por gasto
+/// fixo e mês, criada ao marcar e apagada ao desmarcar. Só reduz o "Falta pagar" (03-regras-negocio § Gasto
+/// fixo pago), nunca o gasto do mês.
+model FixedExpensePayment {
+  id             String   @id @default(uuid())
+  userId         String
+  fixedExpenseId String
+  month          String
+  paidAt         DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fixedExpense FixedExpense @relation(fields: [fixedExpenseId], references: [id], onDelete: Cascade)
+
+  @@unique([fixedExpenseId, month])
+  @@index([userId, month])
 }
 
 /// RLS por userId. Divisão de uma compra entre Persons (03-regras-negocio § Atribuição de pessoa): a soma
@@ -383,16 +402,16 @@ model Split {
 /// fora da gestão). teto variável = income + benefit − fixedExpenses − savingsGoal, calculado, não
 /// guardado. Mês fechado (no passado) é imutável — a API rejeita update.
 model BudgetMonth {
-  id                 String   @id @default(uuid())
-  userId             String
-  month              String
-  incomeCents        Int      @default(0)
-  firstHalfIncomeCents Int    @default(0)
-  benefitCents       Int      @default(0)
-  fixedExpensesCents Int      @default(0)
-  savingsGoalCents   Int      @default(0)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  userId               String
+  month                String
+  incomeCents          Int      @default(0)
+  firstHalfIncomeCents Int      @default(0)
+  benefitCents         Int      @default(0)
+  fixedExpensesCents   Int      @default(0)
+  savingsGoalCents     Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

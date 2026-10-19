@@ -29,6 +29,8 @@ export function computePace(input: {
   | 'firstHalfCapCents'
   | 'advancePaidCents'
   | 'grossSpentCents'
+  | 'paidFixedCents'
+  | 'toPayCents'
   | 'firstHalfRemainingCents'
   | 'secondHalfCapCents'
   | 'secondHalfSpentCents'

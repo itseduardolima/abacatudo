@@ -11,6 +11,7 @@ export const fixedExpenseSchema = z
     name: z.string(),
     amountCents: centsSchema,
     half: payHalfSchema,
+    paid: z.boolean(),
     archivedAt: z.string().datetime().nullable(),
     createdAt: z.string().datetime(),
   })

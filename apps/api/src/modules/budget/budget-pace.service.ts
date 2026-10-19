@@ -24,6 +24,8 @@ export class BudgetPaceService {
       this.invoices.getSummaryWithAdvance(userId, month),
       this.fixedExpenses.sumActiveCents(userId),
     ])
+    const isCurrentMonth = budget.month === monthKey(new Date())
+    const paidFixedCents = isCurrentMonth ? await this.fixedExpenses.sumPaidCents(userId, budget.month) : 0
 
     const pace = computePace({
       monthKeyValue: budget.month,
@@ -33,7 +35,6 @@ export class BudgetPaceService {
       spentCents: invoice.mineCents + fixedExpensesCents,
       cardsMineCents: invoice.mineCents,
     })
-    const isCurrentMonth = budget.month === monthKey(new Date())
     const currentHalf = dayOfMonth(new Date()) <= 15 ? 1 : 2
     const [firstHalfSpentCents, secondHalfSpentCents] = isCurrentMonth
       ? await this.halvesSpentCents(userId, budget.month)
@@ -46,6 +47,8 @@ export class BudgetPaceService {
       ...pace,
       advancePaidCents: invoice.advancePaidCents,
       grossSpentCents: pace.spentCents + invoice.advancePaidCents,
+      paidFixedCents,
+      toPayCents: pace.spentCents - paidFixedCents,
       firstHalfCapCents: budget.firstHalfIncomeCents,
       firstHalfSpentCents,
       firstHalfRemainingCents,

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import type { FixedExpense as FixedExpenseRow } from '@prisma/client'
 import type { CreateFixedExpenseInput, FixedExpense, UpdateFixedExpenseInput } from '@gastos/shared'
+import { monthKey } from '../../common/date/timezone'
 import { NotFoundError } from '../../common/errors/domain.error'
 import { FixedExpenseRepository } from './fixed-expense.repository'
 
@@ -11,7 +12,7 @@ export class FixedExpenseService {
   constructor(private readonly repo: FixedExpenseRepository) {}
 
   async create(userId: string, input: CreateFixedExpenseInput): Promise<FixedExpense> {
-    return toDto(await this.repo.create(userId, input.name, input.amountCents, input.half))
+    return toDto(await this.repo.create(userId, input.name, input.amountCents, input.half), false)
   }
 
   async update(userId: string, id: string, input: UpdateFixedExpenseInput): Promise<FixedExpense> {
@@ -19,11 +20,33 @@ export class FixedExpenseService {
     if (result.count === 0) throw NOT_FOUND()
     const row = await this.repo.findById(userId, id)
     if (!row) throw NOT_FOUND()
-    return toDto(row)
+    const paidIds = await this.repo.findPaidIds(userId, monthKey(new Date()))
+    return toDto(row, paidIds.has(row.id))
   }
 
   async list(userId: string, includeArchived: boolean): Promise<FixedExpense[]> {
-    return (await this.repo.findMany(userId, includeArchived)).map(toDto)
+    const [rows, paidIds] = await Promise.all([
+      this.repo.findMany(userId, includeArchived),
+      this.repo.findPaidIds(userId, monthKey(new Date())),
+    ])
+    return rows.map((row) => toDto(row, paidIds.has(row.id)))
+  }
+
+  async markPaid(userId: string, id: string): Promise<void> {
+    const row = await this.repo.findById(userId, id)
+    if (!row || row.archivedAt) throw NOT_FOUND()
+    await this.repo.markPaid(userId, id, monthKey(new Date()))
+  }
+
+  async unmarkPaid(userId: string, id: string): Promise<void> {
+    const row = await this.repo.findById(userId, id)
+    if (!row) throw NOT_FOUND()
+    await this.repo.unmarkPaid(userId, id, monthKey(new Date()))
+  }
+
+  async sumPaidCents(userId: string, month: string): Promise<number> {
+    const [rows, paidIds] = await Promise.all([this.repo.findMany(userId, false), this.repo.findPaidIds(userId, month)])
+    return rows.reduce((total, row) => (paidIds.has(row.id) ? total + row.amountCents : total), 0)
   }
 
   // Soma dos ativos (03-regras-negocio § Orçamento mensal) — entra junto da fatura aberta no ritmo (HU 7.4).
@@ -48,12 +71,13 @@ export class FixedExpenseService {
   }
 }
 
-function toDto(row: FixedExpenseRow): FixedExpense {
+function toDto(row: FixedExpenseRow, paid: boolean): FixedExpense {
   return {
     id: row.id,
     name: row.name,
     amountCents: row.amountCents,
     half: row.half === 2 || row.half === 3 ? row.half : 1,
+    paid,
     archivedAt: row.archivedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
   }

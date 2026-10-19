@@ -31,6 +31,8 @@ export const budgetPaceSchema = z
     spentCents: centsSchema,
     advancePaidCents: centsSchema,
     grossSpentCents: centsSchema,
+    paidFixedCents: centsSchema,
+    toPayCents: centsSchema,
     // Gasto nos cartões de crédito, somando todos (fatura do banco de cada um) — inclui o que não é meu.
     cardsMineCents: centsSchema,
     remainingCents: centsSchema,
