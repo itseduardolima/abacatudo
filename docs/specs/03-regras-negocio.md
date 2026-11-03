@@ -397,7 +397,7 @@ sistema, por uma **mensagem de texto que o User gera e envia manualmente**
   gravado: para cartão `PLUGGY` com `closingDay`, soma as compras e parcelas (`installmentDueAt`, senão
   `occurredAt`) do ciclo que vai do fechamento nominal do mês anterior (inclusive) ao do mês `M` (exclusive); sem
   `closingDay`, ou conta `MANUAL`/`IMPORT`, cai no mês calendário. Nubank (fecha 7 dias antes do vencimento, cruzando o
-  mês) usa `closingOffsetDays`: fechamento = vencimento do mês seguinte menos esses dias (26/09, 27/10...). Não abate pagamento nem mostra saldo anterior, e
+  mês) usa `closingOffsetDays`: fechamento = vencimento do mês seguinte menos esses dias (26/09, 27/10...), e vale também para a fatura aberta (último e próximo fechamento). Não abate pagamento nem mostra saldo anterior, e
   não há quinzenas. Os gastos fixos continuam os atuais (não guardamos histórico deles). O `billId` não é usado
   porque o banco o liga de forma inconsistente (Pic Pay nunca manda). A Início mostra só o card "Meu em [mês]". A tela Fatura lista as mesmas linhas (compras e estornos, cancelados
   inclusive, sem `CARD_PAYMENT`) e a mensagem de conta usa o mesmo ciclo.
