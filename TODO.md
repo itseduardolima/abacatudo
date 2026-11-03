@@ -1384,3 +1384,26 @@ contas pelo Meu Pluggy (spec 07). Convite é só link copiável, sem e-mail. Bra
     Cypress, mas não foram vistas no navegador (o Chrome da sessão não alcançou o localhost).
 - [ ] Etapa 2: reautenticação em ação sensível (1.7) e excluir conta revogando os Items no Pluggy (1.8).
 - [ ] Etapa 3: teto mensal de IA por usuário e SMTP real (hoje `MAIL_TRANSPORT=log`).
+
+## Início: mês passado e aviso de dado defasado (2026-11-02)
+
+Conferência da Início contra o app do Pic Pay (fatura aberta real 71,74 vs 1.084,28 no app): a conta estava certa, o
+Pluggy não manda nada do Pic Pay depois de 25/10 (faltam as compras de 29/10 e o pagamento de 30/10). Branch
+`feat/past-month`.
+
+- [x] Aviso de dado defasado: `staleSince` e `firstMonth` em `AccountInvoice`, aviso na linha do cartão (Cypress).
+- [x] Mês passado na Início: a seta ◀ vai até o primeiro mês do cartão; fatura de `M` = ciclo que fechou em `M`
+      (spec 03 § Fatura de mês passado), só o card "Meu em [mês]", linha do cartão sem link.
+- Ao vivo contra o banco de dev: BB outubro = 1.075,32 (bate com a fatura fechada que vence 10/11) e Pic Pay
+  outubro = 3.224,62 (bate com os pagamentos de setembro/outubro). Nubank outubro só bateu depois dos ajustes abaixo.
+- [x] Nubank outubro conferido contra o OFX do banco (2.118,12 vs 2.118,07, 45 itens iguais): o Nubank fecha 7 dias
+      antes do vencimento (26/09, 27/10...), não em dia fixo. `Account.closingOffsetDays` (migration), preenchido no sync
+      só para Nubank que fecha num mês e vence no seguinte; usado só no ciclo de mês passado.
+- [x] Compra em moeda estrangeira usa `amountInAccountCurrency` (Paper.Design 108,88, não US$ 20,75).
+- [x] Estorno com valor de parcela já faturada cancela as parcelas pendentes sem fatura (Mercado Livre 2/4 a 4/4, que o
+      Pluggy não remove).
+- [ ] Ciclo da fatura aberta do Nubank ainda usa dia fixo (pode errar 1 dia em mês de 26); BB sem OFX para conferir.
+- [x] Tela Fatura (`/transactions`): a seta ◀ volta às faturas anteriores (lista pelo ciclo que fechou no mês, total
+      igual ao da fatura, conferido ao vivo: Nubank 1.093,63, BB 1.075,32, Pic Pay 3.224,62) e "Enviar contas" vale
+      para o mês passado.
+- [ ] Mês passado ainda usa os gastos fixos atuais (sem histórico de fixos). Navegador não foi aberto nesta etapa.

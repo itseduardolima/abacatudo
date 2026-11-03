@@ -391,8 +391,19 @@ sistema, por uma **mensagem de texto que o User gera e envia manualmente**
   - Rotulada **"Prevista"**. **Nunca** entra no ritmo, no orçamento, no "Meu em [mês]" da Home nem em relatório.
   - **Horizonte**: até o mês da última parcela existente **em qualquer cartão**; a
     seta ▶ só habilita até lá (contando as estimadas) e anda igual para todos os cartões
-    (o cartão sem parcela naquele mês mostra fatura zerada). A seta ◀ para no mês
-    atual (não guardamos histórico de faturas fechadas).
+    (o cartão sem parcela naquele mês mostra fatura zerada). A seta ◀ vai até o mês da
+    primeira transação do cartão (`firstMonth`); ver "Fatura de mês passado".
+- **Fatura de mês passado** (Início): o mês `M` é a fatura que **fechou em `M`**, igual ao rótulo do banco. Nada é
+  gravado: para cartão `PLUGGY` com `closingDay`, soma as compras e parcelas (`installmentDueAt`, senão
+  `occurredAt`) do ciclo que vai do fechamento nominal do mês anterior (inclusive) ao do mês `M` (exclusive); sem
+  `closingDay`, ou conta `MANUAL`/`IMPORT`, cai no mês calendário. Nubank (fecha 7 dias antes do vencimento, cruzando o
+  mês) usa `closingOffsetDays`: fechamento = vencimento do mês seguinte menos esses dias (26/09, 27/10...). Não abate pagamento nem mostra saldo anterior, e
+  não há quinzenas. Os gastos fixos continuam os atuais (não guardamos histórico deles). O `billId` não é usado
+  porque o banco o liga de forma inconsistente (Pic Pay nunca manda). A Início mostra só o card "Meu em [mês]". A tela Fatura lista as mesmas linhas (compras e estornos, cancelados
+  inclusive, sem `CARD_PAYMENT`) e a mensagem de conta usa o mesmo ciclo.
+- **Dado defasado**: na fatura atual de cartão `PLUGGY`, se a última transação recebida (até agora) tem 3 dias ou
+  mais, a API devolve `staleSince` e a Início avisa "Últimas compras recebidas do banco: DD/MM". Só informa; não
+  altera nenhum valor (o conector do Pluggy pode atrasar dias; visto no Pic Pay em 2026-11-02).
 - **Split** entre self e outras Persons conta para o "Meu" só a fatia do
   self.
 - `Person` continua existindo só como **rótulo de quem gastou** (para

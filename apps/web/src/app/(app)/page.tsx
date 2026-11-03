@@ -54,11 +54,15 @@ export default function HomePage() {
 
       {!isLoadingHome && !hasNoCard && !isLoadingPace && pace && (
         <HeroCarousel
-          cards={[
-            { key: 'pace', content: <PaceHeroCard pace={pace} /> },
-            { key: 'to-pay', content: <ToPayHeroCard pace={pace} /> },
-            { key: 'fortnight', content: <FortnightHeroCard pace={pace} /> },
-          ]}
+          cards={
+            forecast.isPast
+              ? [{ key: 'pace', content: <PaceHeroCard pace={pace} /> }]
+              : [
+                  { key: 'pace', content: <PaceHeroCard pace={pace} /> },
+                  { key: 'to-pay', content: <ToPayHeroCard pace={pace} /> },
+                  { key: 'fortnight', content: <FortnightHeroCard pace={pace} /> },
+                ]
+          }
         />
       )}
 
@@ -75,13 +79,19 @@ export default function HomePage() {
             />
           </div>
           {forecast.isForecast && <p className="mt-2 text-xs text-muted">Parcelas lançadas pelo banco e estimadas.</p>}
+          {forecast.isPast && (
+            <p className="mt-2 text-xs text-muted">
+              Fatura que fechou em {formatMonthName(forecast.month)}, somada pelas datas das compras e pelo dia de
+              fechamento do cartão.
+            </p>
+          )}
           <div className="mt-1">
             {cardAccounts.map((account) => (
               <CardInvoiceRow
                 key={account.id}
                 account={account}
                 invoice={invoiceByAccountId.get(account.id)}
-                month={forecast.isForecast ? forecast.month : undefined}
+                month={forecast.isCurrent ? undefined : forecast.month}
                 isLoading={isLoadingInvoices}
               />
             ))}
@@ -89,7 +99,7 @@ export default function HomePage() {
         </section>
       )}
 
-      {!isLoadingHome && !hasNoCard && !forecast.isForecast && fixedExpenses.length > 0 && (
+      {!isLoadingHome && !hasNoCard && !forecast.isForecast && !forecast.isPast && fixedExpenses.length > 0 && (
         <FixedExpensesSection
           expenses={fixedExpenses}
           currentHalf={pace?.currentHalf ?? null}
