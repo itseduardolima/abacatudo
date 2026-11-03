@@ -15,6 +15,7 @@ import { normalizeMerchant } from '../rule/normalize-merchant'
 import { RuleRepository } from '../rule/rule.repository'
 import { BankingSyncRepository } from './banking-sync.repository'
 import {
+  findRefundedInstallments,
   findSettledPendingTwins,
   mapAccountFields,
   mapTransaction,
@@ -190,6 +191,18 @@ export class BankingService {
     }
   }
 
+  private async cancelRefundedInstallments(
+    userId: string,
+    accountId: string,
+    seen: MappedTransaction[],
+  ): Promise<void> {
+    try {
+      await this.sync.cancelPendingInstallments(userId, accountId, findRefundedInstallments(seen))
+    } catch (error) {
+      this.logger.warn(`Não foi possível cancelar parcelas estornadas da conta ${accountId}: ${describeError(error)}`)
+    }
+  }
+
   private async mergePendingDuplicates(
     userId: string,
     accountId: string,
@@ -262,11 +275,12 @@ export class BankingService {
       // balanceCents fora do update quando o Pluggy não mandou saldo nesse sync (fields.balanceCents null):
       // uma omissão pontual do lado do Pluggy não pode apagar o último saldo bom que já tínhamos — cartão
       // de crédito nunca manda saldo mesmo (sempre null), então nunca atualiza aqui, o que já é o esperado.
-      const { balanceCents, closingDay, dueDay, creditLimitCents, ...updateBase } = fields
+      const { balanceCents, closingDay, dueDay, closingOffsetDays, creditLimitCents, ...updateBase } = fields
       const updateFieldsWithoutBalance = {
         ...updateBase,
         ...(closingDay != null ? { closingDay } : {}),
         ...(dueDay != null ? { dueDay } : {}),
+        ...(closingOffsetDays != null ? { closingOffsetDays } : {}),
         ...(creditLimitCents != null ? { creditLimitCents } : {}),
       }
       // pluggyItemId também no update: sem isso, uma conta que já existia (upsert bate no update, não no
@@ -305,6 +319,7 @@ export class BankingService {
         transactionsSynced++
       }
       if (isCreditCard) await this.mergePendingDuplicates(userId, account.id, twins, mappedAll)
+      if (isCreditCard) await this.cancelRefundedInstallments(userId, account.id, mappedAll)
       if (isCreditCard) await this.inheritInstallmentPeople(userId, account.id, syncStartedAt)
     }
 

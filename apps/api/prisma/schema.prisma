@@ -196,6 +196,7 @@ model Account {
   // Só fazem sentido em CREDIT_CARD; a API rejeita se vierem para CHECKING/CASH (mass assignment é do
   // schema Zod, ver packages/shared/src/schemas/account.ts).
   closingDay        Int?
+  closingOffsetDays Int?
   closedBillCents   Int?
   dueDay            Int?
   creditLimitCents  Int?
