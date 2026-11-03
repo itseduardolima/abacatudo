@@ -1402,7 +1402,8 @@ Pluggy não manda nada do Pic Pay depois de 25/10 (faltam as compras de 29/10 e 
 - [x] Compra em moeda estrangeira usa `amountInAccountCurrency` (Paper.Design 108,88, não US$ 20,75).
 - [x] Estorno com valor de parcela já faturada cancela as parcelas pendentes sem fatura (Mercado Livre 2/4 a 4/4, que o
       Pluggy não remove).
-- [ ] Ciclo da fatura aberta do Nubank ainda usa dia fixo (pode errar 1 dia em mês de 26); BB sem OFX para conferir.
+- [x] Fatura aberta do Nubank usa o mesmo fechamento por dias antes do vencimento (último, próximo e janela das
+      parcelas); BB sem OFX para conferir.
 - [x] Tela Fatura (`/transactions`): a seta ◀ volta às faturas anteriores (lista pelo ciclo que fechou no mês, total
       igual ao da fatura, conferido ao vivo: Nubank 1.093,63, BB 1.075,32, Pic Pay 3.224,62) e "Enviar contas" vale
       para o mês passado.
